@@ -1,0 +1,93 @@
+# Kodi Script ID Range: 32000-32999
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgctxt "#32000"
+msgid "General Settings →"
+msgstr "General Settings →"
+
+msgctxt "#32001"
+msgid "↓ Notice! ↓"
+msgstr "↓ Notice! ↓"
+
+msgctxt "#32002"
+msgid "Independent project. Not affiliated with NordVPN. Use at your own risk. Read Full Disclaimer in Legal & Maintenance!"
+msgstr "Independent project. Not affiliated with NordVPN. Use at your own risk. Read Full Disclaimer in Legal & Maintenance!"
+
+msgctxt "#32003"
+msgid "NordVPN Access Token:"
+msgstr "NordVPN Access Token:"
+
+msgctxt "#32004"
+msgid "Service →"
+msgstr "Service →"
+
+msgctxt "#32005"
+msgid "Restart WireGuard Watchdog Service."
+msgstr "Restart WireGuard Watchdog Service."
+
+msgctxt "#32006"
+msgid "Check Service Status."
+msgstr "Check Service Status."
+
+msgctxt "#32007"
+msgid "Enter Country IDs (comma-separated, e.g. 21,81):"
+msgstr "Enter Country IDs (comma-separated, e.g. 21,81):"
+
+msgctxt "#32008"
+msgid "View Country Codes: Europe."
+msgstr "View Country Codes: Europe."
+
+msgctxt "#32009"
+msgid "View Country Codes: Americas and Asia."
+msgstr "View Country Codes: Americas and Asia."
+
+msgctxt "#32010"
+msgid "View Country Codes: Middle East and Africa."
+msgstr "View Country Codes: Middle East and Africa."
+
+msgctxt "#32011"
+msgid "Update ≡ Regenerate ≡ NordVPN Configs."
+msgstr "Update ≡ Regenerate ≡ NordVPN Configs."
+
+msgctxt "#32012"
+msgid "Account Credentials≡"
+msgstr "Account Credentials"
+
+msgctxt "#32013"
+msgid "NordVPN Management"
+msgstr "NordVPN Management"
+
+msgctxt "#32014"
+msgid "Force Reinstall systemd watchdog service."
+msgstr "Force Reinstall systemd watchdog service."
+
+msgctxt "#32015"
+msgid "Factory Reset System Files!"
+msgstr "Factory Reset System Files!"
+
+msgctxt "#32016"
+msgid "Import Token from File. Select a txt file containing your NordVPN token."
+msgstr "Import Token from File. Select a txt file containing your NordVPN token."
+
+msgctxt "#32017"
+msgid "Clear All NordVPN Configs."
+msgstr "Clear All NordVPN Configs."
+
+msgctxt "#32996"
+msgid "Safety & Reset"
+msgstr "Safety & Reset"
+
+msgctxt "#32997"
+msgid ""
+msgstr ""
+
+msgctxt "#32998"
+msgid "Legal & Maintenance →"
+msgstr "Legal & Maintenance →"
+
+msgctxt "#32999"
+msgid "Read Full Disclaimer!"
+msgstr "Read Full Disclaimer!"
