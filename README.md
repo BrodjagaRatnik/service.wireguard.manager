@@ -20,6 +20,7 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 1.  **Install**: Zip the `service.wireguard.manager` folder and use **Install from zip file** in Kodi.
 2.  **Setup**: Enter your **NordVPN Token** in settings and run **Update/Regenerate VPN Configs**.
 3.  **Uninstall**: ⚠️ **IMPORTANT**: Because the background watchdog runs at the OS level (Systemd), Kodi cannot remove it automatically during a standard uninstall. **You must use the "Factory Reset" button in the addon settings before uninstalling** to fully remove the systemd service and remote keymaps.
+4.  📦 Quick Download: If you already know what you're doing, grab the installer here: [**Download Doemela Repo ZIP**](https://github.com/BrodjagaRatnik/doemela-kodi-repo/tree/main/zips/repository.doemela).
 
 ## ⌨️ Shortcuts
 *   **Blue Button / Teletext Blue**: Opens the VPN Manager menu.
