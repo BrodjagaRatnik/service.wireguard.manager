@@ -50,3 +50,6 @@ systemctl disable vpn-watchdog.service
 rm /storage/.config/system.d/vpn-watchdog.service
 rm /storage/.kodi/userdata/keymaps/wireguard_manager_key.xml
 systemctl daemon-reload
+
+---
+*Created by Doemela*
