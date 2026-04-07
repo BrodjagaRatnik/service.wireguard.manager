@@ -26,7 +26,7 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 ## ⌨️ Shortcuts
 *   **Blue Button / Teletext Blue**: Opens the VPN Manager menu.
 *   **F11**: Opens the VPN Manager menu (for keyboards).
-*   **Note**: A **reboot** is required after the first installation to activate these buttons.
+*   **Note**: A **reboot** is required after the first installation to activate these buttons. (This addon need two reboots to install, ready all services!)
 
 ## 🛠 Troubleshooting
 
