@@ -20,51 +20,64 @@ if __name__ == '__main__':
     sys.path.append(os.path.join(ADDON_PATH, 'resources', 'lib'))
 
     args_str = "|".join(sys.argv).lower()
-    log_message(f"Arguments Received: {args_str}")
 
-    try:
-        from setup_helper import ensure_setup, perform_cleanup
-        from vpn_core import install_service, run_update
-    except ImportError as e:
-        log_message(f"Critical Import Error: {e}", xbmc.LOGERROR)
-        sys.exit()
+    if len(sys.argv) > 1 and ("resources/lib" in args_str or args_str.endswith(".py")):
+        if "list_assets.py" in args_str:
+            log_message("Launching Setup Wizard...")
+            try:
+                import list_assets
+                list_assets.run_wizard()
+            except Exception as e:
+                log_message(f"Wizard Error: {e}", xbmc.LOGERROR)
 
-    if "reinstall" in args_str:
-        log_message("Action Triggered: Reinstalling Service...")
+        sys.exit(0)
+
+    if any(cmd in args_str for cmd in ["status", "restart", "clear", "reinstall", "regen", "cleanup", "import_token"]):
+        log_message(f"Processing Command: {args_str}")
         try:
-            install_service(SOURCE_SERVICE, DEST_SERVICE, SERVICE_NAME, MEDIA_PATH)
-            xbmcgui.Dialog().notification("WG Manager", "Reinstall Complete", os.path.join(MEDIA_PATH, 'update_ok.png'), 3000)
+            if "reinstall" in args_str:
+                from vpn_core import install_service
+                install_service(SOURCE_SERVICE, DEST_SERVICE, SERVICE_NAME, MEDIA_PATH)
+                xbmcgui.Dialog().notification("WG Manager", "Reinstall Complete", os.path.join(MEDIA_PATH, 'update_ok.png'), 3000)
+            
+            elif any(cmd in args_str for cmd in ["status", "restart", "clear"]):
+                import service_control
+                service_control.control_service()
+            
+            elif "regen" in args_str:
+                from vpn_core import run_update
+                run_update(SHELL_SCRIPT, TOKEN)
+                if "manual" not in args_str:
+                    xbmcgui.Dialog().notification("VPN Manager", "Servers Updated", os.path.join(MEDIA_PATH, 'update_ok.png'), 3000)
+            
+            elif "cleanup" in args_str:
+                from setup_helper import perform_cleanup
+                perform_cleanup()
+            
+            elif "import_token" in args_str:
+                token_file = xbmcgui.Dialog().browse(1, "Select Token File", "files", ".txt|.key")
+                if token_file:
+                    with open(token_file, 'r') as f:
+                        ADDON.setSetting("vpn_token", f.read().strip())
+        
         except Exception as e:
-            log_message(f"Reinstall Failed: {e}", xbmc.LOGERROR)
-        sys.exit()
+            log_message(f"Execution Error on {args_str}: {e}", xbmc.LOGERROR)
+            xbmcgui.Dialog().ok("Error", f"Command failed: {e}")
+        
+        sys.exit(0)
 
-    if any(cmd in args_str for cmd in ["status", "restart", "clear"]):
-        import service_control
-        service_control.control_service()
-        sys.exit()
-
-    elif "regen" in args_str:
-        run_update(SHELL_SCRIPT, TOKEN)
-        if "manual" not in args_str:
-            xbmcgui.Dialog().notification("VPN Manager", "Servers Updated", os.path.join(MEDIA_PATH, 'update_ok.png'), 3000)
-            sys.exit()
-
-    elif "cleanup" in args_str:
-        perform_cleanup()
-        sys.exit()
-
-    elif "import_token" in args_str:
-        token_file = xbmcgui.Dialog().browse(1, "Select Token File", "files", ".txt|.key")
-        if token_file:
-            with open(token_file, 'r') as f:
-                ADDON.setSetting("vpn_token", f.read().strip())
-        sys.exit()
-
-    if ensure_setup(ADDON_PATH, MEDIA_PATH):
-        sys.exit()
+    if len(sys.argv) > 1 and "manual" not in args_str:
+        try:
+            from setup_helper import ensure_setup
+            if ensure_setup(ADDON_PATH, MEDIA_PATH):
+                log_message("Setup check triggered a system action. Exiting.")
+                sys.exit(0)
+        except ImportError as e:
+            log_message(f"Import Error in Setup: {e}", xbmc.LOGERROR)
 
     if "manual" in args_str or len(sys.argv) == 1:
         if not TOKEN or TOKEN.strip() == "":
+            log_message("No token found, redirecting to settings.")
             xbmc.executebuiltin('Addon.OpenSettings(service.wireguard.manager)')
         else:
             try:
@@ -72,3 +85,4 @@ if __name__ == '__main__':
                 vpn_menu.show_menu(MEDIA_PATH, SHELL_SCRIPT, TOKEN)
             except Exception as e:
                 log_message(f"Menu Load Error: {e}", xbmc.LOGERROR)
+                xbmc.executebuiltin('Addon.OpenSettings(service.wireguard.manager)')

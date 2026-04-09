@@ -2,13 +2,6 @@
   <global>
     <keyboard>
       <f11>RunScript(service.wireguard.manager,manual)</f11>
-      <blue>RunScript(service.wireguard.manager,manual)</blue>
-      <teletextblue>RunScript(service.wireguard.manager,manual)</teletextblue>
     </keyboard>
-    <remote>
-      <blue>RunScript(service.wireguard.manager,manual)</blue>
-      <teletextblue>RunScript(service.wireguard.manager,manual)</teletextblue>
-    </remote>
   </global>
 </keymap>
-

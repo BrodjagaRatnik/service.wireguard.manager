@@ -3,9 +3,9 @@ import xbmc
 import xbmcgui
 import subprocess
 import json
+import time
 
 def show_menu(media_path, shell_script, token):
-    from resources.lib.vpn_core import log
     try:
         output = subprocess.check_output(["connmanctl", "services"]).decode("utf-8")
         lines = output.splitlines()
@@ -50,6 +50,8 @@ def show_menu(media_path, shell_script, token):
             if action == "DISCONNECT":
                 vpn_ids = [m for m in mapping if "vpn_" in m]
                 for sid in vpn_ids: subprocess.run(["connmanctl", "disconnect", sid])
+                subprocess.run(["ifconfig", "eth0", "metric", "1"], check=False)
+                subprocess.run(["connmanctl", "enable", "wifi"], check=False)               
                 xbmcgui.Dialog().notification("Network", "VPN Disconnected", os.path.join(media_path, 'vpn_disconnected.png'), 3000)
             
             elif action == "REGEN":
@@ -58,6 +60,15 @@ def show_menu(media_path, shell_script, token):
                 show_menu(media_path, shell_script, token) 
             
             else:
+                try:
+                    state_out = subprocess.check_output(["connmanctl", "state"], text=True)
+                    if "ethernet" in state_out.lower():
+                        subprocess.run(["connmanctl", "disable", "wifi"], check=False)
+                        subprocess.run(["ifconfig", "eth0", "metric", "100"], check=False)
+                        xbmc.sleep(1000)
+                except:
+                    pass
+
                 raw_label = menu_items[choice].getLabel()
                 clean_name = raw_label.split('[/COLOR] ')[-1].replace('[/B]', '')
                 
@@ -85,7 +96,7 @@ def show_menu(media_path, shell_script, token):
                     except:
                         msg = f"[B][COLOR ff00ff7f][CONNECTED][/COLOR][/B] {clean_name}"
                     
-                    xbmcgui.Dialog().notification("VPN Status", msg, os.path.join(media_path, 'vpn_connected.png'), 5000)
+                    xbmcgui.Dialog().notification("VPN Status", msg, os.path.join(media_path, 'vpn_connected.png'), 4000)
                 else:
                     xbmcgui.Dialog().notification("VPN Error", "Connection Timed Out", os.path.join(media_path, 'error.png'), 5000)
 

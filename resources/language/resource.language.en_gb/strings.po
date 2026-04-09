@@ -21,8 +21,8 @@ msgid "NordVPN Access Token:"
 msgstr "NordVPN Access Token:"
 
 msgctxt "#32004"
-msgid "Service →"
-msgstr "Service →"
+msgid "VPN Service →"
+msgstr "VPN Service →"
 
 msgctxt "#32005"
 msgid "Restart WireGuard Watchdog Service."
@@ -76,13 +76,53 @@ msgctxt "#32017"
 msgid "Clear All NordVPN Configs."
 msgstr "Clear All NordVPN Configs."
 
+msgctxt "#32018"
+msgid "VPN Mapping →"
+msgstr "VPN Mapping →"
+
+msgctxt "#32019"
+msgid "Step 1: Assign VPN Profiles to TV add-on. Automatic do not fill in slots!"
+msgstr "Step 1: Assign VPN Profiles to TV add-on. Automatic do not fill in slots!"
+
+msgctxt "#32020"
+msgid "Selected VPN Profile:"
+msgstr "Selected VPN Profile:"
+
+msgctxt "#32021"
+msgid "Trigger TV add-on:"
+msgstr "Trigger TV add-on:"
+
+msgctxt "#32022"
+msgid "Assign VPN Profiles to TV add-on's."
+msgstr "Assign VPN Profiles to TV add-on's."
+
+msgctxt "#32023"
+msgid "Slot 1."
+msgstr "Slot 1."
+
+msgctxt "#32024"
+msgid "Slot 2."
+msgstr "Slot 2."
+
+msgctxt "#32025"
+msgid "Slot 3."
+msgstr "Slot 3."
+
+msgctxt "#32026"
+msgid "Slot 4."
+msgstr "Slot 4."
+
+msgctxt "#32027"
+msgid "Slot 5."
+msgstr "Slot 5."
+
+msgctxt "#32028"
+msgid "Automatic do not fill in slots! Press step 1."
+msgstr "Automatic do not fill in slots! Press step 1."
+
 msgctxt "#32996"
 msgid "Safety & Reset"
 msgstr "Safety & Reset"
-
-msgctxt "#32997"
-msgid ""
-msgstr ""
 
 msgctxt "#32998"
 msgid "Legal & Maintenance →"
