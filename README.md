@@ -5,7 +5,7 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 ## 🚀 Features
 *   **Native WireGuard**: Interfaces directly with LibreELEC's network stack.
 *   **VPN Watchdog**: Background `systemd` service ensures your connection stays alive and auto-reconnects on drops.
-*   **Remote Optimized**: Automatically maps the **Blue Button** and **F11** to trigger the VPN menu from anywhere in Kodi.
+*   **Remote Optimized**: Automatically maps the **F11** to trigger the VPN menu from anywhere in Kodi.
 *   **Fast Configuration**: Includes a shell script to fetch and regenerate the latest NordVPN server lists via API.
 *   **Smart Recovery**: Built-in logic to restore default gateways if a connection is interrupted.
 
@@ -22,17 +22,16 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 3.  **Uninstall**: ⚠️ **IMPORTANT**: Because the background watchdog runs at the OS level (Systemd), Kodi cannot remove it automatically during a standard uninstall. **You must use the "Factory Reset" button in the addon settings before uninstalling** to fully remove the systemd service and remote keymaps.
 
 ## ⌨️ Shortcuts
-*   **Blue Button / Teletext Blue**: Opens the VPN Manager menu.
 *   **F11**: Opens the VPN Manager menu (for keyboards).
-*   **Note**: A **reboot** is required after the first installation to activate these buttons.
+*   **Note**: A **restart** is required after the first installation to activate these buttons.
 
 ## 🛠 Troubleshooting
 
 ### 1. Watchdog Status: "Initializing"
 If the status check stays on "Initializing," the service is waiting for your router to assign an IP address. It will switch to "Active" automatically once the network is ready.
 
-### 2. Blue Button, F11 does not open the menu
-*   **Reboot**: Ensure you have restarted the device after the initial setup dialog.
+### 2. F11 does not open the menu
+*   **Restart**: Ensure you have restarted the device after the initial setup dialog.
 *   **File Check**: Verify the keymap exists at:  
     `/storage/.kodi/userdata/keymaps/wireguard_manager_key.xml`
 
