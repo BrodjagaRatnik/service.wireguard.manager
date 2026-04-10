@@ -3,6 +3,7 @@ name: Kodi Addon Checker
 on: [push, pull_request]
 
 env:
+  # Opt into Node.js 24 to remove deprecation warnings
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -15,7 +16,7 @@ jobs:
       - name: Kodi addon checker
         uses: xbmc/action-kodi-addon-checker@master
         with:
-          # Changed 'addon-path' to 'addon-id' 
-          # Use "." if the addon.xml is in the root
+          # Changed 'addon-path' to 'addon-id'
+          # Use "." if your addon.xml is in the root of the repo
           addon-id: .
           kodi-version: omega
