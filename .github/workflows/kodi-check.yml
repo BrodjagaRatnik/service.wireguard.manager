@@ -2,6 +2,9 @@ name: Kodi Addon Checker
 
 on: [push, pull_request]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   kodi-addon-checker:
     runs-on: ubuntu-latest
@@ -12,5 +15,7 @@ jobs:
       - name: Kodi addon checker
         uses: xbmc/action-kodi-addon-checker@master
         with:
-          addon-path: .
+          # Changed 'addon-path' to 'addon-id' 
+          # Use "." if the addon.xml is in the root
+          addon-id: .
           kodi-version: omega
