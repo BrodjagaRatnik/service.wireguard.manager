@@ -16,37 +16,18 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 *   `resources/lib/service.py`: The "pure" Python background watchdog (OS level).
 *   `resources/update_servers.sh`: API helper script for fetching NordVPN configurations.
 
-## 🛠 Installation & Uninstallation
-1.  **Install**: Get the `service.wireguard.manager` Download & Install the Repository and use **Install from zip file** in Kodi. grab the installer here: [**Download Doemela Repo ZIP**](https://github.com/BrodjagaRatnik/doemela-kodi-repo/tree/main/zips/repository.doemela).
-2.  **Setup**: Enter your **NordVPN Token** in settings and run **Update/Regenerate VPN Configs**.
-3.  **Uninstall**: ⚠️ **IMPORTANT**: Because the background watchdog runs at the OS level (Systemd), Kodi cannot remove it automatically during a standard uninstall. **You must use the "Factory Reset" button in the addon settings before uninstalling** to fully remove the systemd service and remote keymaps.
+## 📖 Quick Links
+For detailed instructions for this Add-on, please visit our **[Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki)**:
 
-## ⌨️ Shortcuts
-*   **F11**: Opens the VPN Manager menu (for keyboards).
-*   **Note**: A **restart** is required after the first installation to activate these buttons.
+*   **[🛠 Editing Installation & Setup](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Installation-&-Setup)**
+*   **[⌨️ Shortcuts & Logs](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Shortcuts-&-Logs)**
+*   **[🆘 Troubleshooting & Manual Cleanup](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Troubleshooting-&-Manual-Cleanup)**
 
-## 🛠 Troubleshooting
+---
 
-### 1. Watchdog Status: "Initializing"
-If the status check stays on "Initializing," the service is waiting for your router to assign an IP address. It will switch to "Active" automatically once the network is ready.
+## 📦 Quick Download
+If you already know what you're doing, grab the installer here:
+[**Download Doemela Repo ZIP**](https://github.com/BrodjagaRatnik/doemela-kodi-repo/tree/main/zips/repository.doemela).
 
-### 2. F11 does not open the menu
-*   **Restart**: Ensure you have restarted the device after the initial setup dialog.
-*   **File Check**: Verify the keymap exists at:  
-    `/storage/.kodi/userdata/keymaps/wireguard_manager_key.xml`
-
-### 3. Monitoring Logs (SSH)
-Since LibreELEC uses BusyBox, use `awk` for real-time log filtering:
-```bash
-tail -f /storage/.kodi/temp/kodi.log | awk '/service.wireguard.manager/ {print; fflush()}'
-```
-### 4. Manual Cleanup (SSH)
-If you uninstalled the addon without performing a **Factory Reset** in the settings, run these commands via SSH to clean your system:
-```bash
-systemctl stop vpn-watchdog.service
-systemctl disable vpn-watchdog.service
-rm /storage/.config/system.d/vpn-watchdog.service
-rm /storage/.kodi/userdata/keymaps/wireguard_manager_key.xml
-rm /storage/.config/wireguard/nord_*.config
-systemctl daemon-reload
-```
+---
+*Created by Doemela*
