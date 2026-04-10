@@ -13,4 +13,3 @@ jobs:
         uses: xbmc/action-kodi-addon-checker@v2
         with:
           kodi-version: omega
-          addon-id: service.wireguard.manager
