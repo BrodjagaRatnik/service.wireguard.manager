@@ -1,5 +1,7 @@
 __pycache__/
 *.pyc
+.addonignore
+.gitignore
 .DS_Store
 resources/media/*.png.bak
 .github/
