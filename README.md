@@ -39,7 +39,7 @@ If the status check stays on "Initializing," the service is waiting for your rou
 Since LibreELEC uses BusyBox, use `awk` for real-time log filtering:
 ```bash
 tail -f /storage/.kodi/temp/kodi.log | awk '/service.wireguard.manager/ {print; fflush()}'
-
+'''
 ### 4. Manual Cleanup (SSH)
 If you uninstalled the addon without performing a **Factory Reset** in the settings, run these commands via SSH to clean your system:
 ```bash
@@ -49,3 +49,5 @@ rm /storage/.config/system.d/vpn-watchdog.service
 rm /storage/.kodi/userdata/keymaps/wireguard_manager_key.xml
 rm /storage/.config/wireguard/nord_*.config
 systemctl daemon-reload
+'''
+
