@@ -2,4 +2,3 @@ __pycache__/
 *.pyc
 .DS_Store
 resources/media/*.png.bak
-settings.xml
