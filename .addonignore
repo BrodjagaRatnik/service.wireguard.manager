@@ -1,0 +1,33 @@
+# Exclude GitHub & Development Metadata
+.git*
+.github/
+.vscode/
+.idea/
+.project
+.pydevproject
+
+# Exclude Documentation and Design Assets
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+docs/
+assets/
+design/
+*.psd
+*.ai
+*.sketch
+
+# Exclude Python Compiled Files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Exclude OS-specific Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Exclude Kodi Build Artifacts
+*.zip
+*.md5
