@@ -4,6 +4,23 @@ import xbmcgui
 import subprocess
 import json
 import time
+import logging
+from logging.handlers import RotatingFileHandler
+
+LOG_FILE = '/storage/.kodi/temp/wireguard_manager.log'
+_logger = logging.getLogger("WG_Menu")
+_logger.setLevel(logging.INFO)
+if not _logger.handlers:
+    handler = RotatingFileHandler(LOG_FILE, maxBytes=1024*1024, backupCount=1)
+    handler.setFormatter(logging.Formatter('%(asctime)s - MENU - %(levelname)s - %(message)s'))
+    _logger.addHandler(handler)
+
+def log_event(msg, level=xbmc.LOGINFO):
+    xbmc.log(f"WG_Manager: {msg}", level)
+    if level >= xbmc.LOGERROR:
+        _logger.error(msg)
+    else:
+        _logger.info(msg)
 
 def show_menu(media_path, shell_script, token):
     try:
@@ -48,6 +65,7 @@ def show_menu(media_path, shell_script, token):
             action = mapping[choice]
             
             if action == "DISCONNECT":
+                log_event(f"User requested disconnect from {connected_name}")
                 vpn_ids = [m for m in mapping if "vpn_" in m]
                 for sid in vpn_ids: subprocess.run(["connmanctl", "disconnect", sid])
                 subprocess.run(["ifconfig", "eth0", "metric", "1"], check=False)
@@ -55,6 +73,7 @@ def show_menu(media_path, shell_script, token):
                 xbmcgui.Dialog().notification("Network", "VPN Disconnected", os.path.join(media_path, 'vpn_disconnected.png'), 3000)
             
             elif action == "REGEN":
+                log_event("User requested VPN config regeneration")
                 from resources.lib.vpn_core import run_update
                 run_update(shell_script, token)
                 show_menu(media_path, shell_script, token) 
@@ -75,6 +94,7 @@ def show_menu(media_path, shell_script, token):
                 pbg = xbmcgui.DialogProgressBG()
                 pbg.create("VPN Manager", f"Connecting to {clean_name}...")
                 
+                log_event(f"Attempting connection to {clean_name}...")
                 subprocess.run(["connmanctl", "connect", action])
                 
                 connected = False
@@ -88,6 +108,7 @@ def show_menu(media_path, shell_script, token):
                 pbg.close()
                 
                 if connected:
+                    ip = "Unknown"
                     try:
                         res = subprocess.check_output(["curl", "-s", "https://ipinfo.io"], timeout=5).decode("utf-8")
                         data = json.loads(res)
@@ -96,9 +117,11 @@ def show_menu(media_path, shell_script, token):
                     except:
                         msg = f"[B][COLOR ff00ff7f][CONNECTED][/COLOR][/B] {clean_name}"
                     
+                    log_event(f"Successfully connected to {clean_name} (IP: {ip})")
                     xbmcgui.Dialog().notification("VPN Status", msg, os.path.join(media_path, 'vpn_connected.png'), 4000)
                 else:
+                    log_event(f"Connection to {clean_name} timed out", xbmc.LOGERROR)
                     xbmcgui.Dialog().notification("VPN Error", "Connection Timed Out", os.path.join(media_path, 'error.png'), 5000)
 
     except Exception as e:
-        xbmc.log(f"Menu Error: {e}", xbmc.LOGERROR)
+        log_event(f"Menu Error: {e}", xbmc.LOGERROR)
