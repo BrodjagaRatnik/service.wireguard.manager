@@ -3,6 +3,10 @@
  JSON_USER=.... https://api.nordvpn.com/v1/users/services/credentials ...
 
  RAW_JSON=... https://api.nordvpn.com/v1/servers/recommendations?filters\[servers_ ...
+ 
+ NordVPN's Linux client and NordLynx protocol (based on WireGuard) generally prioritize IPv4 traffic and often do not support IPv6 natively, 
+ leading to potential IPv6 leaks or connectivity issues, with some reports suggesting IPv6 support is limited to specific servers using NAT66. 
+ While the client attempts to prevent leaks by blocking IPv6 traffic, it is often recommended to manually disable IPv6 on the Linux machine to ensure no leaks occur when using NordLynx.
 COMMENT
 TOKEN=$1
 # Default to BE(21), DE(81), UK(227), NL(153) if no IDs provided in settings

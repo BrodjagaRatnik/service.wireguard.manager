@@ -37,7 +37,7 @@ def perform_cleanup(silent=False):
             
     except Exception as e:
         xbmc.log(f"Cleanup Error: {e}", xbmc.LOGERROR)
-
+'''
 def disable_connman_ipv6():
     import subprocess
     updated = False
@@ -56,7 +56,7 @@ def disable_connman_ipv6():
         import xbmc
         xbmc.log(f"WG Manager: IPv6 Check Error: {e}", xbmc.LOGERROR)
     return updated
-
+'''
 def ensure_setup(addon_path, media_path):
     import os, shutil, xbmc, xbmcgui, xbmcaddon
     addon = xbmcaddon.Addon()

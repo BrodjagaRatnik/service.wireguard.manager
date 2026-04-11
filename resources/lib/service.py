@@ -10,8 +10,6 @@ try:
     KODI_MODE = True
 except ImportError:
     KODI_MODE = False
-
-# Setup Logger for Watchdog Service
 logger = logging.getLogger("WG_Watchdog")
 if not logger.handlers:
     handler = RotatingFileHandler(LOG_FILE, maxBytes=1024*1024, backupCount=1)
