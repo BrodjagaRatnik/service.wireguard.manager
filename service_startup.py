@@ -24,7 +24,6 @@ class WGManagerService(xbmc.Monitor):
         xbmc.log("[service.wireguard.manager] Monitor Service Initialized", xbmc.LOGINFO)
 
     def get_service_id_by_name(self, name):
-        """Finds the real vpn_xxx ID by matching the Friendly Name label."""
         try:
             out = subprocess.check_output(["connmanctl", "services"], text=True)
             for line in out.splitlines():

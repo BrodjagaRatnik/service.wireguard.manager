@@ -6,10 +6,6 @@ import json
 import subprocess
 
 def get_wg_services():
-    """
-    Parses connmanctl services to find NordVPN profiles.
-    Returns a list of dicts with Friendly Name and Service ID.
-    """
     services = []
     try:
 

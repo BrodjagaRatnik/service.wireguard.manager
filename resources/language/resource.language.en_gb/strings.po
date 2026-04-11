@@ -49,8 +49,8 @@ msgid "View Country Codes: Middle East and Africa."
 msgstr "View Country Codes: Middle East and Africa."
 
 msgctxt "#32011"
-msgid "╠═Update═Regenerate═NordVPN═Configs╣"
-msgstr "╠═Update═Regenerate═NordVPN═Configs╣"
+msgid "╠═Update═╬═Regenerate═╬═NordVPN═Configs═╣"
+msgstr "╠═Update═╬═Regenerate═╬═NordVPN═Configs═╣"
 
 msgctxt "#32012"
 msgid "Account Credentials≡"

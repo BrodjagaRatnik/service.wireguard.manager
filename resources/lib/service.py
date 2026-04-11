@@ -1,18 +1,15 @@
 import time
 import subprocess
 import logging
-import logging
 from logging.handlers import RotatingFileHandler
 
 LOG_FILE = '/storage/.kodi/temp/wireguard_manager.log'
-
-logging.basicConfig(
-    handlers=[RotatingFileHandler(LOG_FILE, maxBytes=1024*1024, backupCount=1)],
-    level=logging.INFO,
-    format='%(asctime)s - WATCHDOG - %(levelname)s - %(message)s'
-)
-
-logging.basicConfig(level=logging.INFO, format='WG_Manager [Watchdog]: %(message)s')
+logger = logging.getLogger("WG_Watchdog")
+if not logger.handlers:
+    handler = RotatingFileHandler(LOG_FILE, maxBytes=1024*1024, backupCount=1)
+    handler.setFormatter(logging.Formatter('%(asctime)s - WATCHDOG - %(levelname)s - %(message)s'))
+    logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
 
 SAVED_GATEWAY = None
 
@@ -47,20 +44,20 @@ def watchdog_logic():
         if "wg0" in routes: return
 
         if "default" not in routes:
-            logging.info(f"Restoring gateway {current_gw} on {interface}")
+            logger.info(f"Restoring gateway {current_gw} on {interface}")
             subprocess.run(["route", "add", "default", "gw", current_gw, interface])
     except Exception as e:
-        logging.error(f"Watchdog error: {e}")
+        logger.error(f"Watchdog error: {e}")
 
 if __name__ == "__main__":
-    logging.info("Watchdog background service starting...")
+    logger.info("Watchdog background service starting...")
 
     while SAVED_GATEWAY is None:
         get_default_gateway()
         if SAVED_GATEWAY: break
         time.sleep(2)
     
-    logging.info(f"Network active ({SAVED_GATEWAY}). Monitoring started.")
+    logger.info(f"Network active ({SAVED_GATEWAY}). Monitoring started.")
     
     while True:
         watchdog_logic()
