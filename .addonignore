@@ -4,4 +4,3 @@ __pycache__/
 .gitignore
 .DS_Store
 resources/media/*.png.bak
-.github/
