@@ -79,9 +79,13 @@ class WGManagerService(xbmc.Monitor):
                 xbmcgui.Dialog().notification("VPN Error", "Connection Timed Out", "", 5000)
 
     def run_loop(self):
+        if xbmc.Player().isPlayingVideo():
+            return
+
         folder = xbmc.getInfoLabel("Container.FolderPath")
         plugin = xbmc.getInfoLabel("Container.PluginName")
         match = False
+        
         for i in range(1, 6):
             target = ADDON.getSetting(f"map_{i}_addon")
             vpn = ADDON.getSetting(f"vpn_{i}_name")
@@ -89,6 +93,7 @@ class WGManagerService(xbmc.Monitor):
                 self.manage_vpn(vpn)
                 match = True
                 break
+
         if not match and self.active_vpn_name: 
             self.manage_vpn(None)
 
