@@ -5,16 +5,16 @@ import xbmcgui
 import xbmcaddon
 
 ADDON = xbmcaddon.Addon()
-TOKEN = ADDON.getSettings().getString("vpn_token")
 ADDON_PATH = ADDON.getAddonInfo('path')
+LIB_PATH = os.path.join(ADDON_PATH, 'resources', 'lib')
+sys.path.append(LIB_PATH)
+from logger import log_message
+TOKEN = ADDON.getSettings().getString("vpn_token")
 MEDIA_PATH = os.path.join(ADDON_PATH, 'resources', 'media')
 SHELL_SCRIPT = os.path.join(ADDON_PATH, 'resources', 'update_servers.sh')
 SERVICE_NAME = "vpn-watchdog.service"
 SOURCE_SERVICE = os.path.join(ADDON_PATH, 'resources', 'data', SERVICE_NAME)
 DEST_SERVICE = os.path.join('/storage/.config/system.d/', SERVICE_NAME)
-
-def log_message(msg, level=xbmc.LOGINFO):
-    xbmc.log(f"WG_MANAGER_SCRIPT: {msg}", level)
 
 if __name__ == '__main__':
     sys.path.append(os.path.join(ADDON_PATH, 'resources', 'lib'))

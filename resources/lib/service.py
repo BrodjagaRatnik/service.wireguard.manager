@@ -1,50 +1,41 @@
 import time
 import subprocess
-import logging
-from logging.handlers import RotatingFileHandler
-
-LOG_FILE = '/storage/.kodi/temp/wireguard_manager.log'
+import os
+import sys
 
 try:
     import xbmc
+    import xbmcaddon
+    ADDON = xbmcaddon.Addon('service.wireguard.manager')
+    ADDON_PATH = ADDON.getAddonInfo('path')
+    sys.path.append(os.path.join(ADDON_PATH, 'resources', 'lib'))
+    from logger import log_message
     KODI_MODE = True
 except ImportError:
     KODI_MODE = False
-logger = logging.getLogger("WG_Watchdog")
-if not logger.handlers:
-    handler = RotatingFileHandler(LOG_FILE, maxBytes=1024*1024, backupCount=1)
-    handler.setFormatter(logging.Formatter('%(asctime)s - WATCHDOG - %(levelname)s - %(message)s'))
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
 
-def log_important(msg):
-    logger.info(msg)
+def log_event(msg, level=2):
     if KODI_MODE:
-        xbmc.log(f"[service.wireguard.manager] {msg}", xbmc.LOGINFO)
+        log_message(f"Watchdog: {msg}", level)
     else:
-        print(f"LOG (IMP): {msg}")
-
-def log_debug(msg):
-    if KODI_MODE:
-        xbmc.log(f"[service.wireguard.manager] {msg}", xbmc.LOGINFO)
-    else:
-        print(f"LOG (DEBUG): {msg}")
+        print(f"WATCHDOG: {msg}")
 
 SAVED_GATEWAY = None
 
 def get_default_interface():
     try:
-        out = subprocess.check_output(["ip", "route"]).decode()
+        out = subprocess.check_output(["ip", "route"], text=True)
         for line in out.splitlines():
             if "default via" in line:
-                return line.split()[line.split().index("dev") + 1]
+                parts = line.split()
+                return parts[parts.index("dev") + 1]
     except: pass
     return "eth0"
 
 def get_default_gateway():
     global SAVED_GATEWAY
     try:
-        out = subprocess.check_output(["ip", "-4", "route", "show", "default"]).decode()
+        out = subprocess.check_output(["ip", "-4", "route", "show", "default"], text=True)
         if "default" in out:
             parts = out.split()
             if "via" in parts:
@@ -59,27 +50,26 @@ def watchdog_logic():
         if not current_gw: return 
             
         interface = get_default_interface()
-        routes = subprocess.check_output(["route"]).decode()
+        routes = subprocess.check_output(["route"], text=True)
 
         if "wg0" in routes:
-            log_debug("Watchdog check: VPN route active.")
             return
 
         if "default" not in routes:
-            log_important(f"Gateway lost! Restoring {current_gw} on {interface}")
-            subprocess.run(["route", "add", "default", "gw", current_gw, interface])
+            log_event(f"Gateway lost! Restoring {current_gw} on {interface}", 4)
+            subprocess.run(["route", "add", "default", "gw", current_gw, interface], check=False)
     except Exception as e:
-        log_important(f"Watchdog error: {e}")
+        log_event(f"Error: {e}", 4)
 
 if __name__ == "__main__":
-    log_important("Watchdog background service starting...")
+    log_event("Starting background monitoring...")
 
     while SAVED_GATEWAY is None:
         get_default_gateway()
         if SAVED_GATEWAY: break
         time.sleep(2)
     
-    log_important(f"Network active ({SAVED_GATEWAY}). Monitoring started.")
+    log_event(f"Network active ({SAVED_GATEWAY}). Monitoring every 10s.")
     
     while True:
         watchdog_logic()
