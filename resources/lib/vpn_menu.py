@@ -1,10 +1,19 @@
 import os
+import sys
 import xbmc
 import xbmcgui
+import xbmcaddon
 import subprocess
 import json
 import time
 import logging
+from logging.handlers import RotatingFileHandler
+
+ADDON = xbmcaddon.Addon('service.wireguard.manager')
+ADDON_PATH = ADDON.getAddonInfo('path')
+sys.path.append(os.path.join(ADDON_PATH, 'resources', 'lib'))
+
+from network_utils import set_secure_dns, disable_connman_ipv6, enable_connman_ipv6
 from logging.handlers import RotatingFileHandler
 
 LOG_FILE = '/storage/.kodi/temp/wireguard_manager.log'
@@ -21,39 +30,6 @@ def log_event(msg, level=xbmc.LOGINFO):
         _logger.error(msg)
     else:
         _logger.info(msg)
-
-def disable_connman_ipv6():
-    """Forces IPv6 off for all physical interfaces."""
-    try:
-        # Get the services list
-        result = subprocess.check_output(["connmanctl", "services"], text=True)
-        for line in result.splitlines():
-            parts = line.split()
-            if not parts: continue           
-            service_id = parts[-1]
-            # Only target ethernet and wifi
-            if service_id.startswith(("ethernet_", "wifi_")):
-                # We skip 'inspect' because it causes Exit Status 22 on this system
-                # We just force the config to 'off'
-                subprocess.run(["connmanctl", "config", service_id, "--ipv6", "off"], check=False)
-        return True
-    except Exception as e:
-        # Use xbmc.log since log_event is only in the menu script
-        xbmc.log(f"WG_MANAGER: IPv6 Disable Error: {e}", xbmc.LOGERROR)
-    return False
-
-def enable_connman_ipv6():
-    """Restores IPv6 to auto mode for physical interfaces."""
-    try:
-        result = subprocess.check_output(["connmanctl", "services"], text=True)
-        for line in result.splitlines():
-            parts = line.split()
-            if not parts: continue           
-            service_id = parts[-1]
-            if service_id.startswith(("ethernet_", "wifi_")):
-                subprocess.run(["connmanctl", "config", service_id, "--ipv6", "auto"], check=False)
-    except Exception as e:
-        log_event(f"Menu IPv6 Restore Error: {e}", xbmc.LOGERROR)
 
 def show_menu(media_path, shell_script, token):
     try:
@@ -101,13 +77,11 @@ def show_menu(media_path, shell_script, token):
                 log_event(f"User requested disconnect from {connected_name}")
                 vpn_ids = [m for m in mapping if "vpn_" in m]
                 for sid in vpn_ids: subprocess.run(["connmanctl", "disconnect", sid])
-                
-                # Restore Network Defaults
+
                 subprocess.run(["ifconfig", "eth0", "metric", "1"], check=False)
                 subprocess.run(["connmanctl", "enable", "wifi"], check=False)
                 enable_connman_ipv6() 
-                
-                # Cleanup routing table cache
+
                 subprocess.run(["ip", "route", "flush", "cache"], check=False)
                 
                 xbmcgui.Dialog().notification("Network", "VPN Disconnected & IPv6 Restored", os.path.join(media_path, 'vpn_disconnected.png'), 3000)
@@ -119,7 +93,6 @@ def show_menu(media_path, shell_script, token):
                 show_menu(media_path, shell_script, token) 
             
             else:
-                # --- START CONNECTION PROCESS ---
                 disable_connman_ipv6()
                 
                 try:
@@ -151,6 +124,7 @@ def show_menu(media_path, shell_script, token):
                 pbg.close()
                 
                 if connected:
+                    set_secure_dns(action, vpn_active=True, log_cb=log_event)
                     ip = "Unknown"
                     try:
                         res = subprocess.check_output(["curl", "-s", "https://ipinfo.io"], timeout=5).decode("utf-8")
