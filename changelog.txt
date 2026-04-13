@@ -1,6 +1,67 @@
 CHANGELOG
 =========
 
+v1.1.0 (2026-04-13)
+- SECURITY: Added DNS Search Domain hardening to prevent local network metadata leaks.
+- FIXED: Watchdog service path resolution and startup syntax errors.
+- IMPROVED: Standardized logging level to LOGINFO for better visibility.
+- IMPROVED: Refined connection state tracking for v1.1 series.
+
+v1.0.9 (2026-04-12)
+- Added "Manual Override" state tracking to prevent auto-disconnect conflicts.
+- Integrated friendly addon name resolution for improved trigger logging.
+- Standardized logging across all modules (Service, Menu, Core, and Watchdog).
+- Optimized network metric and IPv6 handling with centralized vpn_ops logic.
+- Improved connection verification with strict curl timeouts and country detection.
+
+v1.0.8
+- Fixed error in def run_loop of class WGManagerService.
+
+- v1.0.7
+- Fixed DNS leaks by forcing VPN nameservers on physical interfaces.
+- Added automatic IPv6 disabling to prevent "around-the-tunnel" leaks.
+- Improved code efficiency by moving network logic to a shared library.
+- Enhanced logging with a rotating file handler for easier debugging.
+
+v1.0.6
+- NordVPN's Linux client and NordLynx protocol (based on WireGuard) generally prioritize IPv4 traffic and often do not support IPv6 natively, leading to potential IPv6 leaks or connectivity issues.
+- Added: Automatic IPv6 leak protection (forces IPv6 OFF before connecting).
+- Added: IPv6 restoration to "Auto" mode upon VPN disconnection.
+- Added: Routing table cleanup (cache flush) to remove stagnant host routes.
+- Fixed: Improved network stability by managing interface metrics and WiFi states.
+- Optimized: Full compatibility with LibreELEC/ConnMan for Raspberry Pi 5.
+
+v1.0.5
+- fix logging service, service_helper and menu
+
+v1.0.4
+- Cleaned up logging
+
+v1.0.3
+- Cleaned up files and new icons
+
+v1.0.2
+- Security: Added automatic IPv6 Leak Protection. The manager now identifies and disables IPv6 on Ethernet and Wi-Fi.
+- Routing Fix: Implemented Metric priority (Metric 100) for Ethernet to ensure VPN traffic always takes precedence.
+- Hardware: Added Wi-Fi Kill Switch. Automatically disables Wi-Fi when Ethernet is connected to prevent multi-interface leaks.
+- Setup: Improved first-run logic with a dedicated Keymap installation, mandatory Restart prompt, and Token Import wizard.
+- Mapping: Slot assignments are now "Regen-Proof." They use Friendly Names (e.g., NordVPN_Belgium) instead of static IPs.
+- UI: Synchronized notifications between the manual menu and background service, including progress bars and IP info lookups.
+- Keymap: Removed the Blue button mapping from the keymap as it was found to be incompatible.
+- Cleanup: Enhanced Factory Reset to purge NordVPN-specific configs and properly decommission legacy system services.
+
+v1.0.1
+- Added: Smart Add-on Mapping (Auto-connect VPN based on which TV add-on is open)
+- Added: Visual Setup Wizard to easily assign WireGuard profiles to slots
+- Added: Dynamic background monitoring for Kodi 21.3 (Omega)
+- Improved: Log-less trigger detection for better performance on Pi 5
+- Fixed: Resolved service-start delays in LibreELEC 12.2.1
+
+v1.0.0
+- Fixed: RunScript reinstall command argument parsing
+- Improved: Main logic execution order for better setup handling
+- Added: Enhanced logging for LibreELEC
+
 v1.0.9 (2026-04-12)
 - Added "Manual Override" state tracking to prevent auto-disconnect conflicts.
 - Integrated friendly addon name resolution for improved trigger logging.

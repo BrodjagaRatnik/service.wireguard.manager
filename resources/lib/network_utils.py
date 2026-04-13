@@ -20,23 +20,37 @@ def get_dns_from_config(vpn_name):
                     dns_list = [d.strip() for d in match.group(1).split(",")]
         except: pass
 
-    # Fallback to NordVPN Public DNS if parsing fails
     return dns_list if dns_list else ["103.86.96.100", "103.86.99.100"]
 
 def set_secure_dns(vpn_name=None, vpn_active=True):
-    """Overrides DNS for ALL physical interfaces to ensure no leaks."""
     dns_servers = get_dns_from_config(vpn_name) if vpn_active else []
+    
     try:
         result = subprocess.check_output(["connmanctl", "services"], text=True)
         for line in result.splitlines():
             if "ethernet_" in line or "wifi_" in line:
-                service_id = line.split()[-1]
-                subprocess.run(["connmanctl", "config", service_id, "--nameservers"] + dns_servers, check=False)
-                
-        state = f"VPN DNS {dns_servers}" if vpn_active else "DHCP/Auto"
-        log_message(f"Network: DNS locked to {state} for all hardware.")
+                sid = line.split()[-1]
+                if vpn_active:
+                    subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
+                    subprocess.run(["connmanctl", "config", sid, "--nameservers"] + dns_servers, check=False)
+                    subprocess.run(["connmanctl", "config", sid, "--domains", "."], check=False)
+                    subprocess.run(["connmanctl", "config", sid, "--ipv6", "off"], check=False)
+                else:
+                    subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
+                    subprocess.run(["connmanctl", "config", sid, "--domains"], check=False)
+                    subprocess.run(["connmanctl", "config", sid, "--ipv6", "auto"], check=False)
+
+        if vpn_active and dns_servers:
+            log_message("Network: Forcing manual resolv.conf overwrite for absolute privacy.")
+            with open("/etc/resolv.conf", "w") as f:
+                f.write("# Hardened DNS by WG Manager\n")
+                f.write("options timeout:2 attempts:1\n")
+                for dns in dns_servers:
+                    f.write(f"nameserver {dns}\n")
+        
+        log_message(f"Network: DNS {'Hardened & Flushed' if vpn_active else 'Restored'}")
     except Exception as e:
-        log_message(f"Network Error: DNS Override failed: {e}", xbmc.LOGERROR)
+        log_message(f"DNS Error: {e}", xbmc.LOGERROR)
 
 def disable_connman_ipv6():
     """Forces IPv6 off for all physical interfaces."""

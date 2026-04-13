@@ -15,7 +15,7 @@ import vpn_ops
 def show_menu(media_path, shell_script, token):
     try:
         raw_state = vpn_ops.get_active_vpn()
-        active_name = raw_state.split('|')[0] if raw_state and '|' in raw_state else raw_state
+        active_name = raw_state.replace('_', ' ').strip() if raw_state else None
 
         output = subprocess.check_output(["connmanctl", "services"], text=True)
         lines = output.splitlines()
@@ -23,6 +23,7 @@ def show_menu(media_path, shell_script, token):
         menu_items = []
         mapping = []
 
+        # 1. DISCONNECT Button
         if active_name:
             item_reset = xbmcgui.ListItem(f"[B][COLOR white]DISCONNECT[/COLOR] [COLOR yellow]({active_name})[/COLOR][/B]")
             item_reset.setArt({'icon': os.path.join(media_path, 'reset.png')}) 
@@ -59,15 +60,20 @@ def show_menu(media_path, shell_script, token):
                 vpn_ops.disconnect_vpn()
             
             elif action == "REGEN":
-                log_message("Menu: Config regeneration requested")
                 from vpn_core import run_update
                 run_update(shell_script, token)
                 show_menu(media_path, shell_script, token)
             
             else:
                 target_name, target_sid = action
+                t_clean = target_name.replace('_', ' ').strip()
+                if active_name == t_clean:
+                    return
+
+                xbmcgui.Window(10000).setProperty('vpn_manual_session', 'true')
+                
                 log_message(f"Menu: Manual connection requested for {target_name}")
-                vpn_ops.connect_vpn(target_name, target_sid, manual=True)
+                vpn_ops.connect_vpn(target_name, target_sid)
 
     except Exception as e:
         log_message(f"Menu Error: {e}", xbmc.LOGERROR)
