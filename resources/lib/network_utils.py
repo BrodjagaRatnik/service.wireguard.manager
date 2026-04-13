@@ -43,7 +43,7 @@ def set_secure_dns(vpn_name=None, vpn_active=True):
         if vpn_active and dns_servers:
             log_message("Network: Forcing manual resolv.conf overwrite for absolute privacy.")
             with open("/etc/resolv.conf", "w") as f:
-                f.write("# Hardened DNS by WG Manager\n")
+                f.write("# Hardened DNS by WireGuard Manager\n")
                 f.write("options timeout:2 attempts:1\n")
                 for dns in dns_servers:
                     f.write(f"nameserver {dns}\n")

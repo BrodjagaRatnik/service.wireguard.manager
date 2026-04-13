@@ -43,7 +43,7 @@ def run_wizard():
         log_message(f"Wizard: Resetting Slot {slot_id}")
         addon.setSetting(f"vpn_{slot_id}_name", "")
         addon.setSetting(f"map_{slot_id}_addon", "")
-        xbmcgui.Dialog().notification("WG Manager", f"Slot {slot_id} reset", "", 3000)
+        xbmcgui.Dialog().notification("WireGuard Manager", f"Slot {slot_id} reset", "", 3000)
         return
 
     services = get_wg_services()
@@ -81,7 +81,7 @@ def run_wizard():
     addon.setSetting(f"vpn_{slot_id}_name", chosen_vpn_name)
     addon.setSetting(f"map_{slot_id}_addon", chosen_addon_id)
     
-    xbmcgui.Dialog().notification("WG Manager", f"Slot {slot_id} Saved", "", 3000)
+    xbmcgui.Dialog().notification("WireGuard Manager", f"Slot {slot_id} Saved", "", 3000)
 
 if __name__ == '__main__':
     run_wizard()

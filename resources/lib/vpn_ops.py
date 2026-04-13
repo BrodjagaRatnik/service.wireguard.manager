@@ -105,7 +105,7 @@ def connect_vpn(vpn_name, sid):
         except:
             msg = f"[B][COLOR ff00ff7f][CONNECTED][/COLOR][/B] {vpn_name}"
             
-        xbmcgui.Dialog().notification("VPN Secured", msg, ICON_CON, 2000)
+        xbmcgui.Dialog().notification("VPN Secured", msg, ICON_CON, 2500)
         return True
     
     error_icon = os.path.join(ADDON_PATH, 'resources', 'media', 'error.png')

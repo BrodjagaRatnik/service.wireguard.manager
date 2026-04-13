@@ -1,12 +1,15 @@
-import xbmc, xbmcgui, xbmcaddon, os, sys, subprocess
+import xbmc, xbmcgui, xbmcaddon, xbmcvfs, os, sys, subprocess
 
 ADDON = xbmcaddon.Addon('service.wireguard.manager')
-ADDON_PATH = ADDON.getAddonInfo('path')
+ADDON_PATH = xbmcvfs.translatePath(ADDON.getAddonInfo('path'))
 LIB_PATH = os.path.join(ADDON_PATH, 'resources', 'lib')
-sys.path.append(LIB_PATH)
+
+if LIB_PATH not in sys.path:
+    sys.path.append(LIB_PATH)
 
 from logger import log_message
 import vpn_ops
+from setup_helper import ensure_setup
 
 class WGManagerService(xbmc.Monitor):
     def __init__(self):
@@ -56,6 +59,26 @@ class WGManagerService(xbmc.Monitor):
                 vpn_ops.disconnect_vpn(silent=False)
 
 if __name__ == '__main__':
+    MEDIA_PATH = os.path.join(ADDON_PATH, 'resources', 'media')
+    try:
+        was_updated = ensure_setup(ADDON_PATH, MEDIA_PATH)
+
+        if was_updated is True:
+            icon = os.path.join(MEDIA_PATH, 'icon.png')
+            xbmcgui.Dialog().notification(
+                "WireGuard Manager", 
+                "System files initialized successfully", 
+                icon, 
+                3000, 
+                False
+            )
+            log_message("Service Setup: First-run installation completed.", xbmc.LOGINFO)
+        else:
+            log_message("Service Setup: Files already verified.", xbmc.LOGINFO)
+        
+    except Exception as e:
+        log_message(f"Service Setup Error: {e}", xbmc.LOGERROR)
+
     monitor = WGManagerService()
     while not monitor.abortRequested():
         monitor.run_loop()

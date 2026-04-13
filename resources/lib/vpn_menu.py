@@ -23,7 +23,6 @@ def show_menu(media_path, shell_script, token):
         menu_items = []
         mapping = []
 
-        # 1. DISCONNECT Button
         if active_name:
             item_reset = xbmcgui.ListItem(f"[B][COLOR white]DISCONNECT[/COLOR] [COLOR yellow]({active_name})[/COLOR][/B]")
             item_reset.setArt({'icon': os.path.join(media_path, 'reset.png')}) 

@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+v1.1.1 (2026-04-13)
+- Fixed install-from-zip issue by moving file setup to service startup
+- Improved Kodi 19-21+ compatibility by migrating to xbmcvfs.translatePath
+- Renamed addon to WireGuard Manager for better consistency
+- Added automated installation and cleanup of vpn-watchdog.service
+- Integrated logger.py for comprehensive system-wide logging
+- Streamlined setup process for template configs and keymaps
+- Fixed token import logic to handle direct file browsing
+
 v1.1.0 (2026-04-13)
 - SECURITY: Added DNS Search Domain hardening to prevent local network metadata leaks.
 - FIXED: Watchdog service path resolution and startup syntax errors.

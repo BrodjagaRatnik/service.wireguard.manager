@@ -81,7 +81,7 @@
                 </setting>
             </group>
 		    <group id="3" label="32023">
-				<setting id="vpn_1_name" type="string" label="32020">
+				<setting id="vpn_1_name" type="string" label="32020" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -91,7 +91,7 @@
                    <enabled>false</enabled>
                    </control>
                 </setting>
-				<setting id="map_1_addon" type="string" label="32021">
+				<setting id="map_1_addon" type="string" label="32021" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -103,7 +103,7 @@
                 </setting>
             </group>
 		    <group id="4" label="32024">
-				<setting id="vpn_2_name" type="string" label="32020">
+				<setting id="vpn_2_name" type="string" label="32020" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -113,7 +113,7 @@
                    <enabled>false</enabled>
                    </control>
                 </setting>
-				<setting id="map_2_addon" type="string" label="32021">
+				<setting id="map_2_addon" type="string" label="32021" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -125,7 +125,7 @@
                 </setting>
             </group>
 		    <group id="5" label="32025">
-				<setting id="vpn_3_name" type="string" label="32020">
+				<setting id="vpn_3_name" type="string" label="32020" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -135,7 +135,7 @@
                    <enabled>false</enabled>
                    </control>
                 </setting>
-				<setting id="map_3_addon" type="string" label="32021">
+				<setting id="map_3_addon" type="string" label="32021" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -147,7 +147,7 @@
                 </setting>
             </group>
 		    <group id="6" label="32026">
-				<setting id="vpn_4_name" type="string" label="32020">
+				<setting id="vpn_4_name" type="string" label="32020" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -157,7 +157,7 @@
                    <enabled>false</enabled>
                    </control>
                 </setting>
-				<setting id="map_4_addon" type="string" label="32021">
+				<setting id="map_4_addon" type="string" label="32021" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -169,7 +169,7 @@
                 </setting>
             </group>
 		    <group id="7" label="32027">
-				<setting id="vpn_5_name" type="string" label="32020">
+				<setting id="vpn_5_name" type="string" label="32020" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -179,7 +179,7 @@
                    <enabled>false</enabled>
                    </control>
                 </setting>
-				<setting id="map_5_addon" type="string" label="32021">
+				<setting id="map_5_addon" type="string" label="32021" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -211,7 +211,7 @@
 					    <data>RunScript(service.wireguard.manager,"reinstall")</data>
                      </control>
                 </setting>
-				<setting id="factory_reset" type="action" label="32015">
+				<setting id="factory_reset" type="action" label="32015" help="32029">
                     <level>0</level>
                     <control type="button" format="action">
                       <data>RunScript(service.wireguard.manager,cleanup)</data>

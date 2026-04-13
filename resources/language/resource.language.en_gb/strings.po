@@ -120,6 +120,10 @@ msgctxt "#32028"
 msgid "▓ Automatic you do not fill in slot's! ▓ Press step 1 only to assign VPN Profiles to TV add-on's! ▓"
 msgstr "▓ Automatic you do not fill in slot's! ▓ Press step 1 only to assign VPN Profiles to TV add-on's! ▓"
 
+msgctxt "#32029"
+msgid "This uninstalls vpn-watchdog.service, WireGuard manager key file and all WireGuard config files."
+msgstr "This uninstalls vpn-watchdog.service, WireGuard manager key file and all WireGuard config files."
+
 msgctxt "#32996"
 msgid "Safety & Reset."
 msgstr "Safety & Reset."
