@@ -8,6 +8,22 @@ if LIB_PATH not in sys.path:
     sys.path.append(LIB_PATH)
 
 from logger import log_message
+
+def is_libreelec():
+    try:
+        with open('/etc/os-release', 'r') as f:
+            return "LibreELEC" in f.read()
+    except:
+        return False
+
+if not is_libreelec():
+    msg = "This addon is designed for LibreELEC only."
+    log_message(msg, xbmc.LOGERROR)
+    xbmcgui.Dialog().ok("Unsupported OS", msg)
+    sys.exit()
+else:
+    log_message("LibreELEC detected. Continuing startup...", xbmc.LOGINFO)
+
 import vpn_ops
 from setup_helper import ensure_setup
 

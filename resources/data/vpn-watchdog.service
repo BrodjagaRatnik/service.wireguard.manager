@@ -1,11 +1,14 @@
 [Unit]
 Description=VPN Route Watchdog
-After=network-online.target
+After=network-online.target connman.service
+Wants=network-online.target
 
 [Service]
 ExecStart=/usr/bin/python3 /storage/.kodi/addons/service.wireguard.manager/resources/lib/service.py
 Restart=always
 RestartSec=10
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Install]
 WantedBy=multi-user.target

@@ -7,32 +7,54 @@
  NordVPN's Linux client and NordLynx protocol (based on WireGuard) generally prioritize IPv4 traffic and often do not support IPv6 natively, 
  leading to potential IPv6 leaks or connectivity issues, with some reports suggesting IPv6 support is limited to specific servers using NAT66. 
  While the client attempts to prevent leaks by blocking IPv6 traffic, it is often recommended to manually disable IPv6 on the Linux machine to ensure no leaks occur when using NordLynx.
+
+curl -s -u "token:YOUR_TOKEN_HERE" "https://api.nordvpn.com/v1/users/services/credentials" | python3 -c "import sys, json; data=json.load(sys.stdin); print(data.get('username', 'Unauthorized'))"
+read -sp "Paste Token: " MY_TOKEN && echo "" && curl -s -o /dev/null -w "%{http_code}" -u "token:$MY_TOKEN" "https://api.nordvpn.com/v1/users/services/credentials"
 COMMENT
+ADDON_ID="service.wireguard.manager"
+ADDON_VER=$(grep '<addon' /storage/.kodi/addons/$ADDON_ID/addon.xml | grep -o 'version="[^"]*"' | cut -d'"' -f2)
+[ -z "$ADDON_VER" ] && ADDON_VER="?.?.?"
+LOG_PATH="/storage/.kodi/temp/kodi.log"
+
+log_kodi() {
+    local msg="$1"
+    local level="${2:-info}" # Default to info
+    local timestamp=$(date +"%Y-%m-%d %H:%M:%S.%3N")
+    local pid=$$ # Script Process ID to look like a Kodi Thread ID
+    local lvl_pad="    info"
+    [[ "$level" == "error" ]] && lvl_pad="   error"
+    [[ "$level" == "warning" ]] && lvl_pad=" warning"
+
+    local formatted_line="${timestamp} T:${pid}${lvl_pad} <general>: ${ADDON_ID} v${ADDON_VER}: ${msg}"
+
+    echo "$msg"
+    echo "$formatted_line" >> "$LOG_PATH"
+}
+
 TOKEN=$1
 # Default to BE(21), DE(81), UK(227), NL(153) if no IDs provided in settings
 INPUT_IDS=${2:-"21,81,227,153"}
 
 TOKEN=$(echo "$TOKEN" | tr -d '\r\n ')
-COUNTRIES=$(echo "$INPUT_IDS" | tr -d '\r\n ')
-COUNTRY_LIST=$(echo "$COUNTRIES" | tr ',' ' ')
+COUNTRY_LIST=$(echo "$INPUT_IDS" | tr -d '\r\n ' | tr ',' ' ')
 
-echo "--- NordVPN WireGuard Regen ---"
-echo "Target Countries: $COUNTRIES"
+log_kodi "--- NordVPN WireGuard Regen ---"
+log_kodi "Target Countries: $COUNTRIES"
 
 JSON_USER=$(curl -s -u "token:$TOKEN" "https://api.nordvpn.com/v1/users/services/credentials")
 PRIV_KEY=$(echo "$JSON_USER" | python3 -c "import sys, json; print(json.load(sys.stdin).get('nordlynx_private_key', ''))" 2>/dev/null)
 
 if [ -z "$PRIV_KEY" ] || [ "$PRIV_KEY" == "None" ]; then
-    echo "Error: Private Key fetch failed. Check your Token."
-    echo "API Response: $JSON_USER"
+    log_kodi "Error: Private Key fetch failed. Check your Token." "error"
+	log_kodi "API Response: $JSON_USER" "error"
     exit 1
 fi
 
-echo "Cleaning up old NordVPN configs..."
+log_kodi "Cleaning up old NordVPN configs..."
 rm -f /storage/.config/wireguard/nord_*.config
 
 for id in $COUNTRY_LIST; do
-    echo "Fetching best server for Country ID: $id..."
+    log_kodi "Fetching best server for Country ID: $id"
 
     RAW_JSON=$(curl -s "https://api.nordvpn.com/v1/servers/recommendations?filters\[servers_technologies\]\[identifier\]=wireguard_udp&filters\[country_id\]=$id&limit=1")
 
@@ -79,9 +101,7 @@ $RAW_JSON
 EOF
 done
 
-echo "Finalizing: Setting permissions and restarting Connman..."
+log_kodi "Finalizing: Setting permissions and restarting Connman..."
 chmod 600 /storage/.config/wireguard/*.config
 systemctl restart connman-vpn
-
-echo "Regen Complete."
-
+log_kodi "--- NordVPN WireGuard Regen Complete ---"

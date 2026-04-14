@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+v1.1.2 (2026-04-15)
+- FIXED: Resolved "Keymapping error" by implementing a direct-write logging system for background processes.
+- IMPROVED: Enhanced Watchdog with a 30-second network-aware boot delay to prevent startup crashes.
+- IMPROVED: Standardized log formatting (Thread ID and alignment) to match native Kodi logs.
+- FIXED: Improved Bash Regen script compatibility with BusyBox/LibreELEC for reliable version detection.
+- SECURITY: Removed unused system dependencies to eliminate "missing addon" warnings at startup.
+
 v1.1.1 (2026-04-13)
 - Fixed install-from-zip issue by moving file setup to service startup
 - Improved Kodi 19-21+ compatibility by migrating to xbmcvfs.translatePath
