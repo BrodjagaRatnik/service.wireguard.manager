@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+v1.1.4 (2026-04-15)
+- Fixed infinite reconnect loop when navigating to Home screen.
+- Added 'Intentional Disconnect' flag to mute Watchdog during auto-cleanup.
+- Improved Home screen detection to bypass stale Kodi plugin labels.
+- Optimized Watchdog to ignore 'Ethernet back' events if VPN is already active.
+- Increased Watchdog grace period to 45s for stable Pi 5 network switching.
+- Added optional Debug Logging for trigger matching (visible when Kodi Debug is enabled).
+
 v1.1.3 (2026-04-15)
 - Added: Automatic Ethernet-to-Wi-Fi Failover and Failback support.
 - Added: Background Watchdog service for connection persistence.

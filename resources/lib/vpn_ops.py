@@ -51,8 +51,11 @@ def get_default_gateway():
     return None
 
 def disconnect_vpn(silent=False):
-    xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
+
+    xbmcgui.Window(10000).setProperty('vpn_intentional_disconnect', 'true')
+    xbmc.sleep(500)
     
+    xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
     log_message("Network: Cleaning up VPN and restoring defaults", xbmc.LOGINFO)
 
     try:
@@ -61,20 +64,10 @@ def disconnect_vpn(silent=False):
             if "vpn_" in line and ("* " in line or "R " in line):
                 subprocess.run(["connmanctl", "disconnect", line.split()[-1]], check=False)
 
-        route_out = subprocess.check_output(["route", "-n"], text=True)
-        for line in route_out.splitlines():
-            if " UGH " in line or " H " in line:
-                parts = line.split()
-                if parts:
-                    subprocess.run(["route", "del", "-host", parts[0]], check=False)
-
         gw = get_default_gateway()
         if gw:
             subprocess.run(["route", "add", "default", "gw", gw], check=False)
-            subprocess.run(["ip", "route", "flush", "cache"], check=False)
             log_message(f"Network: Gateway restored via {gw}")
-        else:
-            log_message("Network: Gateway missing. Watchdog will restore from memory.", xbmc.LOGWARNING)
 
     except Exception as e:
         log_message(f"Disconnect Error: {e}", xbmc.LOGERROR)
@@ -86,6 +79,9 @@ def disconnect_vpn(silent=False):
     if not silent:
         icon = os.path.join(ADDON_PATH, 'resources', 'media', 'vpn_disconnected.png')
         xbmcgui.Dialog().notification("Network", "VPN Disconnected", icon, 3000)
+
+    xbmc.sleep(1000) 
+    xbmcgui.Window(10000).setProperty('vpn_intentional_disconnect', '')
 
 def connect_vpn(vpn_name, sid):
     raw_state = get_active_vpn()
@@ -105,7 +101,7 @@ def connect_vpn(vpn_name, sid):
     connected = False
     for i in range(1, 16):
         pbg.update(int(i * 6.6), message=f"Verifying... ({i}s)")
-        xbmc.sleep(1000)
+        xbmc.sleep(800)
         try:
             check = subprocess.check_output(["connmanctl", "services"], text=True)
             if any(sid in line and ("* R" in line or "* O" in line) for line in check.splitlines()):
@@ -119,7 +115,7 @@ def connect_vpn(vpn_name, sid):
     if connected:
         set_active_vpn(target_clean)
         set_secure_dns(vpn_name, vpn_active=True)
-        xbmc.sleep(2000) 
+        xbmc.sleep(1000) 
         try:
             res = subprocess.check_output(["curl", "-s", "--max-time", "5", "https://ipinfo.io"], text=True)
             data = json.loads(res)

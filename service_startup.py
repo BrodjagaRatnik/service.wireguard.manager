@@ -33,8 +33,8 @@ class WGManagerService(xbmc.Monitor):
         self.internet_alert_sent = False
         
         log_message("Monitor: Startup reset initiated...", xbmc.LOGINFO)
-
-        vpn_ops.disconnect_vpn(silent=False)
+        ''' silent=False shows the notification, silent=True hides it. '''
+        vpn_ops.disconnect_vpn(silent=True)
         self.waitForAbort(2)
         log_message("Monitor Service Initialized", xbmc.LOGINFO)
 
@@ -46,68 +46,61 @@ class WGManagerService(xbmc.Monitor):
         except: return None
 
     def run_loop(self):
-        if xbmc.Player().isPlayingVideo(): return
-
-        state_file = "/tmp/vpn_manager_active.txt"
-        if os.path.exists(state_file):
-            if (time.time() - os.path.getmtime(state_file)) < 10:
-                return
-
-        gw = vpn_ops.get_default_gateway() 
-        ICON_ERROR = os.path.join(ADDON_PATH, 'resources', 'media', 'icon.png')
-        
-        if not gw:
-            if not self.internet_alert_sent:
-                xbmcgui.Dialog().notification("Network Error", "No connection to router detected!", ICON_ERROR, 6000)
-                log_message("Monitor: Total network loss detected.", xbmc.LOGERROR)
-                self.internet_alert_sent = True
+        if xbmc.Player().isPlayingVideo(): 
             return
-        else:
-            self.internet_alert_sent = False
 
-        is_manual = xbmcgui.Window(10000).getProperty('vpn_manual_session') == 'true'
-        is_home = xbmc.getCondVisibility("Window.IsActive(home)")
-        active_now = vpn_ops.get_active_vpn()
-        
+        is_home = xbmc.getCondVisibility("Window.IsActive(home) | Window.IsActive(10000)")
         folder = xbmc.getInfoLabel("Container.FolderPath")
         plugin = xbmc.getInfoLabel("Container.PluginName")
+        active_now = vpn_ops.get_active_vpn()
+        is_manual = xbmcgui.Window(10000).getProperty('vpn_manual_session') == 'true'
+        
+        if (is_home or not plugin) and active_now and not is_manual:
+             log_message("Auto-cleanup: Home detected. Disconnecting.")
+             vpn_ops.disconnect_vpn(silent=False)
+             return
+
         match_found = False
-        if not is_home and not is_manual:
+        if not is_home: 
+            log_message(f"Monitor: Checking triggers. VPN: {active_now} | Plugin: {plugin}", xbmc.LOGDEBUG)
+
             for i in range(1, 6):
                 target = ADDON.getSetting(f"map_{i}_addon")
                 vpn = ADDON.getSetting(f"vpn_{i}_name")
                 
-                if target and vpn and (target in folder or target == plugin):
-                    match_found = True
-                    v_clean = vpn.replace('_', ' ').strip()
-                    a_clean = active_now.replace('_', ' ').strip() if active_now else None
+                if target:
+                    log_message(f"Trigger Debug: Checking {target}", xbmc.LOGDEBUG)
                     
-                    if a_clean != v_clean:
-                        log_message(f"Trigger: Mapping matched for {target}. Switching to {vpn}.")
-                        xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
-                        vpn_ops.disconnect_vpn(silent=True)
-                        vpn_ops.connect_vpn(vpn, self.get_service_id_by_name(vpn))
-                    return
+                    if vpn and (target in folder or target == plugin):
+                        match_found = True
+                        v_clean = vpn.replace('_', ' ').strip()
+                        a_clean = active_now.replace('_', ' ').strip() if active_now else None
+                        
+                        if a_clean != v_clean:
+                            log_message(f"Trigger: Match found for {target}. Switching to {vpn}.")
+                            xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
+                            vpn_ops.disconnect_vpn(silent=True)
+                            vpn_ops.connect_vpn(vpn, self.get_service_id_by_name(vpn))
+                        return
 
         if not match_found and active_now and not is_manual:
 
-            if is_home or (plugin != "" and plugin != "service.wireguard.manager"):
+            if self.waitForAbort(3): return 
+            
 
-                if self.waitForAbort(4): return 
-
-                still_home = xbmc.getCondVisibility("Window.IsActive(home)")
-                still_folder = xbmc.getInfoLabel("Container.FolderPath")
-                still_plugin = xbmc.getInfoLabel("Container.PluginName")
-                still_outside = True
-                for j in range(1, 6):
-                    t = ADDON.getSetting(f"map_{j}_addon")
-                    if t and (t in still_folder or t == still_plugin):
-                        still_outside = False
-                        break
-                
-                if still_outside and (still_home or still_plugin != ""):
-                    log_message(f"Auto-cleanup: Context left. Disconnecting {active_now}.")
-                    vpn_ops.disconnect_vpn(silent=False)
+            still_folder = xbmc.getInfoLabel("Container.FolderPath")
+            still_plugin = xbmc.getInfoLabel("Container.PluginName")
+            still_outside = True
+            
+            for j in range(1, 6):
+                t = ADDON.getSetting(f"map_{j}_addon")
+                if t and (t in still_folder or t == still_plugin):
+                    still_outside = False
+                    break
+            
+            if still_outside:
+                log_message(f"Auto-cleanup: No mapping match found. Disconnecting {active_now}.")
+                vpn_ops.disconnect_vpn(silent=False)
 
 if __name__ == '__main__':
     MEDIA_PATH = os.path.join(ADDON_PATH, 'resources', 'media')
@@ -133,4 +126,5 @@ if __name__ == '__main__':
     monitor = WGManagerService()
     while not monitor.abortRequested():
         monitor.run_loop()
-        if monitor.waitForAbort(1): break
+        if monitor.waitForAbort(5):
+            break

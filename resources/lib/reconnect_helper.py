@@ -1,11 +1,18 @@
-import xbmc, xbmcgui, xbmcaddon, os, sys, time, subprocess
+import xbmc, xbmcgui, xbmcaddon, xbmcvfs, os, sys, time, subprocess
 
 addon = xbmcaddon.Addon('service.wireguard.manager')
-addon_path = addon.getAddonInfo('path')
-sys.path.append(os.path.join(addon_path, 'resources', 'lib'))
+addon_path = xbmcvfs.translatePath(addon.getAddonInfo('path'))
+lib_path = os.path.join(addon_path, 'resources', 'lib')
+
+if lib_path not in sys.path:
+    sys.path.insert(0, lib_path)
 
 from vpn_ops import disconnect_vpn, connect_vpn
 from logger import log_message
+
+if xbmcgui.Window(10000).getProperty('vpn_intentional_disconnect') == 'true':
+    log_message("Helper: Intentional disconnect detected. Aborting reconnect.")
+    sys.exit()
 
 state_path = "/tmp/vpn_manager_active.txt"
 vpn_name = None
