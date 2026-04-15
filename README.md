@@ -6,7 +6,7 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 *   **Native WireGuard**: Interfaces directly with LibreELEC's network stack for maximum speed.
 *   **VPN Watchdog**: A background `systemd` service ensures your connection stays alive and auto-reconnects on drops.
 *   **Ethernet/Wi-Fi Failover**: Built-in logic to seamlessly transition the VPN tunnel if a cable is pulled.
-*   **IPv6 Leak Protection**: Kernel-level hardening prevents DNS leaks, specifically optimized for Fritz!Box users.
+*   **IPv6 Leak Protection**: Kernel-level hardening prevents DNS leaks.
 *   **Remote Optimized**: Automatically maps **F11** to trigger the VPN menu from anywhere in Kodi.
 *   **Smart Auto-Mappings**: Connects to specific countries automatically based on the addon you are currently browsing.
 
