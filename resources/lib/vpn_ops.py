@@ -39,29 +39,53 @@ def get_active_vpn():
             return None
     return None
 
-def disconnect_vpn(silent=False):
-    active = get_active_vpn()
-    if not active:
-        xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
-        return
+def get_default_gateway():
+    """Dynamically finds the current system gateway."""
+    try:
+        out = subprocess.check_output(["ip", "-4", "route", "show", "default"], text=True)
+        if "default" in out:
+            parts = out.split()
+            return parts[parts.index("via") + 1]
+    except:
+        pass
+    return None
 
-    if not silent:
-        log_message("Network: Cleaning up VPN and restoring defaults", xbmc.LOGINFO)
+def disconnect_vpn(silent=False):
+    xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
+    
+    log_message("Network: Cleaning up VPN and restoring defaults", xbmc.LOGINFO)
 
     try:
         out = subprocess.check_output(["connmanctl", "services"], text=True)
         for line in out.splitlines():
-            if "vpn_" in line and ("* R" in line or "* O" in line):
+            if "vpn_" in line and ("* " in line or "R " in line):
                 subprocess.run(["connmanctl", "disconnect", line.split()[-1]], check=False)
-    except: pass
 
-    xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
+        route_out = subprocess.check_output(["route", "-n"], text=True)
+        for line in route_out.splitlines():
+            if " UGH " in line or " H " in line:
+                parts = line.split()
+                if parts:
+                    subprocess.run(["route", "del", "-host", parts[0]], check=False)
+
+        gw = get_default_gateway()
+        if gw:
+            subprocess.run(["route", "add", "default", "gw", gw], check=False)
+            subprocess.run(["ip", "route", "flush", "cache"], check=False)
+            log_message(f"Network: Gateway restored via {gw}")
+        else:
+            log_message("Network: Gateway missing. Watchdog will restore from memory.", xbmc.LOGWARNING)
+
+    except Exception as e:
+        log_message(f"Disconnect Error: {e}", xbmc.LOGERROR)
+
     enable_connman_ipv6()
     set_secure_dns(vpn_active=False)
     set_active_vpn(None)
     
     if not silent:
-        xbmcgui.Dialog().notification("Network", "VPN Disconnected", ICON_DIS, 3000)
+        icon = os.path.join(ADDON_PATH, 'resources', 'media', 'vpn_disconnected.png')
+        xbmcgui.Dialog().notification("Network", "VPN Disconnected", icon, 3000)
 
 def connect_vpn(vpn_name, sid):
     raw_state = get_active_vpn()

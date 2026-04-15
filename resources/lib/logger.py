@@ -43,7 +43,7 @@ def log_message(msg, level=None):
                 lvl_line = "    warning <general>:"
             elif level == 3:
                 lvl_line = "    error <general>:"
-            else: # info
+            else:
                 lvl_line = "    info <general>:"
 
             log_line = f"{now} T:{pid}{lvl_line} {formatted_msg}\n"

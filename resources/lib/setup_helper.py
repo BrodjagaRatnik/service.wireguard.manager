@@ -10,6 +10,7 @@ from logger import log_message
 def perform_cleanup(silent=False):
     keymap = xbmcvfs.translatePath('special://userdata/keymaps/wireguard_manager_key.xml')
     service_file = '/storage/.config/system.d/vpn-watchdog.service'
+    connman_config = '/storage/.config/connman_main.conf'
     wg_config_path = '/storage/.config/wireguard/'
     template_file = os.path.join(wg_config_path, 'template.config')
     
@@ -19,6 +20,10 @@ def perform_cleanup(silent=False):
         if os.path.exists(keymap):
             os.remove(keymap)
             log_message(f"Removed keymap: {keymap}")
+
+        if os.path.exists(connman_config):
+            os.remove(connman_config)
+            log_message("Removed connman_main.conf")
 
         if os.path.exists(wg_config_path):
             if os.path.exists(template_file):
@@ -50,13 +55,29 @@ def ensure_setup(addon_path, media_path):
     addon = xbmcaddon.Addon()
     keymap_dest = xbmcvfs.translatePath('special://userdata/keymaps/wireguard_manager_key.xml')
     keymap_source = os.path.join(addon_path, 'resources', 'keymaps', 'wireguard_manager_key.xml')
+    
     wg_config_path = '/storage/.config/wireguard/'
     template_dest = os.path.join(wg_config_path, 'template.config')
     template_source = os.path.join(addon_path, 'resources', 'data', 'template.config')
+    
     service_dest = '/storage/.config/system.d/vpn-watchdog.service'
     service_source = os.path.join(addon_path, 'resources', 'data', 'vpn-watchdog.service')
     
-    service_updated = False
+    connman_dest = '/storage/.config/connman_main.conf'
+    connman_source = os.path.join(addon_path, 'resources', 'data', 'connman_main.conf')
+    
+    setup_updated = False
+
+    if not os.path.exists(connman_dest):
+        try:
+            log_message("ConnMan config missing. Installing connman_main.conf...")
+            if os.path.exists(connman_source):
+                shutil.copy2(connman_source, connman_dest)
+                subprocess.run(["systemctl", "restart", "connman"], check=False)
+                log_message("connman_main.conf installed and ConnMan restarted.")
+                setup_updated = True
+        except Exception as e:
+            log_message(f"ConnMan Setup Error: {e}", xbmc.LOGERROR)
 
     if not os.path.exists(service_dest):
         try:
@@ -69,7 +90,7 @@ def ensure_setup(addon_path, media_path):
                 subprocess.run(["systemctl", "enable", "vpn-watchdog.service"], check=False)
                 subprocess.run(["systemctl", "start", "vpn-watchdog.service"], check=False)
                 log_message("vpn-watchdog.service installed and started.")
-                service_updated = True
+                setup_updated = True
         except Exception as e:
             log_message(f"Service Install Error: {e}", xbmc.LOGERROR)
 
@@ -140,4 +161,4 @@ def ensure_setup(addon_path, media_path):
             log_message("User exited token setup.")
             return "EXIT_SIGNAL"
 
-    return service_updated
+    return setup_updated
