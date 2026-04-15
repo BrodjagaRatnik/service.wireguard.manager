@@ -42,5 +42,7 @@ If you already know what you're doing, grab the installer here:
 [**Download Doemela Repo ZIP**](https://github.com/BrodjagaRatnik/doemela-kodi-repo/tree/main/zips/repository.doemela).
 
 <img src="resources/media/screenshot00002.png" alt="Alt text" width="800">
+
 ---
+
 *Created by Doemela*
