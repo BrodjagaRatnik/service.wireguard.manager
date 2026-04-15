@@ -41,6 +41,6 @@ For detailed instructions for this Add-on, please visit our **[Wiki](https://git
 If you already know what you're doing, grab the installer here:
 [**Download Doemela Repo ZIP**](https://github.com/BrodjagaRatnik/doemela-kodi-repo/tree/main/zips/repository.doemela).
 
-<img src="resources/media/screenshot00002.png" alt="Alt text" width="600">
+<img src="resources/media/screenshot00002.png" alt="Alt text" width="800">
 ---
 *Created by Doemela*
