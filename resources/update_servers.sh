@@ -36,10 +36,11 @@ TOKEN=$1
 INPUT_IDS=${2:-"21,81,227,153"}
 
 TOKEN=$(echo "$TOKEN" | tr -d '\r\n ')
-COUNTRY_LIST=$(echo "$INPUT_IDS" | tr -d '\r\n ' | tr ',' ' ')
+CLEAN_IDS=$(echo "$INPUT_IDS" | tr -d '\r\n ')
+COUNTRY_LIST=$(echo "$CLEAN_IDS" | tr ',' ' ')
 
 log_kodi "--- NordVPN WireGuard Regen ---"
-log_kodi "Target Countries: $COUNTRIES"
+log_kodi "Target Country IDs: $CLEAN_IDS"
 
 JSON_USER=$(curl -s -u "token:$TOKEN" "https://api.nordvpn.com/v1/users/services/credentials")
 PRIV_KEY=$(echo "$JSON_USER" | python3 -c "import sys, json; print(json.load(sys.stdin).get('nordlynx_private_key', ''))" 2>/dev/null)

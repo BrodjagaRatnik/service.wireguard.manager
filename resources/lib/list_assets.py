@@ -6,8 +6,8 @@ import json
 import subprocess
 import sys
 
-ADDON = xbmcaddon.Addon('service.wireguard.manager')
-ADDON_PATH = ADDON.getAddonInfo('path')
+_ADDON = xbmcaddon.Addon('service.wireguard.manager')
+ADDON_PATH = _ADDON.getAddonInfo('path')
 sys.path.append(os.path.join(ADDON_PATH, 'resources', 'lib'))
 
 from logger import log_message
@@ -28,8 +28,6 @@ def get_wg_services():
     return services
 
 def run_wizard():
-    addon = xbmcaddon.Addon()
-
     slots = ["Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5"]
     sel_slot = xbmcgui.Dialog().select("Assign VPN to which Slot?", slots)
     if sel_slot == -1: return
@@ -41,8 +39,8 @@ def run_wizard():
 
     if sel_action == 1:
         log_message(f"Wizard: Resetting Slot {slot_id}")
-        addon.setSetting(f"vpn_{slot_id}_name", "")
-        addon.setSetting(f"map_{slot_id}_addon", "")
+        _ADDON.setSetting(f"vpn_{slot_id}_name", "")
+        _ADDON.setSetting(f"map_{slot_id}_addon", "")
         xbmcgui.Dialog().notification("WireGuard Manager", f"Slot {slot_id} reset", "", 3000)
         return
 
@@ -78,8 +76,8 @@ def run_wizard():
 
     log_message(f"Wizard: Successfully assigned Slot {slot_id} -> {chosen_vpn_name} (Trigger: {chosen_addon_id})")
     
-    addon.setSetting(f"vpn_{slot_id}_name", chosen_vpn_name)
-    addon.setSetting(f"map_{slot_id}_addon", chosen_addon_id)
+    _ADDON.setSetting(f"vpn_{slot_id}_name", chosen_vpn_name)
+    _ADDON.setSetting(f"map_{slot_id}_addon", chosen_addon_id)
     
     xbmcgui.Dialog().notification("WireGuard Manager", f"Slot {slot_id} Saved", "", 3000)
 

@@ -5,8 +5,8 @@ import xbmcgui
 import xbmcaddon
 import subprocess
 
-ADDON = xbmcaddon.Addon('service.wireguard.manager')
-ADDON_PATH = ADDON.getAddonInfo('path')
+_ADDON = xbmcaddon.Addon('service.wireguard.manager')
+ADDON_PATH = _ADDON.getAddonInfo('path')
 sys.path.append(os.path.join(ADDON_PATH, 'resources', 'lib'))
 
 from logger import log_message
@@ -66,6 +66,7 @@ def show_menu(media_path, shell_script, token):
             else:
                 target_name, target_sid = action
                 t_clean = target_name.replace('_', ' ').strip()
+
                 if active_name == t_clean:
                     return
 

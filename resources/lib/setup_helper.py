@@ -7,6 +7,8 @@ import xbmcaddon
 import xbmcvfs
 from logger import log_message
 
+_ADDON = xbmcaddon.Addon('service.wireguard.manager')
+
 def perform_cleanup(silent=False):
     keymap = xbmcvfs.translatePath('special://userdata/keymaps/wireguard_manager_key.xml')
     service_file = '/storage/.config/system.d/vpn-watchdog.service'
@@ -52,7 +54,6 @@ def perform_cleanup(silent=False):
         log_message(f"Cleanup Error: {e}", xbmc.LOGERROR)
 
 def ensure_setup(addon_path, media_path):
-    addon = xbmcaddon.Addon()
     keymap_dest = xbmcvfs.translatePath('special://userdata/keymaps/wireguard_manager_key.xml')
     keymap_source = os.path.join(addon_path, 'resources', 'keymaps', 'wireguard_manager_key.xml')
     
@@ -106,7 +107,7 @@ def ensure_setup(addon_path, media_path):
             log_message(f"Template Copy Error: {e}", xbmc.LOGERROR)
 
     keymap_installed = False
-    if not os.path.exists(keymap_dest) or addon.getSettingBool("first_run"):
+    if not os.path.exists(keymap_dest) or _ADDON.getSettingBool("first_run"):
         try:
             log_message("Installing WireGuard Manager keymaps...")
             if os.path.exists(keymap_source):
@@ -114,7 +115,7 @@ def ensure_setup(addon_path, media_path):
                 if not os.path.exists(dest_dir):
                     os.makedirs(dest_dir)
                 shutil.copy2(keymap_source, keymap_dest)
-                addon.setSettingBool("first_run", False)
+                _ADDON.setSettingBool("first_run", False)
                 keymap_installed = True
         except Exception as e:
             log_message(f"Keymap Setup Error: {e}", xbmc.LOGERROR)
@@ -126,7 +127,7 @@ def ensure_setup(addon_path, media_path):
             xbmc.executebuiltin('RestartApp')
             return True
 
-    if addon.getSetting("vpn_token") == "":
+    if _ADDON.getSetting("vpn_token") == "":
         log_message("No VPN Token found. Prompting user...")
         choice = xbmcgui.Dialog().select("WireGuard Manager: Token Required", [
             "Import Token from File (Recommended)",
@@ -140,7 +141,7 @@ def ensure_setup(addon_path, media_path):
                 try:
                     with open(token_file, 'r') as f:
                         token_content = f.read().strip()
-                        addon.setSetting("vpn_token", token_content)
+                        _ADDON.setSetting("vpn_token", token_content)
                         log_message("VPN Token imported from file successfully.")
                         xbmcgui.Dialog().notification("WireGuard Manager", "Token saved.", xbmcgui.NOTIFICATION_INFO, 5000)
                         return True
@@ -152,7 +153,7 @@ def ensure_setup(addon_path, media_path):
             keyboard = xbmc.Keyboard("", "Enter NordVPN Token", False)
             keyboard.doModal()
             if keyboard.isConfirmed() and keyboard.getText():
-                addon.setSetting("vpn_token", keyboard.getText())
+                _ADDON.setSetting("vpn_token", keyboard.getText())
                 log_message("VPN Token entered manually.")
                 xbmcgui.Dialog().notification("WireGuard Manager", "Token saved.", xbmcgui.NOTIFICATION_INFO, 5000)
                 return True

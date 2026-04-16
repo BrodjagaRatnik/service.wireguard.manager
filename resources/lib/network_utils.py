@@ -1,15 +1,17 @@
 import os, re, subprocess, xbmc
 from logger import log_message
+from vpn_config import DNS_FALLBACK
+CONFIG_DIR = "/storage/.config/wireguard/"
 
 def get_dns_from_config(vpn_name):
-    config_dir = "/storage/.config/wireguard/"
     dns_list = []
     variations = [
         f"{vpn_name}.config", 
         f"{vpn_name.lower()}.config", 
         f"{vpn_name.lower().replace('nordvpn', 'nord')}.config"
     ]
-    target_path = next((os.path.join(config_dir, v) for v in variations if os.path.exists(os.path.join(config_dir, v))), None)
+    
+    target_path = next((os.path.join(CONFIG_DIR, v) for v in variations if os.path.exists(os.path.join(CONFIG_DIR, v))), None)
     
     if target_path:
         try:
@@ -18,9 +20,10 @@ def get_dns_from_config(vpn_name):
                 match = re.search(r"(?:WireGuard\.)?DNS\s*=\s*(.*)", content, re.IGNORECASE)
                 if match:
                     dns_list = [d.strip() for d in match.group(1).split(",")]
-        except: pass
+        except Exception as e:
+            log_message(f"Network: Error reading DNS from config: {e}", xbmc.LOGDEBUG)
 
-    return dns_list if dns_list else ["103.86.96.100", "103.86.99.100"]
+    return dns_list if dns_list else DNS_FALLBACK
 
 def set_secure_dns(vpn_name=None, vpn_active=True):
     dns_servers = get_dns_from_config(vpn_name) if vpn_active else []
@@ -54,7 +57,7 @@ def set_secure_dns(vpn_name=None, vpn_active=True):
         
         log_message(f"Network: DNS & IPv6 {'Hardened' if vpn_active else 'Restored'}")
     except Exception as e:
-        log_message(f"DNS Error: {e}", xbmc.LOGERROR)
+        log_message(f"Network Error: DNS hardening failed: {e}", xbmc.LOGERROR)
 
 def disable_connman_ipv6():
     """Forces IPv6 off for all physical interfaces and Kernel."""

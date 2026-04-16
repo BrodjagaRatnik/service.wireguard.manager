@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="service.wireguard.manager" name="WireGuard Manager NordVPN" version="1.1.4" provider-name="Doemela">
+<addon id="service.wireguard.manager" name="WireGuard Manager NordVPN" version="1.1.5" provider-name="Doemela">
     <requires>
         <import addon="xbmc.python" version="3.0.0"/>
     </requires>
@@ -10,7 +10,16 @@
     <extension point="xbmc.addon.metadata">
         <summary lang="en_GB">Hardened NordVPN WireGuard Manager for Raspberry Pi 5</summary>
         <description lang="en_GB">High-performance VPN manager for LibreELEC. Uses NordLynx for maximum speed with an automated Systemd watchdog to prevent connection drops.[CR][CR][B]Note:[/B] This addon is designed specifically for the LibreELEC filesystem and will not work on standard Android or Windows Kodi installations.[CR][CR][B]Features:[/B][CR]• WireGuard Native (NordLynx)[CR]• Smart Watchdog &amp; Auto-Regen[CR]• Hard Reset Routing Tables[CR][CR][B]Disclaimer:[/B] Not an official NordVPN product. Use at your own risk. This addon is provided "as is" without warranty. The developer is not liable for data loss or security breaches. Full disclaimer available in addon settings.</description>
-        <news>v1.1.4 (2026-04-15)
+        <news>v1.1.5 (2026-04-16)
+- Optimized for Raspberry Pi 5: Total VPN switch time reduced to ~1.0s.
+- Centralized Timings: All delays moved to vpn_config.py for easy tuning.
+- Robust Reconnect: Refined Ethernet-to-WiFi failover and interface priority logic.
+- Standalone Watchdog: Background service decoupled from Kodi modules to prevent crashes.
+- Improved Monitoring: Added detailed PURPOSE DEBUG logging for all wait states via SSH.
+- Dynamic Tagging: Version-independent log tagging for cleaner SSH monitoring.
+- Security: Forced file-based flags for manual session persistence during network swaps.
+
+v1.1.4 (2026-04-15)
 - Fixed infinite reconnect loop when navigating to Home screen.
 - Added 'Intentional Disconnect' flag to mute Watchdog during auto-cleanup.
 - Improved Home screen detection to bypass stale Kodi plugin labels.

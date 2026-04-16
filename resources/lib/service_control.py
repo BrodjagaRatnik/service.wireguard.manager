@@ -1,29 +1,35 @@
-import sys
-import os
-import subprocess
+import sys, os, subprocess
+
+ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
+LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
+if LIB_PATH not in sys.path:
+    sys.path.append(LIB_PATH)
 
 try:
-    import xbmc
-    import xbmcgui
-    import xbmcaddon
+    import xbmc, xbmcgui, xbmcaddon
     KODI_MODE = True
-    ADDON = xbmcaddon.Addon('service.wireguard.manager')
-    ADDON_PATH = ADDON.getAddonInfo('path')
-
-    sys.path.append(os.path.join(ADDON_PATH, 'resources', 'lib'))
+    _ADDON = xbmcaddon.Addon('service.wireguard.manager')
+    ADDON_PATH = _ADDON.getAddonInfo('path')
+    
     from logger import log_message
+    from vpn_config import *
     
     MEDIA_PATH = os.path.join(ADDON_PATH, 'resources', 'media')
     ICON_OK = os.path.join(MEDIA_PATH, 'update_ok.png')
     ICON_ERR = os.path.join(MEDIA_PATH, 'error.png')
 except ImportError:
     KODI_MODE = False
+    SYSTEMD_POLL_DELAY = 300
+    SYSTEMD_POLL_PURPOSE = "Systemd state transition wait"
 
-def log_event(msg, level=xbmc.LOGINFO if KODI_MODE else 1):
+def log_event(msg, level=None):
+    if level is None:
+        level = xbmc.LOGINFO if KODI_MODE else 1
+        
     if KODI_MODE:
         log_message(f"Control: {msg}", level)
     else:
-        print(f"CONTROL: {msg}")
+        print(f"CONTROL: {msg}", flush=True)
 
 def control_service():
     service_name = "vpn-watchdog.service"
@@ -46,16 +52,20 @@ def control_service():
         elif action == "status":
             if not os.path.exists(f'/storage/.config/system.d/{service_name}'):
                 real_status = "Not Installed"
-                icon = ICON_ERR
+                icon = ICON_ERR if KODI_MODE else None
             else:
-                for _ in range(5): 
+                for i in range(1, 6): 
                     result = subprocess.run(["systemctl", "is-active", service_name], capture_output=True, text=True)
                     real_status = result.stdout.strip()
                     if real_status == "active":
                         break
-                    if KODI_MODE: xbmc.sleep(400)
+                    if KODI_MODE:
+                        log_message(f"WAIT_START: Systemd Poll {i} ({SYSTEMD_POLL_DELAY}ms) | PURPOSE: {SYSTEMD_POLL_PURPOSE}", xbmc.LOGDEBUG)
+                        xbmc.sleep(SYSTEMD_POLL_DELAY)
+                        log_message(f"WAIT_END: Systemd Poll {i}", xbmc.LOGDEBUG)
                 
-                icon = ICON_OK if real_status == "active" else ICON_ERR
+                if KODI_MODE:
+                    icon = ICON_OK if real_status == "active" else ICON_ERR
                 if real_status == "activating": real_status = "Initializing..."
 
             log_event(f"Status check: {real_status}")

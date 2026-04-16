@@ -1,30 +1,28 @@
-import time, subprocess, os, sys, signal
-try:
-    import xbmcgui
-    KODI_AVAILABLE = True
-except ImportError:
-    KODI_AVAILABLE = False
+import time, subprocess, os, sys
 
-addon_dir = '/storage/.kodi/addons/service.wireguard.manager'
-lib_path = os.path.join(addon_dir, 'resources', 'lib')
-if lib_path not in sys.path:
-    sys.path.append(lib_path)
+ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
+LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
+if LIB_PATH not in sys.path: sys.path.append(LIB_PATH)
 
 try:
-    from logger import log_message
+    from vpn_config import *
 except ImportError:
-    def log_message(msg, level=None): print(f"LOG: {msg}")
+    WATCHDOG_HEARTBEAT, WATCHDOG_SETTLE_DELAY, WATCHDOG_RECOVERY_DELAY = 2000, 4000, 3000
+
+STATE_FILE = "/tmp/vpn_manager_active.txt"
+INTENTIONAL_DISCONNECT_FILE = "/tmp/vpn_intentional_disconnect.txt"
+HELPER_SCRIPT = os.path.join(LIB_PATH, "reconnect_helper.py")
+
+def log_message(msg):
+    print(f"service.wireguard.manager [WATCHDOG]: {msg}", flush=True)
 
 LAST_INTERFACE = None
 SAVED_GATEWAY = None
-STATE_FILE = "/tmp/vpn_manager_active.txt"
-HELPER_SCRIPT = "/storage/.kodi/addons/service.wireguard.manager/resources/lib/reconnect_helper.py"
 
 def get_active_interface():
     try:
         out = subprocess.check_output(["ip", "route", "show", "default"], text=True)
-        if "dev" in out:
-            return out.split()[out.split().index("dev") + 1]
+        if "dev" in out: return out.split()[out.split().index("dev") + 1]
     except: pass
     return None
 
@@ -41,91 +39,55 @@ def get_default_gateway():
     try:
         out = subprocess.check_output(["ip", "-4", "route", "show", "default"], text=True)
         if "default" in out:
-            parts = out.split()
-            new_gw = parts[parts.index("via") + 1]
+            new_gw = out.split()[out.split().index("via") + 1]
             if new_gw != SAVED_GATEWAY:
                 SAVED_GATEWAY = new_gw
-                log_message(f"Watchdog: System gateway identified as {SAVED_GATEWAY}")
+                log_message(f"Gateway identified as {SAVED_GATEWAY}")
             return SAVED_GATEWAY
-    except:
-        pass
-
-    if SAVED_GATEWAY:
-        return SAVED_GATEWAY
-    
-    return None
+    except: pass
+    return SAVED_GATEWAY
 
 def watchdog_logic():
-    global LAST_INTERFACE, SAVED_GATEWAY
-
-    if KODI_AVAILABLE:
-        if xbmcgui.Window(10000).getProperty('vpn_intentional_disconnect') == 'true':
-            return 
-
-    STATE_FILE = "/tmp/vpn_manager_active.txt"
-    if not os.path.exists(STATE_FILE):
-        return
-
-    try:
-        file_age = time.time() - os.path.getmtime(STATE_FILE)
-        if file_age < 45:
-            return
-    except: pass
-
+    global LAST_INTERFACE
+    if os.path.exists(INTENTIONAL_DISCONNECT_FILE): return 
+    if not os.path.exists(STATE_FILE): return
     eth_online, wifi_online = check_interface_status()
     current_iface = get_active_interface()
-    HELPER_SCRIPT = "/storage/.kodi/addons/service.wireguard.manager/resources/lib/reconnect_helper.py"
     
     try:
-
-        routes = subprocess.check_output(["ip", "route"], text=True)
-        vpn_active = "wg0" in routes
-
-        if LAST_INTERFACE == "eth0" and not eth_online:
-            log_message("Watchdog: Ethernet lost! Triggering Reconnect Helper...")
+        vpn_active = "wg0" in subprocess.check_output(["ip", "route"], text=True)
+        if LAST_INTERFACE == "wlan0" and eth_online:
+            log_message("Ethernet back! Triggering Reconnect...")
             subprocess.run(['kodi-send', f'--action=RunScript("{HELPER_SCRIPT}")'], check=False)
-            LAST_INTERFACE = "wlan0"
-            time.sleep(15) 
+            LAST_INTERFACE = "eth0"
+            log_message(f"WAIT_START: Interface Settle ({WATCHDOG_SETTLE_DELAY}ms)")
+            time.sleep(WATCHDOG_SETTLE_DELAY / 1000.0)
             return
 
-        if LAST_INTERFACE == "wlan0" and eth_online:
-
-            if not vpn_active:
-                log_message("Watchdog: Ethernet back! Triggering Reconnect Helper...")
-                subprocess.run(['kodi-send', f'--action=RunScript("{HELPER_SCRIPT}")'], check=False)
-            else:
-                log_message("Watchdog: Ethernet back, but VPN is already active. Skipping.")
-            
-            LAST_INTERFACE = "eth0"
-            time.sleep(15)
+        if LAST_INTERFACE == "eth0" and not eth_online:
+            log_message("Ethernet lost! Triggering Reconnect...")
+            subprocess.run(['kodi-send', f'--action=RunScript("{HELPER_SCRIPT}")'], check=False)
+            LAST_INTERFACE = "wlan0"
+            log_message(f"WAIT_START: Failover Settle ({WATCHDOG_SETTLE_DELAY}ms)")
+            time.sleep(WATCHDOG_SETTLE_DELAY / 1000.0)
             return
 
         if not vpn_active and (eth_online or wifi_online):
-            log_message("Watchdog: VPN tunnel missing. Triggering Reconnect Helper...")
+            log_message("VPN tunnel missing. Triggering Recovery...")
             subprocess.run(['kodi-send', f'--action=RunScript("{HELPER_SCRIPT}")'], check=False)
-            time.sleep(15)
+            log_message(f"WAIT_START: Tunnel Recovery ({WATCHDOG_RECOVERY_DELAY}ms)")
+            time.sleep(WATCHDOG_RECOVERY_DELAY / 1000.0)
             return
-
-        if not vpn_active and "default" not in routes and SAVED_GATEWAY:
-            log_message("Watchdog: Path lost. Restoring gateway...")
-            subprocess.run(["route", "add", "default", "gw", SAVED_GATEWAY], check=False)
-
-    except Exception as e:
-        log_message(f"Watchdog Error: {e}")
-
-    if current_iface:
-        LAST_INTERFACE = current_iface
+    except Exception as e: log_message(f"Error: {e}")
+    if current_iface: LAST_INTERFACE = current_iface
 
 if __name__ == "__main__":
-
     while SAVED_GATEWAY is None:
         get_default_gateway()
         if SAVED_GATEWAY: break
         time.sleep(2)
-
     LAST_INTERFACE = get_active_interface()
-    log_message(f"Watchdog: Initialized on {LAST_INTERFACE}. Loop started.")
-    
+    log_message(f"Initialized on {LAST_INTERFACE}. Monitoring started.")
     while True:
         watchdog_logic()
-        time.sleep(5)
+        time.sleep(WATCHDOG_HEARTBEAT / 1000.0)

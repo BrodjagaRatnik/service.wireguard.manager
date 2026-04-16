@@ -1,11 +1,10 @@
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs, os, sys, time, subprocess
+from vpn_config import *
 
-addon = xbmcaddon.Addon('service.wireguard.manager')
-addon_path = xbmcvfs.translatePath(addon.getAddonInfo('path'))
+_ADDON = xbmcaddon.Addon('service.wireguard.manager')
+addon_path = xbmcvfs.translatePath(_ADDON.getAddonInfo('path'))
 lib_path = os.path.join(addon_path, 'resources', 'lib')
-
-if lib_path not in sys.path:
-    sys.path.insert(0, lib_path)
+if lib_path not in sys.path: sys.path.insert(0, lib_path)
 
 from vpn_ops import disconnect_vpn, connect_vpn
 from logger import log_message
@@ -16,40 +15,21 @@ if xbmcgui.Window(10000).getProperty('vpn_intentional_disconnect') == 'true':
 
 state_path = "/tmp/vpn_manager_active.txt"
 vpn_name = None
-
 if os.path.exists(state_path):
-    with open(state_path, "r") as f:
-        vpn_name = f.read().strip()
+    with open(state_path, "r") as f: vpn_name = f.read().strip()
 
 if not vpn_name or vpn_name.lower() == "true":
     vpn_name = xbmcgui.Window(10000).getProperty('vpn_manual_session')
 
-if not vpn_name or vpn_name.lower() == "true":
-    log_message(f"Helper: Invalid VPN name '{vpn_name}'. Stopping.")
-    sys.exit()
-
-log_message(f"Helper: Failover for {vpn_name} started. Cleaning up...")
+if not vpn_name or vpn_name.lower() == "true": sys.exit()
 
 disconnect_vpn(silent=True)
-
-time.sleep(4)
+log_message(f"WAIT_START: Cleanup Cool-off ({CLEANUP_COOLING_DELAY}ms) | PURPOSE: {CLEANUP_COOLING_PURPOSE}", xbmc.LOGDEBUG)
+time.sleep(CLEANUP_COOLING_DELAY / 1000.0)
+log_message("WAIT_END: Cleanup Cool-off", xbmc.LOGDEBUG)
 
 try:
     out = subprocess.check_output(["connmanctl", "services"], text=True)
-    search_name = vpn_name.replace(' ', '_')
-    
-    target_sid = None
-    for line in out.splitlines():
-        if "vpn_" in line and (search_name.lower() in line.lower() or vpn_name.lower() in line.lower()):
-            target_sid = line.split()[-1]
-            break
-
-    if target_sid:
-        log_message(f"Helper: Reconnecting to {vpn_name} via {target_sid}")
-        xbmcgui.Window(10000).setProperty('vpn_manual_session', 'true')
-        connect_vpn(vpn_name, target_sid)
-    else:
-        log_message(f"Helper: Could not find SID for {vpn_name}")
-
-except Exception as e:
-    log_message(f"Helper Error: {e}")
+    target_sid = next((l.split()[-1] for l in out.splitlines() if vpn_name.replace(' ', '_') in l), None)
+    if target_sid: connect_vpn(vpn_name, target_sid)
+except Exception as e: log_message(f"Helper Error: {e}")
