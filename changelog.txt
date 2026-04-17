@@ -1,7 +1,6 @@
 CHANGELOG
 =========
 
-v1.1.5
 v1.1.5 (2026-04-16)
 - Optimized for Raspberry Pi 5: Total VPN switch time reduced to ~1.0s.
 - Centralized Timings: All delays moved to vpn_config.py for easy tuning.
