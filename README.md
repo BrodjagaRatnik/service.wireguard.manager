@@ -1,5 +1,4 @@
 # WireGuard Manager for NordVPN (LibreELEC)
-
 A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 Omega)**. This tool manages WireGuard connections natively via `connmanctl`, providing a faster and more stable experience than traditional OpenVPN-based addons.
 
 ## 🚀 Features
@@ -12,11 +11,7 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 *   **Smart Auto-Mappings**: Connects to specific countries automatically based on the addon or folder you are currently browsing.
 *   **SSH Monitoring**: Detailed `PURPOSE` logging for all wait states, visible via standard system logs.
 
----
-
 ## 📂 Project Structure
-
-
 | File/Folder | Description |
 | :--- | :--- |
 | **`main.py`** | Primary entry point for the GUI and menu logic. |
@@ -31,25 +26,36 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 | **`resources/data/`** | Contains `vpn-watchdog.service`, `connman_main.conf`, and tunnel templates. |
 | **`resources/update_servers.sh`** | Bash script utilizing NordVPN APIs to fetch and resolve the latest server IPs. |
 
----
-
 ## 🛠 Advanced Tuning
 All performance timings are centralized in `resources/lib/vpn_config.py`. Users on high-performance hardware like the **Raspberry Pi 5** can adjust variables like `PROP_SYNC_DELAY` and `OS_RELEASE_DELAY` to achieve near-instantaneous connection swaps.
 
----
-
 ## 📖 Quick Links
 For detailed instructions for this Add-on, please visit our **[Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki)**:
-
+*   **[🔑 How to get your NordVPN Token](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/How-to-get-your-NordVPN-Token)**
 *   **[🛠 Editing Installation & Setup](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Installation-&-Setup)**
 *   **[⌨️ Shortcuts & Logs](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Shortcuts-&-Logs)**
 *   **[🆘 Troubleshooting & Manual Cleanup](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Troubleshooting-&-Manual-Cleanup)**
 
----
+## 📥 Fast Installation (via Doemela Repo)
+If you already know what you're doing, grab the repository installer here:  
+**[📦 Download Doemela Repo ZIP](https://github.com/BrodjagaRatnik/doemela-kodi-repo/tree/main/zips/repository.doemela)**
 
-## 📦 Quick Download
-If you already know what you're doing, grab the installer here:
-[**Download Doemela Repo ZIP**](https://github.com/BrodjagaRatnik/doemela-kodi-repo/tree/main/zips/repository.doemela).
+### Step 1: Install the Repository
+1. Download the **Doemela Repo ZIP** file to your device (or use a USB stick).
+2. Open Kodi and navigate to **Add-ons**.
+3. Click the **Box Icon** (Add-on Browser) in the top-left corner.
+4. Select **Install from zip file**.
+   * *If prompted, click 'Settings' and enable 'Unknown Sources', then go back.*
+5. Locate and select the `repository.doemela-x.x.x.zip` file.
+6. Wait for the **"Add-on installed"** notification.
+
+### Step 2: Install WireGuard Manager
+1. While still in the Add-on Browser, select **Install from repository**.
+2. Choose the **Doemela Repo**.
+3. Navigate to **Services** > **WireGuard Manager for NordVPN**.
+4. Select **Install**.
+5. Once the installation is complete, the **Setup Wizard** will launch automatically to guide you through the initial configuration and token import.
+> **Tip:** Installing via the Repository is the recommended method. It ensures you receive **automatic updates** for bug fixes and new Raspberry Pi 5 performance optimizations as soon as they are released.
 
 <img src="resources/media/screenshot00002.png" alt="Alt text" width="800">
 
