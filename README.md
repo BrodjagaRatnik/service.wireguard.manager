@@ -16,7 +16,7 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 | :--- | :--- |
 | **`main.py`** | Primary entry point for the GUI and menu logic. |
 | **`service_startup.py`** | Kodi Monitor service handling auto-mappings and UI context checks. |
-| **`resources/lib/vpn_config.py`** | **[NEW]** Centralized configuration for all wait times, paths, and DNS fallbacks. |
+| **`resources/lib/vpn_config.py`** | Centralized configuration for all wait times, paths, and DNS fallbacks. |
 | **`resources/lib/service.py`** | Bulletproof, standalone background watchdog running at the OS level. |
 | **`resources/lib/reconnect_helper.py`** | Bridge script allowing the OS watchdog to trigger Kodi-aware VPN actions. |
 | **`resources/lib/vpn_ops.py`** | Core engine for Connect/Disconnect/Status logic with dependency-safe imports. |
