@@ -22,7 +22,7 @@ if __name__ == '__main__':
     try:
         from setup_helper import ensure_setup
         if ensure_setup(ADDON_PATH, MEDIA_PATH):
-            log_message("Setup check triggered a system action (Restart/Redirect). Exiting.")
+            log_message("Setup check triggered a system action (Restart/Redirect). Exiting.", xbmc.LOGDEBUG)
             sys.exit(0)
     except Exception as e:
         log_message(f"Critical Setup Error: {e}", xbmc.LOGERROR)
@@ -31,7 +31,7 @@ if __name__ == '__main__':
 
     if len(sys.argv) > 1 and ("resources/lib" in args_str or args_str.endswith(".py")):
         if "list_assets.py" in args_str:
-            log_message("Launching Setup Wizard...")
+            log_message("Launching Setup Wizard...", xbmc.LOGINFO)
             try:
                 import list_assets
                 list_assets.run_wizard()
@@ -40,7 +40,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     if any(cmd in args_str for cmd in ["status", "restart", "clear", "reinstall", "regen", "cleanup", "import_token"]):
-        log_message(f"Processing Command: {args_str}")
+        log_message(f"Processing Command: {args_str}", xbmc.LOGINFO)
         try:
             if "reinstall" in args_str:
                 from vpn_core import install_service
@@ -77,7 +77,7 @@ if __name__ == '__main__':
 
     if "manual" in args_str or len(sys.argv) <= 1:
         if not TOKEN or TOKEN.strip() == "":
-            log_message("No token found, redirecting to settings.")
+            log_message("No token found, redirecting to settings.", xbmc.LOGDEBUG)
             xbmc.executebuiltin('Addon.OpenSettings(service.wireguard.manager)')
         else:
             try:

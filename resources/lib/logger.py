@@ -25,11 +25,15 @@ except:
     ADDON_VER = get_version_from_xml()
 
 def log_message(msg, level=None):
+
+    if level is None:
+        level = 1
+        
     formatted_msg = f"{ADDON_ID} v{ADDON_VER}: {msg}"
     
     if KODI_MODE:
         import xbmc
-        xbmc.log(formatted_msg, level if level is not None else 1)
+        xbmc.log(formatted_msg, level)
     else:
         print(formatted_msg)
         sys.stdout.flush()
@@ -38,8 +42,10 @@ def log_message(msg, level=None):
             log_path = '/storage/.kodi/temp/kodi.log'
             now = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
             pid = os.getpid()
-            
-            if level == 2:
+
+            if level == 0:
+                lvl_line = "    debug <general>:"
+            elif level == 2:
                 lvl_line = "    warning <general>:"
             elif level == 3:
                 lvl_line = "    error <general>:"

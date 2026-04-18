@@ -18,16 +18,25 @@ LOG_PATH="/storage/.kodi/temp/kodi.log"
 
 log_kodi() {
     local msg="$1"
-    local level="${2:-info}" # Default to info
-    local timestamp=$(date +"%Y-%m-%d %H:%M:%S.%3N")
-    local pid=$$ # Script Process ID to look like a Kodi Thread ID
+    local level="${2:-info}"
     local lvl_pad="    info"
-    [[ "$level" == "error" ]] && lvl_pad="   error"
+    [[ "$level" == "error" ]]   && lvl_pad="   error"
     [[ "$level" == "warning" ]] && lvl_pad=" warning"
+    [[ "$level" == "debug" ]]   && lvl_pad="   debug"
 
+    if [[ "$level" == "debug" ]]; then
+
+        if ! grep -q "Enabled debug logging" "$LOG_PATH"; then
+            return
+        fi
+    fi
+
+    local timestamp=$(date +"%Y-%m-%d %H:%M:%S.%3N")
+    local pid=$$ 
     local formatted_line="${timestamp} T:${pid}${lvl_pad} <general>: ${ADDON_ID} v${ADDON_VER}: ${msg}"
 
     echo "$msg"
+
     echo "$formatted_line" >> "$LOG_PATH"
 }
 
@@ -38,9 +47,10 @@ INPUT_IDS=${2:-"21,81,227,153"}
 TOKEN=$(echo "$TOKEN" | tr -d '\r\n ')
 CLEAN_IDS=$(echo "$INPUT_IDS" | tr -d '\r\n ')
 COUNTRY_LIST=$(echo "$CLEAN_IDS" | tr ',' ' ')
+LOG_IDS=$(echo "$COUNTRY_LIST" | tr ' ' ',')
 
 log_kodi "--- NordVPN WireGuard Regen ---"
-log_kodi "Target Country IDs: $CLEAN_IDS"
+log_kodi "Target Country IDs: $CLEAN_IDS" "debug"
 
 JSON_USER=$(curl -s -u "token:$TOKEN" "https://api.nordvpn.com/v1/users/services/credentials")
 PRIV_KEY=$(echo "$JSON_USER" | python3 -c "import sys, json; print(json.load(sys.stdin).get('nordlynx_private_key', ''))" 2>/dev/null)
@@ -51,11 +61,12 @@ if [ -z "$PRIV_KEY" ] || [ "$PRIV_KEY" == "None" ]; then
     exit 1
 fi
 
-log_kodi "Cleaning up old NordVPN configs..."
+log_kodi "Cleaning up old NordVPN configs..." "debug"
 rm -f /storage/.config/wireguard/nord_*.config
 
+log_kodi "Fetching best servers for Country IDs: $LOG_IDS"
+
 for id in $COUNTRY_LIST; do
-    log_kodi "Fetching best server for Country ID: $id"
 
     RAW_JSON=$(curl -s "https://api.nordvpn.com/v1/servers/recommendations?filters\[servers_technologies\]\[identifier\]=wireguard_udp&filters\[country_id\]=$id&limit=1")
 
@@ -102,7 +113,7 @@ $RAW_JSON
 EOF
 done
 
-log_kodi "Finalizing: Setting permissions and restarting Connman..."
+log_kodi "Finalizing: Setting permissions and restarting Connman..." "debug"
 chmod 600 /storage/.config/wireguard/*.config
 systemctl restart connman-vpn
 log_kodi "--- NordVPN WireGuard Regen Complete ---"

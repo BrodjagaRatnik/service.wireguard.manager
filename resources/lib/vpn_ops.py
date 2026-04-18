@@ -1,3 +1,4 @@
+''' vpn_ops.py '''
 import subprocess, time, json, os, sys
 
 try:
@@ -57,12 +58,20 @@ def get_default_gateway():
     except: return None
 
 def disconnect_vpn(silent=False):
+    if not silent:
+        xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
+        for path in ['/tmp/vpn_manual_active.txt', '/storage/.kodi/temp/vpn_manual_active.txt']:
+            if os.path.exists(path):
+                try: os.remove(path)
+                except: pass
+
     try: open(INTENTIONAL_DISCONNECT_FILE, 'w').close()
     except: pass
+
     if KODI_AVAILABLE:
         xbmcgui.Window(10000).setProperty('vpn_intentional_disconnect', 'true')
         xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
-    
+   
     log_message(f"WAIT_START: Property Sync ({PROP_SYNC_DELAY}ms) | PURPOSE: {PROP_SYNC_PURPOSE}")
     if KODI_AVAILABLE: xbmc.sleep(PROP_SYNC_DELAY)
     else: time.sleep(PROP_SYNC_DELAY / 1000.0)
@@ -72,8 +81,7 @@ def disconnect_vpn(silent=False):
         for line in out.splitlines():
             if "vpn_" in line and ("* " in line or "R " in line):
                 subprocess.run(["connmanctl", "disconnect", line.split()[-1]], check=False)
-        gw = get_default_gateway()
-        if gw: subprocess.run(["route", "add", "default", "gw", gw], check=False)
+
     except Exception as e: log_message(f"Disconnect Error: {e}")
 
     enable_connman_ipv6()
@@ -87,6 +95,20 @@ def disconnect_vpn(silent=False):
     if KODI_AVAILABLE: xbmc.sleep(OS_RELEASE_DELAY)
     else: time.sleep(OS_RELEASE_DELAY / 1000.0)
     
+    gw = get_default_gateway()
+    if not gw:
+        gw = GATEWAY_FALLBACK
+        log_message(f"Network: Using hard-coded fallback gateway: {gw}", xbmc.LOGINFO)
+
+    try:
+        serv = subprocess.check_output(["connmanctl", "services"], text=True)
+        target_dev = "eth0" if "ethernet" in serv else "wlan0"
+
+        subprocess.run(["ip", "route", "replace", "default", "via", gw, "dev", target_dev], check=False)
+        log_message(f"Network: Route forced via {gw} on {target_dev}", xbmc.LOGDEBUG)
+    except Exception as e:
+        log_message(f"Route Restore Error: {e}", xbmc.LOGERROR)
+
     if KODI_AVAILABLE: xbmcgui.Window(10000).setProperty('vpn_intentional_disconnect', '')
     if os.path.exists(INTENTIONAL_DISCONNECT_FILE):
         try: os.remove(INTENTIONAL_DISCONNECT_FILE)
@@ -98,7 +120,7 @@ def connect_vpn(vpn_name, sid):
     target_clean = vpn_name.replace('_', ' ').strip()
     if active_clean == target_clean: return True
 
-    log_message(f"Action: Connecting to {vpn_name}")
+    log_message(f"Ops: Connecting to {vpn_name}", xbmc.LOGINFO)
     disable_connman_ipv6()
     pbg = xbmcgui.DialogProgressBG() if KODI_AVAILABLE else None
     if pbg: pbg.create("VPN Manager", f"Connecting to {vpn_name}...")
@@ -107,7 +129,7 @@ def connect_vpn(vpn_name, sid):
     connected = False
     for i in range(1, 16):
         if pbg: pbg.update(int(i * 6.6), message=f"Verifying... ({i}s)")
-        log_message(f"WAIT_START: Connection Poll {i} ({CONN_POLL_INTERVAL}ms) | PURPOSE: {CONN_POLL_PURPOSE}")
+        log_message(f"WAIT_START: Connection Poll {i} ({CONN_POLL_INTERVAL}ms) | PURPOSE: {CONN_POLL_PURPOSE}", xbmc.LOGDEBUG)
         if KODI_AVAILABLE: xbmc.sleep(CONN_POLL_INTERVAL)
         else: time.sleep(CONN_POLL_INTERVAL / 1000.0)
         try:
@@ -122,7 +144,7 @@ def connect_vpn(vpn_name, sid):
     if connected:
         set_active_vpn(target_clean)
         set_secure_dns(vpn_name, vpn_active=True)
-        log_message(f"WAIT_START: Route Propagation ({ROUTE_PROP_DELAY}ms) | PURPOSE: {ROUTE_PROP_PURPOSE}")
+        log_message(f"WAIT_START: Route Propagation ({ROUTE_PROP_DELAY}ms) | PURPOSE: {ROUTE_PROP_PURPOSE}", xbmc.LOGDEBUG)
         if KODI_AVAILABLE: xbmc.sleep(ROUTE_PROP_DELAY)
         else: time.sleep(ROUTE_PROP_DELAY / 1000.0)
         try:

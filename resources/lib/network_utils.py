@@ -21,7 +21,7 @@ def get_dns_from_config(vpn_name):
                 if match:
                     dns_list = [d.strip() for d in match.group(1).split(",")]
         except Exception as e:
-            log_message(f"Network: Error reading DNS from config: {e}", xbmc.LOGDEBUG)
+            log_message(f"Network: Error reading DNS from config: {e}", xbmc.LOGERROR)
 
     return dns_list if dns_list else DNS_FALLBACK
 
@@ -48,14 +48,14 @@ def set_secure_dns(vpn_name=None, vpn_active=True):
                     subprocess.run(["connmanctl", "config", sid, "--ipv6", "auto"], check=False)
 
         if vpn_active and dns_servers:
-            log_message("Network: Forcing manual resolv.conf overwrite for absolute privacy.")
+            log_message("Network: Forcing manual resolv.conf overwrite for absolute privacy.", xbmc.LOGDEBUG)
             with open("/etc/resolv.conf", "w") as f:
                 f.write("# Hardened DNS by WireGuard Manager\n")
                 f.write("options timeout:2 attempts:1\n")
                 for dns in dns_servers:
                     f.write(f"nameserver {dns}\n")
         
-        log_message(f"Network: DNS & IPv6 {'Hardened' if vpn_active else 'Restored'}")
+        log_message(f"Network: DNS & IPv6 {'Hardened' if vpn_active else 'Restored'}", xbmc.LOGDEBUG)
     except Exception as e:
         log_message(f"Network Error: DNS hardening failed: {e}", xbmc.LOGERROR)
 
@@ -72,7 +72,7 @@ def disable_connman_ipv6():
             if service_id.startswith(("ethernet_", "wifi_")):
                 subprocess.run(["connmanctl", "config", service_id, "--ipv6", "off"], check=False)
         
-        log_message("Network: IPv6 disabled globally and on interfaces", xbmc.LOGINFO)
+        log_message("Network: IPv6 disabled globally and on interfaces", xbmc.LOGDEBUG)
     except Exception as e:
         log_message(f"Network Error: IPv6 Disable failed: {e}", xbmc.LOGERROR)
 
@@ -89,6 +89,6 @@ def enable_connman_ipv6():
             if service_id.startswith(("ethernet_", "wifi_")):
                 subprocess.run(["connmanctl", "config", service_id, "--ipv6", "auto"], check=False)
                 
-        log_message("Network: IPv6 restored to auto", xbmc.LOGINFO)
+        log_message("Network: IPv6 restored to auto", xbmc.LOGDEBUG)
     except Exception as e:
         log_message(f"Network Error: IPv6 Restore failed: {e}", xbmc.LOGERROR)

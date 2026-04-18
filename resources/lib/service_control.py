@@ -68,7 +68,7 @@ def control_service():
                     icon = ICON_OK if real_status == "active" else ICON_ERR
                 if real_status == "activating": real_status = "Initializing..."
 
-            log_event(f"Status check: {real_status}")
+            log_event(f"Status check: {real_status}", xbmc.LOGDEBUG)
             if KODI_MODE:
                 xbmcgui.Dialog().notification("Watchdog", f"Status: {real_status}", icon, 3000)
 

@@ -1,0 +1,68 @@
+''' VPN Timing Constants Optimized for Raspberry Pi 4 All values in milliseconds (ms) '''
+
+''' vpn_ops.py '''
+# Pause after writing status to Kodi memory. Pi 4 needs 200ms to ensure no race conditions.
+PROP_SYNC_DELAY = 200
+PROP_SYNC_PURPOSE = "Syncing Kodi properties to prevent service conflict"
+
+# Wait for Kernel to destroy wg0. Pi 4 networking stack benefits from 1.5s to fully clear.
+OS_RELEASE_DELAY = 1500
+OS_RELEASE_PURPOSE = "Waiting for Kernel to destroy wg0 interface"
+
+# Polling frequency for WireGuard handshake.
+CONN_POLL_INTERVAL = 300
+CONN_POLL_PURPOSE = "Polling Connman for WireGuard handshake"
+
+
+''' service.py '''
+# Gap for routing table/DNS propagation.
+ROUTE_PROP_DELAY = 200
+ROUTE_PROP_PURPOSE = "Waiting for routing table/DNS propagation"
+
+# Watchdog check frequency (2 seconds).
+WATCHDOG_HEARTBEAT = 2000
+
+# Freeze time during physical swap (Eth/WiFi). 4s allows Pi 4 and Router to finish DHCP.
+WATCHDOG_SETTLE_DELAY = 4000
+WATCHDOG_SETTLE_PURPOSE = "Physical interface swap/priority cooling"
+
+# Buffer to prevent infinite retry loops. 2s is safer for Pi 4 CPU overhead.
+WATCHDOG_RECOVERY_DELAY = 2000
+WATCHDOG_RECOVERY_PURPOSE = "Anti-flap tunnel recovery buffer"
+
+
+''' service_control.py '''
+# Wait for Systemd state transitions. Pi 4 requires 500ms for reliable status checks.
+SYSTEMD_POLL_DELAY = 500
+SYSTEMD_POLL_PURPOSE = "Systemd state transition wait"
+
+
+''' reconnect_helper.py '''
+# Buffer to ensure all sockets are closed before rebuilding the tunnel.
+CLEANUP_COOLING_DELAY = 3000
+CLEANUP_COOLING_PURPOSE = "Network stack cooling before reconnect"
+
+
+''' vpn_core.py '''
+# Buffer for Systemd PID spawning. Pi 4 is slower at allocating process resources.
+SERVICE_INIT_DELAY = 600
+SERVICE_INIT_PURPOSE = "Systemd PID spawning buffer"
+
+# Visual confirmation hold so notifications are readable on screen.
+UI_BUFFER_DELAY = 800
+UI_BUFFER_PURPOSE = "Visual confirmation hold for user"
+
+
+''' menu_vpn.py '''
+# Visual buffer specifically for manual menu actions.
+UI_BUFFER_DELAY_MENU = 500 
+UI_BUFFER_PURPOSE = "Visual confirmation hold for user / Property sink"
+
+
+''' NordVPN Default DNS '''
+DNS_FALLBACK = ["103.86.96.100", "103.86.99.100"]
+
+
+''' Fallback Gateway '''
+# Change this if your local router uses a different IP (e.g., 192.168.1.1)
+GATEWAY_FALLBACK = "192.168.178.1"

@@ -10,7 +10,7 @@ from logger import log_message
 def install_service(source, dest, name, media_path):
     try:
         if not os.path.exists(dest):
-            log_message(f"Core: Installing watchdog service to {dest}")
+            log_message(f"Core: Installing watchdog service to {dest}", xbmc.LOGINFO)
             shutil.copy2(source, dest)
             subprocess.run(["systemctl", "daemon-reload"])
             subprocess.run(["systemctl", "enable", name])
@@ -19,7 +19,7 @@ def install_service(source, dest, name, media_path):
         else:
             res = subprocess.run(["systemctl", "is-active", name], capture_output=True, text=True)
             if "active" not in res.stdout:
-                log_message(f"Core: Watchdog service inactive, attempting start.")
+                log_message(f"Core: Watchdog service inactive, attempting start.", xbmc.LOGINFO)
                 subprocess.run(["systemctl", "start", name])
                 log_message(f"WAIT_START: Service Initialization ({SERVICE_INIT_DELAY}ms) | PURPOSE: {SERVICE_INIT_PURPOSE}", xbmc.LOGDEBUG)
                 xbmc.sleep(SERVICE_INIT_DELAY)
@@ -36,7 +36,7 @@ def check_for_updates(media_path):
             latest_file = max(files, key=os.path.getmtime)
             file_age = time.time() - os.path.getmtime(latest_file)
             if file_age > 604800:
-                log_message("Core: Server list is over 7 days old. Notifying user.")
+                log_message("Core: Server list is over 7 days old. Notifying user.", xbmc.LOGINFO)
                 xbmcgui.Dialog().notification("NordVPN Manager", "Server list is over 7 days old.", os.path.join(media_path, 'update.png'), 5000)
     except Exception as e:
         log_message(f"Core Error: Update Check failed: {e}", xbmc.LOGERROR)
@@ -52,10 +52,10 @@ def run_update(shell_script, token):
     try:
         subprocess.run(["sed", "-i", "s/\\r//", shell_script])
         subprocess.run(["chmod", "+x", shell_script])
-        log_message(f"Core: Running config update for: {countries}")
+        log_message(f"Core: Running config update for: {countries}", xbmc.LOGINFO)
         res = subprocess.run([shell_script, token, countries], capture_output=True, text=True, timeout=60)
         if res.returncode == 0:
-            log_message("Core: Config update successful.")
+            log_message("Core: Config update successful.", xbmc.LOGINFO)
             progress.update(100, "Update Complete!")
             log_message(f"WAIT_START: UI Buffer ({UI_BUFFER_DELAY}ms) | PURPOSE: {UI_BUFFER_PURPOSE}", xbmc.LOGDEBUG)
             xbmc.sleep(UI_BUFFER_DELAY)
@@ -73,9 +73,12 @@ def run_update(shell_script, token):
 
 def get_default_gateway():
     try:
-        out = subprocess.check_output(["ip", "route", "show", "default"], text=True)
-        parts = out.split()
-        if "via" in parts:
-            return parts[parts.index("via") + 1]
-    except: pass
-    return None
+        out = subprocess.check_output(["ip", "-4", "route", "show", "default"], text=True)
+        for line in out.splitlines():
+            if "via" in line and "wg0" not in line:
+                parts = line.split()
+                return parts[parts.index("via") + 1]
+    except: 
+        pass
+
+    return GATEWAY_FALLBACK

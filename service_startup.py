@@ -9,12 +9,23 @@ from vpn_config import *
 from logger import log_message as original_log_message
 import vpn_ops
 
-def log_message(msg, level=xbmc.LOGINFO):
+def log_message(msg, level=xbmc.LOGDEBUG):
     original_log_message(msg, level)
+
+CLEANUP_COUNT = 0
 
 class WGManagerService(xbmc.Monitor):
     def __init__(self):
         super().__init__()
+        xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
+
+        for path in ['/tmp/vpn_manual_active.txt', '/storage/.kodi/temp/vpn_manual_active.txt']:
+            if os.path.exists(path):
+                try: 
+                    os.remove(path)
+                    xbmc.log(f"service.wireguard.manager: Cleaned up old Safety Pin at {path}", xbmc.LOGDEBUG)
+                except: pass
+
         vpn_ops.disconnect_vpn(silent=True)
         log_message("Monitor Service Initialized", xbmc.LOGINFO)
 
@@ -26,51 +37,65 @@ class WGManagerService(xbmc.Monitor):
         except: return None
 
     def run_loop(self):
+        global CLEANUP_COUNT
         active_now = vpn_ops.get_active_vpn()
-        is_manual = xbmcgui.Window(10000).getProperty('vpn_manual_session') == 'true'
 
-        if xbmc.Player().isPlayingVideo(): return
+        manual_prop = xbmcgui.Window(10000).getProperty('vpn_manual_session').lower() == 'true'
+        file_1 = os.path.exists('/tmp/vpn_manual_active.txt')
+        file_2 = os.path.exists('/storage/.kodi/temp/vpn_manual_active.txt')
+        is_manual = manual_prop or file_1 or file_2
+
+        if xbmc.Player().isPlayingVideo(): 
+            CLEANUP_COUNT = 0
+            return
 
         is_home = xbmc.getCondVisibility("Window.IsActive(home) | Window.IsActive(10000)")
         plugin = xbmc.getInfoLabel("Container.PluginName")
         folder = xbmc.getInfoLabel("Container.FolderPath")
 
         match_found = False
+        if plugin and plugin.startswith("plugin.video."):
+            match_found = True
+
         if not is_home and plugin:
-            log_message(f"Monitor: Checking triggers. VPN: {active_now} | Plugin: {plugin}", xbmc.LOGDEBUG)
             for i in range(1, 6):
                 target = _ADDON.getSetting(f"map_{i}_addon")
                 vpn = _ADDON.getSetting(f"vpn_{i}_name")
                 if target and (target in folder or target == plugin):
                     match_found = True
+                    
                     v_clean = vpn.replace('_', ' ').strip()
                     a_clean = active_now.replace('_', ' ').strip() if active_now else None
                     
                     if a_clean != v_clean:
-                        log_message(f"Trigger: Match found for {target}. Switching to {vpn}.")
+                        log_message(f"Trigger: Mapped addon {target} override detected. Switching to {vpn}.", xbmc.LOGINFO)
 
                         xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
+                        for path in ['/tmp/vpn_manual_active.txt', '/storage/.kodi/temp/vpn_manual_active.txt']:
+                            if os.path.exists(path):
+                                try: os.remove(path)
+                                except: pass
+
                         vpn_ops.disconnect_vpn(silent=True)
                         vpn_ops.connect_vpn(vpn, self.get_service_id_by_name(vpn))
                     return
 
-        if not match_found and active_now and not is_manual:
-             if is_home or not plugin:
-                 log_message("Auto-cleanup: Home detected. Disconnecting.")
-                 vpn_ops.disconnect_vpn(silent=False)
-             else:
-                 if self.waitForAbort(3): return 
-                 still_plugin = xbmc.getInfoLabel("Container.PluginName")
-                 still_folder = xbmc.getInfoLabel("Container.FolderPath")
-                 still_outside = True
-                 for j in range(1, 6):
-                     t = _ADDON.getSetting(f"map_{j}_addon")
-                     if t and (t in still_folder or t == still_plugin):
-                         still_outside = False
-                         break
-                 if still_outside:
-                     log_message(f"Auto-cleanup: Outside mapping. Disconnecting.")
-                     vpn_ops.disconnect_vpn(silent=False)
+        if not match_found and active_now:
+
+            if is_manual:
+                CLEANUP_COUNT = 0
+                return 
+
+            if is_home:
+                log_message("Auto-cleanup: Home detected for mapped addon. Disconnecting.")
+                vpn_ops.disconnect_vpn(silent=False)
+                CLEANUP_COUNT = 0
+            else:
+                CLEANUP_COUNT += 1
+                if CLEANUP_COUNT >= 3:
+                    log_message("Auto-cleanup: Confirmed outside mapping for 6s. Disconnecting.", xbmc.LOGINFO)
+                    vpn_ops.disconnect_vpn(silent=False)
+                    CLEANUP_COUNT = 0
 
 if __name__ == '__main__':
     monitor = WGManagerService()

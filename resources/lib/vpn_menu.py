@@ -9,6 +9,7 @@ _ADDON = xbmcaddon.Addon('service.wireguard.manager')
 ADDON_PATH = _ADDON.getAddonInfo('path')
 sys.path.append(os.path.join(ADDON_PATH, 'resources', 'lib'))
 
+from vpn_config import *
 from logger import log_message
 import vpn_ops
 
@@ -33,15 +34,17 @@ def show_menu(media_path, shell_script, token):
             if "NordVPN" in s:
                 sid = s.split()[-1]
                 name = s.replace(sid, "").strip("* Rd").strip().replace('_', ' ')
-
                 is_active = (name == active_name)
                 
-                label = f"[B][COLOR ff00ff7f][CONNECTED][/COLOR] {name}[/B]" if is_active else name
-                item = xbmcgui.ListItem(label)
-
-                icon_file = 'vpn_on.png' if is_active else 'vpn_off.png'
-                item.setArt({'icon': os.path.join(media_path, icon_file)})
+                if is_active:
+                    label = f"[B][COLOR ff00ff7f][CONNECTED][/COLOR] {name}[/B]"
+                    icon_file = 'vpn_on.png'
+                else:
+                    label = f"[B][COLOR white]{name}[/COLOR][/B]"
+                    icon_file = 'vpn_off.png'
                 
+                item = xbmcgui.ListItem(label)
+                item.setArt({'icon': os.path.join(media_path, icon_file)})
                 menu_items.append(item)
                 mapping.append((name, sid))
 
@@ -55,7 +58,7 @@ def show_menu(media_path, shell_script, token):
             action = mapping[choice]
             
             if action == "DISCONNECT":
-                log_message(f"Menu: Manual disconnect requested for {active_name}")
+                log_message(f"Menu: Manual disconnect requested for {active_name}", xbmc.LOGINFO)
                 vpn_ops.disconnect_vpn()
             
             elif action == "REGEN":
@@ -70,9 +73,21 @@ def show_menu(media_path, shell_script, token):
                 if active_name == t_clean:
                     return
 
-                xbmcgui.Window(10000).setProperty('vpn_manual_session', 'true')
+                try:
+                    xbmcgui.Window(10000).setProperty('vpn_manual_session', 'true')
+                    for path in ['/tmp/vpn_manual_active.txt', '/storage/.kodi/temp/vpn_manual_active.txt']:
+                        try:
+                            with open(path, 'w') as f:
+                                f.write("manual")
+                            log_message(f"Menu: Safety Pin created at {path}", xbmc.LOGDEBUG)
+                        except:
+                            continue
+                except Exception as e:
+                    log_message(f"Menu Flag Error: {e}", xbmc.LOGERROR)
                 
-                log_message(f"Menu: Manual connection requested for {target_name}")
+                xbmc.sleep(UI_BUFFER_DELAY_MENU)
+
+                log_message(f"Menu: Manual connection requested for {target_name}", xbmc.LOGINFO)
                 vpn_ops.connect_vpn(target_name, target_sid)
 
     except Exception as e:

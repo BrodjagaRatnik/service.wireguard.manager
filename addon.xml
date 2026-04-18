@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="service.wireguard.manager" name="WireGuard Manager NordVPN" version="1.1.5" provider-name="Doemela">
+<addon id="service.wireguard.manager" name="WireGuard Manager NordVPN" version="1.1.6" provider-name="Doemela">
     <requires>
         <import addon="xbmc.python" version="3.0.0"/>
     </requires>
@@ -10,7 +10,20 @@
     <extension point="xbmc.addon.metadata">
         <summary lang="en_GB">Hardened NordVPN WireGuard Manager for Raspberry Pi 5</summary>
         <description lang="en_GB">High-performance VPN manager for LibreELEC. Uses NordLynx for maximum speed with an automated Systemd watchdog to prevent connection drops.[CR][CR][B]Note:[/B] This addon is designed specifically for the LibreELEC filesystem and will not work on standard Android or Windows Kodi installations.[CR][CR][B]Features:[/B][CR]• WireGuard Native (NordLynx)[CR]• Smart Watchdog &amp; Auto-Regen[CR]• Hard Reset Routing Tables[CR][CR][B]Disclaimer:[/B] Not an official NordVPN product. Use at your own risk. This addon is provided "as is" without warranty. The developer is not liable for data loss or security breaches. Full disclaimer available in addon settings.</description>
-        <news>v1.1.5 (2026-04-16)
+        <news>v1.1.6 (2026-04-19)
+- IMPROVED: Major overhaul of watchdog logic for stable Pi 5 network failover.
+- FIXED: Resolved "script aborted" errors in reconnect helper by mocking Kodi modules for standalone execution.
+- FIXED: Added SID discovery logic to ensure successful reconnections when VPN names contain spaces.
+- OPTIMIZED: Level-based logging (INFO/DEBUG) to prevent log spam while maintaining high-detail troubleshooting.
+- UPDATED: Faster recovery timers and hardened DNS/IPv6 handling during interface swaps.
+- Optimized for Raspberry Pi 5: Increased OS interface release delay to 1000ms to prevent routing table race conditions.
+- Implemented "Safety Pin" Session Protection: Manual VPN connections now persist through Home screen transitions, even with WiFi latency.
+- Smart Override: Mapped addons now correctly override manual sessions and perform auto-cleanup on exit.
+- Hard-coded Gateway Fallback: Added support for 192.168.178.1 (Fritz!Box) or other routing restoration if the system fails to auto-detect the route.
+- Robust Logging: Integrated Watchdog and Network Utility events into the primary Kodi log for better troubleshooting.
+- Improved Auto-Cleanup: Added a 6-second grace period when exiting streams to prevent accidental disconnects during UI refreshes.
+
+v1.1.5 (2026-04-16)
 - Optimized for Raspberry Pi 5: Total VPN switch time reduced to ~1.0s.
 - Centralized Timings: All delays moved to vpn_config.py for easy tuning.
 - Robust Reconnect: Refined Ethernet-to-WiFi failover and interface priority logic.
