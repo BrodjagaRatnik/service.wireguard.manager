@@ -1,6 +1,9 @@
 CHANGELOG
 =========
 
+v1.1.7 (2026-04-19)
+- fixed service watchdog spamming journal when not on DEBUG logging on.
+
 v1.1.6 (2026-04-19)
 - IMPROVED: Major overhaul of watchdog logic for stable Pi 5 network failover.
 - FIXED: Resolved "script aborted" errors in reconnect helper by mocking Kodi modules for standalone execution.

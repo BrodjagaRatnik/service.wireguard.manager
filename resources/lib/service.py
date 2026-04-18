@@ -30,11 +30,12 @@ def log_message(msg, level=xbmc.LOGINFO):
         if HAS_XBMC:
             xbmc.log(f"service.wireguard.manager [WATCHDOG]: {msg}", level)
         else:
-            # This is what will show up in your journalctl now
-            lvl_name = {0:"DEBUG", 1:"INFO", 2:"WARNING", 3:"ERROR"}.get(level, "INFO")
-            print(f"WATCHDOG [{lvl_name}]: {msg}", flush=True)
+            if level > 0:
+                lvl_name = {1:"INFO", 2:"WARNING", 3:"ERROR"}.get(level, "INFO")
+                print(f"WATCHDOG [{lvl_name}]: {msg}", flush=True)
     except:
-        print(f"WATCHDOG: {msg}", flush=True)
+        pass
+
 LAST_INTERFACE = None
 SAVED_GATEWAY = None
 
@@ -132,4 +133,4 @@ if __name__ == "__main__":
     while True:
         watchdog_logic()
         time.sleep(WATCHDOG_SETTLE_DELAY / 1000.0)
-        #log_message("WAIT_COMPLETE: Resuming Watchdog...", xbmc.LOGDEBUG)
+        log_message("WAIT_COMPLETE: Resuming Watchdog...", xbmc.LOGDEBUG)
