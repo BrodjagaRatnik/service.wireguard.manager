@@ -48,9 +48,3 @@ UI_BUFFER_PURPOSE = "Visual confirmation hold for user"
 ''' menu_vpn.py Visual/System confirmation buffer for manual menu actions '''
 UI_BUFFER_DELAY_MENU = 500 
 UI_BUFFER_PURPOSE = "Visual confirmation hold for user / Property sink"
-
-''' NordVPN Default DNS '''
-DNS_FALLBACK = ["103.86.96.100", "103.86.99.100"]
-
-''' Fallback Gateway '''
-GATEWAY_FALLBACK = "192.168.178.1"

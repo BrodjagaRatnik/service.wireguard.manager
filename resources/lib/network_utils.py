@@ -1,7 +1,30 @@
-import os, re, subprocess, xbmc
-from logger import log_message
-from vpn_config import DNS_FALLBACK
+''' ./resources/lib/network_utils.py '''
+import os, re, subprocess
+
+try:
+    import xbmc
+    KODI_AVAILABLE = True
+except ImportError:
+    KODI_AVAILABLE = False
+
 CONFIG_DIR = "/storage/.config/wireguard/"
+
+def log_message(msg, level=None):
+    if KODI_AVAILABLE:
+        xbmc.log(f"NetworkUtils: {msg}", level if level is not None else 1)
+    else:
+        print(f"NetworkUtils: {msg}", flush=True)
+
+def get_default_gateway(ignore_vpn=True):
+    try:
+        out = subprocess.check_output(["ip", "-4", "route", "show", "default"], text=True)
+        for line in out.splitlines():
+            if "via" in line:
+                if ignore_vpn and "wg0" in line: continue
+                parts = line.split()
+                return parts[parts.index("via") + 1]
+    except: pass
+    return None
 
 def get_dns_from_config(vpn_name):
     dns_list = []
@@ -23,7 +46,7 @@ def get_dns_from_config(vpn_name):
         except Exception as e:
             log_message(f"Network: Error reading DNS from config: {e}", xbmc.LOGERROR)
 
-    return dns_list if dns_list else DNS_FALLBACK
+    return dns_list
 
 def set_secure_dns(vpn_name=None, vpn_active=True):
     dns_servers = get_dns_from_config(vpn_name) if vpn_active else []
@@ -39,9 +62,11 @@ def set_secure_dns(vpn_name=None, vpn_active=True):
                 sid = line.split()[-1]
                 if vpn_active:
                     subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
-                    subprocess.run(["connmanctl", "config", sid, "--nameservers"] + dns_servers, check=False)
+                    if dns_servers:
+                        subprocess.run(["connmanctl", "config", sid, "--nameservers"] + dns_servers, check=False)
                     subprocess.run(["connmanctl", "config", sid, "--domains", "."], check=False)
                     subprocess.run(["connmanctl", "config", sid, "--ipv6", "off"], check=False)
+
                 else:
                     subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
                     subprocess.run(["connmanctl", "config", sid, "--domains"], check=False)
@@ -92,3 +117,14 @@ def enable_connman_ipv6():
         log_message("Network: IPv6 restored to auto", xbmc.LOGDEBUG)
     except Exception as e:
         log_message(f"Network Error: IPv6 Restore failed: {e}", xbmc.LOGERROR)
+
+def is_physically_connected(interface):
+    """Checks the physical carrier status of a network interface (1=Connected, 0=Unplugged)."""
+    try:
+        path = f"/sys/class/net/{interface}/carrier"
+        if os.path.exists(path):
+            with open(path, 'r') as f:
+                return f.read().strip() == '1'
+    except:
+        pass
+    return False

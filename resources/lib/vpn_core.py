@@ -1,3 +1,4 @@
+''' ./resources/lib/vpn_core.py '''
 import os, sys, xbmc, xbmcaddon, subprocess, shutil, xbmcgui, time
 from vpn_config import *
 
@@ -6,6 +7,7 @@ ADDON_PATH = _ADDON.getAddonInfo('path')
 
 sys.path.append(os.path.join(ADDON_PATH, 'resources', 'lib'))
 from logger import log_message
+from network_utils import get_default_gateway
 
 def install_service(source, dest, name, media_path):
     try:
@@ -70,15 +72,3 @@ def run_update(shell_script, token):
     except Exception as e:
         log_message(f"Core Error: Update failed: {e}", xbmc.LOGERROR)
         if progress: progress.close()
-
-def get_default_gateway():
-    try:
-        out = subprocess.check_output(["ip", "-4", "route", "show", "default"], text=True)
-        for line in out.splitlines():
-            if "via" in line and "wg0" not in line:
-                parts = line.split()
-                return parts[parts.index("via") + 1]
-    except: 
-        pass
-
-    return GATEWAY_FALLBACK

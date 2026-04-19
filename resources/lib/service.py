@@ -1,4 +1,6 @@
+''' ./resources/lib/service.py '''
 import time, subprocess, os, sys
+from network_utils import get_default_gateway, is_physically_connected
 
 try:
     import xbmc
@@ -6,45 +8,26 @@ try:
 except ImportError:
     HAS_XBMC = False
     class MockXBMC:
-        LOGDEBUG = 0
-        LOGINFO = 1
-        LOGWARNING = 2
-        LOGERROR = 3
+        LOGDEBUG, LOGINFO, LOGWARNING, LOGERROR = 0, 1, 2, 3
     xbmc = MockXBMC()
 
 ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
 LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
 if LIB_PATH not in sys.path: sys.path.append(LIB_PATH)
 
-try:
-    from vpn_config import *
-except ImportError:
-    WATCHDOG_HEARTBEAT, WATCHDOG_SETTLE_DELAY, WATCHDOG_RECOVERY_DELAY = 2000, 4000, 3000
+try: from vpn_config import *
+except ImportError: WATCHDOG_HEARTBEAT, WATCHDOG_SETTLE_DELAY, WATCHDOG_RECOVERY_DELAY = 5000, 4000, 3000
 
-STATE_FILE = "/tmp/vpn_manager_active.txt"
-INTENTIONAL_DISCONNECT_FILE = "/tmp/vpn_intentional_disconnect.txt"
-HELPER_SCRIPT = os.path.join(LIB_PATH, "reconnect_helper.py")
+STATE_FILE, INTENTIONAL_FILE = "/tmp/vpn_manager_active.txt", "/tmp/vpn_intentional_disconnect.txt"
+HELPER_SCRIPT, HELPER_LOCK = os.path.join(LIB_PATH, "reconnect_helper.py"), "/tmp/vpn_helper.lock"
 
-def log_message(msg, level=xbmc.LOGINFO):
-    try:
-        if HAS_XBMC:
-            xbmc.log(f"service.wireguard.manager [WATCHDOG]: {msg}", level)
-        else:
-            if level > 0:
-                lvl_name = {1:"INFO", 2:"WARNING", 3:"ERROR"}.get(level, "INFO")
-                print(f"WATCHDOG [{lvl_name}]: {msg}", flush=True)
-    except:
-        pass
-
-LAST_INTERFACE = None
-SAVED_GATEWAY = None
+LAST_INTERFACE, SAVED_GATEWAY, BLACKOUT_ALERTED = None, None, False
 
 def get_active_interface():
     try:
         out = subprocess.check_output(["ip", "route", "show", "default"], text=True)
         if "dev" in out: return out.split()[out.split().index("dev") + 1]
-    except: pass
-    return None
+    except: return None
 
 def check_interface_status():
     try:
@@ -54,83 +37,61 @@ def check_interface_status():
         return eth, wifi
     except: return False, False
 
-def get_default_gateway():
-    global SAVED_GATEWAY
+def log_message(msg, level=1):
     try:
-        out = subprocess.check_output(["ip", "-4", "route", "show", "default"], text=True)
-        if "default" in out and "wg0" not in out:
-            new_gw = out.split()[out.split().index("via") + 1]
-            if new_gw != SAVED_GATEWAY:
-                SAVED_GATEWAY = new_gw
-                log_message(f"Gateway identified as {SAVED_GATEWAY}", xbmc.LOGINFO)
-            return SAVED_GATEWAY
+        if HAS_XBMC: xbmc.log(f"service.wireguard.manager [WATCHDOG]: {msg}", level)
+        else:
+            if level > 0:
+                lvl = {1:"INFO", 2:"WARNING", 3:"ERROR"}.get(level, "INFO")
+                print(f"WATCHDOG [{lvl}]: {msg}", flush=True)
     except: pass
 
-    if not SAVED_GATEWAY:
-        SAVED_GATEWAY = GATEWAY_FALLBACK
-    return SAVED_GATEWAY
-
 def watchdog_logic():
-    global LAST_INTERFACE, SAVED_GATEWAY
+    global LAST_INTERFACE, SAVED_GATEWAY, BLACKOUT_ALERTED
     
+    eth_link, wifi_link = is_physically_connected("eth0"), is_physically_connected("wlan0")
+    if not eth_link and not wifi_link:
+        if not BLACKOUT_ALERTED:
+            log_message("PHYSICAL DISCONNECT: No link detected.", 3)
+            BLACKOUT_ALERTED = True
+        return 
+    
+    BLACKOUT_ALERTED = False
+    if os.path.exists(HELPER_LOCK): return
+
     eth_online, wifi_online = check_interface_status()
     current_iface = get_active_interface()
 
-    if not os.path.exists(STATE_FILE): 
-        return
+    if not os.path.exists(STATE_FILE) or os.path.exists(INTENTIONAL_FILE): return
 
-    if (eth_online or wifi_online) and not current_iface:
-        gw = get_default_gateway()
+    if (eth_online or wifi_online) and not current_iface and SAVED_GATEWAY:
         target_dev = "eth0" if eth_online else "wlan0"
-        log_message(f"Emergency: Route missing. Forcing {gw} on {target_dev}...", xbmc.LOGINFO)
-        subprocess.run(["ip", "route", "replace", "default", "via", gw, "dev", target_dev], check=False)
+        subprocess.run(["ip", "route", "replace", "default", "via", SAVED_GATEWAY, "dev", target_dev], check=False)
         time.sleep(1.0)
         current_iface = get_active_interface()
 
-    if os.path.exists(INTENTIONAL_DISCONNECT_FILE): return 
-    
     try:
         vpn_active = "wg0" in subprocess.check_output(["ip", "route"], text=True)
-        
-        if LAST_INTERFACE == "wlan0" and eth_online:
-            log_message("Ethernet back! Triggering Reconnect...", xbmc.LOGINFO)
+        if (not vpn_active or (LAST_INTERFACE == "wlan0" and eth_online) or (LAST_INTERFACE == "eth0" and not eth_online)):
+            log_message("Network change or tunnel loss. Triggering Helper...", 1)
             subprocess.run(['kodi-send', f'--action=RunScript("{HELPER_SCRIPT}")'], check=False)
-            LAST_INTERFACE = "eth0"
-            log_message(f"WAIT_START: Interface Settle ({WATCHDOG_SETTLE_DELAY}ms)", xbmc.LOGDEBUG)
             time.sleep(WATCHDOG_SETTLE_DELAY / 1000.0)
-            return
+    except: pass
 
-        if LAST_INTERFACE == "eth0" and not eth_online:
-            log_message("Ethernet lost! Triggering Reconnect...", xbmc.LOGINFO)
-            subprocess.run(['kodi-send', f'--action=RunScript("{HELPER_SCRIPT}")'], check=False)
-            LAST_INTERFACE = "wlan0"
-            log_message(f"WAIT_START: Failover Settle ({WATCHDOG_SETTLE_DELAY}ms)", xbmc.LOGDEBUG)
-            log_message("Ethernet: Failover Settle...")
-            time.sleep(WATCHDOG_SETTLE_DELAY / 1000.0)
-            return
-
-        if not vpn_active and (eth_online or wifi_online):
-            log_message("VPN tunnel missing. Triggering Recovery...", xbmc.LOGINFO)
-            subprocess.run(['kodi-send', f'--action=RunScript("{HELPER_SCRIPT}")'], check=False)
-            log_message(f"WAIT_START: Tunnel Recovery ({WATCHDOG_RECOVERY_DELAY}ms)", xbmc.LOGDEBUG)
-            log_message("Online: Failover Settle...")
-            time.sleep(WATCHDOG_RECOVERY_DELAY / 1000.0)
-            return
-            
-    except Exception as e: 
-        log_message(f"Error: {e}")
-        
-    if current_iface: 
+    if current_iface and current_iface in ['eth0', 'wlan0']:
+        if LAST_INTERFACE != current_iface:
+            if os.path.exists("/tmp/vpn_reconnect_count.txt"): os.remove("/tmp/vpn_reconnect_count.txt")
         LAST_INTERFACE = current_iface
 
 if __name__ == "__main__":
     while SAVED_GATEWAY is None:
-        get_default_gateway()
+        SAVED_GATEWAY = get_default_gateway()
         if SAVED_GATEWAY: break
-        time.sleep(2)
+        log_message("Waiting for gateway...", 2)
+        time.sleep(5)
+    
     LAST_INTERFACE = get_active_interface()
-    log_message(f"Initialized on {LAST_INTERFACE}. Monitoring started.", xbmc.LOGINFO)
+    log_message(f"Initialized on {LAST_INTERFACE}. Monitoring started.", 1)
     while True:
         watchdog_logic()
-        time.sleep(WATCHDOG_SETTLE_DELAY / 1000.0)
-        log_message("WAIT_COMPLETE: Resuming Watchdog...", xbmc.LOGDEBUG)
+        time.sleep(WATCHDOG_HEARTBEAT / 1000.0)

@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+v1.1.8
+Changelog v1.1.8 (2026-04-12)
+
+- ADDED (Smart Recovery): Implemented a 10-minute (120-attempt) gateway timeout with automatic Systemd retry.
+- FIXED (Logic): Throttled UI notifications to once per minute to prevent user annoyance.
+- FIXED (Systemd): Moved rate-limiters from [Service] to [Unit] to fix the "unknown key" error.
+- IMPROVED (Architecture): Moved hardware-level carrier detection to network_utils.py.
+- IMPROVED (Centralization): Unified all network functions into network_utils.py, allowing multiple files (vpn_ops.py, service.py, vpn_core.py) to share the same reliable logic.
+- REMOVED (Hardcoding): Deleted GATEWAY_FALLBACK and DNS_FALLBACK; system now uses dynamic OS/API values.
+
 v1.1.7 (2026-04-19)
 - fixed service watchdog spamming journal when not on DEBUG logging on.
 

@@ -1,4 +1,4 @@
-''' vpn_ops.py '''
+''' ./resources/lib/vpn_ops.py '''
 import subprocess, time, json, os, sys
 
 try:
@@ -31,11 +31,12 @@ if KODI_AVAILABLE:
     ADDON_PATH = _ADDON.getAddonInfo('path')
     ICON_CON = os.path.join(ADDON_PATH, 'resources', 'media', 'vpn_connected.png')
     ICON_DIS = os.path.join(ADDON_PATH, 'resources', 'media', 'vpn_disconnected.png')
+    ICON_ERROR = os.path.join(ADDON_PATH, 'resources', 'media', 'error.png')
 else:
     ADDON_PATH = f"/storage/.kodi/addons/{ADDON_ID}"
-    ICON_CON = ICON_DIS = ""
+    ICON_CON = ICON_DIS = ICON_ERROR = ""
 
-from network_utils import set_secure_dns, disable_connman_ipv6, enable_connman_ipv6
+from network_utils import set_secure_dns, disable_connman_ipv6, enable_connman_ipv6, get_default_gateway
 
 def get_active_vpn():
     if os.path.exists(STATE_FILE):
@@ -50,12 +51,6 @@ def set_active_vpn(name):
             with open(STATE_FILE, "w") as f: f.write(name.strip())
         elif os.path.exists(STATE_FILE): os.remove(STATE_FILE)
     except Exception as e: log_message(f"State Error: {e}")
-
-def get_default_gateway():
-    try:
-        out = subprocess.check_output(["ip", "-4", "route", "show", "default"], text=True)
-        if "default" in out: return out.split()[out.split().index("via") + 1]
-    except: return None
 
 def disconnect_vpn(silent=False):
     if not silent:
@@ -81,7 +76,6 @@ def disconnect_vpn(silent=False):
         for line in out.splitlines():
             if "vpn_" in line and ("* " in line or "R " in line):
                 subprocess.run(["connmanctl", "disconnect", line.split()[-1]], check=False)
-
     except Exception as e: log_message(f"Disconnect Error: {e}")
 
     enable_connman_ipv6()
@@ -94,20 +88,36 @@ def disconnect_vpn(silent=False):
     log_message(f"WAIT_START: OS Interface Release ({OS_RELEASE_DELAY}ms) | PURPOSE: {OS_RELEASE_PURPOSE}")
     if KODI_AVAILABLE: xbmc.sleep(OS_RELEASE_DELAY)
     else: time.sleep(OS_RELEASE_DELAY / 1000.0)
-    
+
+    time.sleep(2) 
     gw = get_default_gateway()
+    
     if not gw:
-        gw = GATEWAY_FALLBACK
-        log_message(f"Network: Using hard-coded fallback gateway: {gw}", xbmc.LOGINFO)
+        log_message("Network: Default route lost. Attempting restoration...", xbmc.LOGWARNING)
+        try:
+            out = subprocess.check_output(["connmanctl", "services"], text=True)
+            phys_service = next((line.split()[-1] for line in out.splitlines() if line.startswith(('*', 'R')) and "vpn_" not in line), None)
+            if phys_service:
+                subprocess.run(["connmanctl", "config", phys_service, "--ipv4", "dhcp"], check=False)
+                time.sleep(2)
+                gw = get_default_gateway()
+        except: pass
 
-    try:
-        serv = subprocess.check_output(["connmanctl", "services"], text=True)
-        target_dev = "eth0" if "ethernet" in serv else "wlan0"
-
-        subprocess.run(["ip", "route", "replace", "default", "via", gw, "dev", target_dev], check=False)
-        log_message(f"Network: Route forced via {gw} on {target_dev}", xbmc.LOGDEBUG)
-    except Exception as e:
-        log_message(f"Route Restore Error: {e}", xbmc.LOGERROR)
+    if gw:
+        try:
+            out_route = subprocess.check_output(["ip", "route", "show", "default"], text=True)
+            route_is_missing = "default" not in out_route
+            
+            serv = subprocess.check_output(["connmanctl", "services"], text=True)
+            target_dev = "eth0" if "ethernet" in serv else "wlan0"
+            subprocess.run(["ip", "route", "replace", "default", "via", gw, "dev", target_dev], check=False)
+            
+            if route_is_missing:
+                log_message(f"Network: Route restored via {gw} on {target_dev}", xbmc.LOGINFO)
+        except Exception as e:
+            log_message(f"Route Restore Error: {e}", xbmc.LOGERROR)
+    else:
+        log_message("Network: Fatal - No gateway found after restoration attempt.", xbmc.LOGERROR)
 
     if KODI_AVAILABLE: xbmcgui.Window(10000).setProperty('vpn_intentional_disconnect', '')
     if os.path.exists(INTENTIONAL_DISCONNECT_FILE):
@@ -157,6 +167,6 @@ def connect_vpn(vpn_name, sid):
         return True
     
     if KODI_AVAILABLE:
-        xbmcgui.Dialog().notification("VPN Error", "Tunnel failed", "", 5000)
+        xbmcgui.Dialog().notification("VPN Error", "Tunnel failed", ICON_ERROR, 5000)
     disconnect_vpn(silent=True)
     return False

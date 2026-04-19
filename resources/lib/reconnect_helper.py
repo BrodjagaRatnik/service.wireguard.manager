@@ -1,85 +1,75 @@
+''' ./resources/lib/reconnect_helper.py '''
 import os, sys, time, subprocess
+from network_utils import get_default_gateway
 
 try:
-    import xbmc, xbmcgui, xbmcaddon, xbmcvfs
+    import xbmc, xbmcgui
     KODI_AVAILABLE = True
 except ImportError:
-    from unittest.mock import MagicMock
-    mock_xbmc = MagicMock()
-    mock_xbmc.LOGINFO, mock_xbmc.LOGDEBUG, mock_xbmc.LOGERROR = 1, 0, 2
-    sys.modules['xbmc'] = mock_xbmc
-    sys.modules['xbmcgui'] = MagicMock()
-    sys.modules['xbmcaddon'] = MagicMock()
-    sys.modules['xbmcvfs'] = MagicMock()
     KODI_AVAILABLE = False
 
 ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
 LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
 if LIB_PATH not in sys.path: sys.path.insert(0, LIB_PATH)
 
-try:
-    from vpn_config import *
-    from vpn_ops import disconnect_vpn, connect_vpn
-    from logger import log_message
-except ImportError as e:
-    print(f"Import Error: {e}")
-    sys.exit(1)
+from vpn_config import *
+from vpn_ops import disconnect_vpn, connect_vpn
+from logger import log_message
+
+HELPER_LOCK = "/tmp/vpn_helper.lock"
+RETRY_FILE = "/tmp/vpn_reconnect_count.txt"
 
 def run_reconnect():
-    vpn_name = None
-    sid = None
-    state_path = "/tmp/vpn_manager_active.txt"
-
-    intentional = 'false'
-    if KODI_AVAILABLE:
-        intentional = xbmcgui.Window(10000).getProperty('vpn_intentional_disconnect')
+    open(HELPER_LOCK, 'w').close()
     
-    if intentional == 'true' or os.path.exists("/tmp/vpn_intentional_disconnect.txt"):
-        log_message("Helper: Intentional disconnect detected. Aborting.", xbmc.LOGDEBUG)
-        return
-
-    if os.path.exists(state_path):
-        try:
-            with open(state_path, "r") as f:
-                vpn_name = f.read().strip()
-        except: pass
-
-    if (not vpn_name or vpn_name.lower() == "true") and KODI_AVAILABLE:
-        vpn_name = xbmcgui.Window(10000).getProperty('vpn_manual_session')
-
-    if not vpn_name or vpn_name.lower() == "true":
-        log_message("Helper: No active VPN session found in state. Aborting.", xbmc.LOGDEBUG)
-        return
-
-    log_message(f"Helper: Connection lost to {vpn_name}. Starting cleanup...", xbmc.LOGINFO)
-    disconnect_vpn(silent=True)
-    
-    log_message(f"WAIT_START: Cleanup Cool-off ({CLEANUP_COOLING_DELAY}ms)", xbmc.LOGDEBUG)
-    time.sleep(CLEANUP_COOLING_DELAY / 1000.0)
-    log_message("WAIT_END: Cleanup Cool-off", xbmc.LOGDEBUG)
-
     try:
-        search_term = vpn_name.replace(' ', '_')
-        out = subprocess.check_output(["connmanctl", "services"], text=True)
-        for line in out.splitlines():
-            if search_term in line:
-                sid = line.split()[-1]
-                break
-    except Exception as e:
-        log_message(f"Helper Error finding SID: {e}", xbmc.LOGERROR)
+        if os.path.exists("/tmp/vpn_intentional_disconnect.txt"):
+            return
 
-    if vpn_name and sid:
-        log_message(f"Helper: Reconnecting to {vpn_name} ({sid})...", xbmc.LOGINFO)
-        success = connect_vpn(vpn_name, sid)
-        if success:
-            log_message(f"Helper: Reconnect to {vpn_name} successful.", xbmc.LOGINFO)
-        else:
-            log_message(f"Helper: Reconnect to {vpn_name} failed.")
-    else:
-        log_message(f"Helper: Could not find SID for {vpn_name}. Aborting.", xbmc.LOGERROR)
+        count = 0
+        if os.path.exists(RETRY_FILE):
+            try:
+                with open(RETRY_FILE, "r") as f: count = int(f.read().strip())
+            except: pass
+
+        if count >= 10:
+            log_message(f"Helper: Max retries (10) reached. Standing down.", 2) # LOGWARNING
+            return
+
+        gw_ready = False
+        for i in range(1, 7):
+            if get_default_gateway():
+                gw_ready = True
+                break
+            time.sleep(5)
+        
+        if not gw_ready: return
+
+        state_path = "/tmp/vpn_manager_active.txt"
+        vpn_name = None
+        if os.path.exists(state_path):
+            try:
+                with open(state_path, "r") as f: vpn_name = f.read().strip()
+            except: pass
+
+        if vpn_name and vpn_name.lower() != "true":
+            disconnect_vpn(silent=True)
+            time.sleep(2.0)
+
+            try:
+                search_term = vpn_name.replace(' ', '_')
+                out = subprocess.check_output(["connmanctl", "services"], text=True)
+                sid = next((line.split()[-1] for line in out.splitlines() if search_term in line), None)
+                
+                if sid:
+                    log_message(f"Helper: Reconnecting (Attempt {count + 1}/10)...", 1) # LOGINFO
+                    if connect_vpn(vpn_name, sid):
+                        if os.path.exists(RETRY_FILE): os.remove(RETRY_FILE)
+                    else:
+                        with open(RETRY_FILE, "w") as f: f.write(str(count + 1))
+            except: pass
+    finally:
+        if os.path.exists(HELPER_LOCK): os.remove(HELPER_LOCK)
 
 if __name__ == "__main__":
-    try:
-        run_reconnect()
-    except Exception as e:
-        log_message(f"Helper Critical Error: {e}", xbmc.LOGERROR)
+    run_reconnect()
