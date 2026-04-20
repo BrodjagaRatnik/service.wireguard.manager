@@ -2,14 +2,20 @@
 A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 Omega)**. This tool manages WireGuard connections natively via `connmanctl`, providing a faster and more stable experience than traditional OpenVPN-based addons.
 
 ## 🚀 Features
-*   **Native WireGuard**: Interfaces directly with LibreELEC's network stack for maximum speed.
-*   **Raspberry Pi 5 Optimized**: Aggressive timing profile reduces VPN switching time to ~1.0s.
-*   **VPN Watchdog**: A standalone background `systemd` service ensures your connection stays alive and auto-reconnects on drops.
-*   **Ethernet/Wi-Fi Failover**: Refined logic to seamlessly transition the VPN tunnel and physical interface priority if a cable is pulled.
-*   **IPv6 Leak Protection**: Kernel-level hardening and manual `resolv.conf` management prevent DNS leaks.
+*   **Native WireGuard**: Interfaces directly with LibreELEC's network stack for maximum speed and minimal overhead.
+*   **Raspberry Pi 5 Optimized**: Specifically tuned timing profiles and multi-threaded execution reduce VPN switching and recovery times.
+*   **1Hz Physical Watchdog**: A standalone `systemd` service monitors hardware carrier status every second for near-instant detection of cable pulls or link loss.
+*   **Aggressive Stream Recovery**: Automatically kills "frozen" video players during network blackouts to prevent UI hangs and provide immediate error feedback.
+*   **Intelligent Throttling**: Implements a "Safety Fuse" logic that stands down after 10 failed reconnection attempts to preserve system resources and NordVPN API limits.
+*   **Auto-Healing Failover**: Detects physical interface changes (Ethernet <-> Wi-Fi) and automatically resets retry budgets to ensure seamless recovery.
+*   **High-Visibility Alerts**: Enhanced Kodi notifications with ARGB color formatting and custom audio cues (`error.wav`) for critical network events.
+*   **IPv6 Leak Protection**: Kernel-level hardening and dynamic DNS management prevent data leaks during VPN transitions.
 *   **Remote Optimized**: Automatically maps **F11** to trigger the VPN menu from anywhere in Kodi.
-*   **Smart Auto-Mappings**: Connects to specific countries automatically based on the addon or folder you are currently browsing.
-*   **SSH Monitoring**: Detailed `PURPOSE` logging for all wait states, visible via standard system logs.
+*   **Smart Auto-Mappings**: Dynamically switches VPN locations based on the specific Kodi addon or folder being browsed.
+
+## 🛠 Advanced Monitoring
+*   **Real-time Logging**: Detailed `PURPOSE` tagging for all system waits, visible via `journalctl` or centralized logs.
+*   **Status Persistence**: Tracks active sessions and retry counts via secure temporary state files to survive script restarts.
 
 ## 📂 Project Structure
 | File/Folder | Description |
