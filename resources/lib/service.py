@@ -1,5 +1,5 @@
 ''' ./resources/lib/service.py '''
-import time, subprocess, os, sys
+import time, subprocess, os, sys, threading
 from network_utils import get_default_gateway, is_physically_connected
 
 try:
@@ -15,13 +15,27 @@ ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
 LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
 if LIB_PATH not in sys.path: sys.path.append(LIB_PATH)
 
-try: from vpn_config import *
-except ImportError: WATCHDOG_HEARTBEAT, WATCHDOG_SETTLE_DELAY, WATCHDOG_RECOVERY_DELAY = 5000, 4000, 3000
+try:
+    from vpn_config import *
+except ImportError:
+    WATCHDOG_HEARTBEAT, WATCHDOG_SETTLE_DELAY, WATCHDOG_RECOVERY_DELAY = 5000, 10000, 3000
 
-STATE_FILE, INTENTIONAL_FILE = "/tmp/vpn_manager_active.txt", "/tmp/vpn_intentional_disconnect.txt"
-HELPER_SCRIPT, HELPER_LOCK = os.path.join(LIB_PATH, "reconnect_helper.py"), "/tmp/vpn_helper.lock"
+STATE_FILE = "/tmp/vpn_manager_active.txt"
+INTENTIONAL_FILE = "/tmp/vpn_intentional_disconnect.txt"
+HELPER_SCRIPT = os.path.join(LIB_PATH, "reconnect_helper.py")
+HELPER_LOCK = "/tmp/vpn_helper.lock"
+RETRY_FILE = "/tmp/vpn_reconnect_count.txt"
 
 LAST_INTERFACE, SAVED_GATEWAY, BLACKOUT_ALERTED = None, None, False
+
+def log_message(msg, level=1):
+    try:
+        if HAS_XBMC: xbmc.log(f"service.wireguard.manager [WATCHDOG]: {msg}", level)
+        else:
+            if level > 0:
+                lvl = {1:"INFO", 2:"WARNING", 3:"ERROR"}.get(level, "INFO")
+                print(f"WATCHDOG [{lvl}]: {msg}", flush=True)
+    except: pass
 
 def get_active_interface():
     try:
@@ -37,31 +51,48 @@ def check_interface_status():
         return eth, wifi
     except: return False, False
 
-def log_message(msg, level=1):
+def trigger_blackout_ui():
+    """Aggressive background thread to kill frozen streams immediately."""
     try:
-        if HAS_XBMC: xbmc.log(f"service.wireguard.manager [WATCHDOG]: {msg}", level)
+        icon = os.path.join(ADDON_DIR, 'resources', 'media', 'router-network-error-alert.png')
+        sound = os.path.join(ADDON_DIR, 'resources', 'media', 'error.wav')
+
+        subprocess.run(['kodi-send', '--action=PlayerControl(Stop)'], check=False)
+        subprocess.run(['kodi-send', '--action=Action(Stop)'], check=False)
+        subprocess.run(['kodi-send', '--action=Dialog.Close(all,true)'], check=False)
+        
+        title = "[B][COLOR ffff0000]NO INTERNET CONNECTION[/COLOR][/B]"
+        msg = "[COLOR fffffff00]No network detected! Check your modem or telecom provider.[/COLOR]"
+        
+        subprocess.run(['kodi-send', f'--action=Notification("{title}", "{msg}", 15000, "{icon}")'], check=False)
+
+        if os.path.exists(sound):
+            subprocess.run(['kodi-send', f'--action=PlayMedia("{sound}", hidegui)'], check=False)
         else:
-            if level > 0:
-                lvl = {1:"INFO", 2:"WARNING", 3:"ERROR"}.get(level, "INFO")
-                print(f"WATCHDOG [{lvl}]: {msg}", flush=True)
+            subprocess.run(['kodi-send', '--action=PlayAction(rightclick)'], check=False)
     except: pass
 
 def watchdog_logic():
     global LAST_INTERFACE, SAVED_GATEWAY, BLACKOUT_ALERTED
-    
+
     eth_link, wifi_link = is_physically_connected("eth0"), is_physically_connected("wlan0")
     if not eth_link and not wifi_link:
         if not BLACKOUT_ALERTED:
             log_message("PHYSICAL DISCONNECT: No link detected.", 3)
+            threading.Thread(target=trigger_blackout_ui, daemon=True).start()
             BLACKOUT_ALERTED = True
         return 
     
     BLACKOUT_ALERTED = False
-    if os.path.exists(HELPER_LOCK): return
+
+    if os.path.exists(HELPER_LOCK):
+        if time.time() - os.path.getmtime(HELPER_LOCK) > 120:
+            try: os.remove(HELPER_LOCK)
+            except: pass
+        else: return 
 
     eth_online, wifi_online = check_interface_status()
     current_iface = get_active_interface()
-
     if not os.path.exists(STATE_FILE) or os.path.exists(INTENTIONAL_FILE): return
 
     if (eth_online or wifi_online) and not current_iface and SAVED_GATEWAY:
@@ -71,16 +102,21 @@ def watchdog_logic():
         current_iface = get_active_interface()
 
     try:
-        vpn_active = "wg0" in subprocess.check_output(["ip", "route"], text=True)
+        vpn_active = subprocess.run(['ip', 'link', 'show', 'wg0'], capture_output=True).returncode == 0
         if (not vpn_active or (LAST_INTERFACE == "wlan0" and eth_online) or (LAST_INTERFACE == "eth0" and not eth_online)):
+            open(HELPER_LOCK, 'w').close()
             log_message("Network change or tunnel loss. Triggering Helper...", 1)
             subprocess.run(['kodi-send', f'--action=RunScript("{HELPER_SCRIPT}")'], check=False)
             time.sleep(WATCHDOG_SETTLE_DELAY / 1000.0)
+            return
     except: pass
 
-    if current_iface and current_iface in ['eth0', 'wlan0']:
+    if current_iface in ['eth0', 'wlan0']:
         if LAST_INTERFACE != current_iface:
-            if os.path.exists("/tmp/vpn_reconnect_count.txt"): os.remove("/tmp/vpn_reconnect_count.txt")
+            if os.path.exists(RETRY_FILE):
+                try: os.remove(RETRY_FILE)
+                except: pass
+            log_message(f"Interface changed to {current_iface}. Resetting retry counter.", 1)
         LAST_INTERFACE = current_iface
 
 if __name__ == "__main__":

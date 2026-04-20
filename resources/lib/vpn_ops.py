@@ -32,9 +32,10 @@ if KODI_AVAILABLE:
     ICON_CON = os.path.join(ADDON_PATH, 'resources', 'media', 'vpn_connected.png')
     ICON_DIS = os.path.join(ADDON_PATH, 'resources', 'media', 'vpn_disconnected.png')
     ICON_ERROR = os.path.join(ADDON_PATH, 'resources', 'media', 'error.png')
+    ICON_ERROR_NETWORK = os.path.join(ADDON_PATH, 'resources', 'media', 'router-network-error-alert.png')
 else:
     ADDON_PATH = f"/storage/.kodi/addons/{ADDON_ID}"
-    ICON_CON = ICON_DIS = ICON_ERROR = ""
+    ICON_CON = ICON_DIS = ICON_ERROR = ICON_ERROR_NETWORK = ""
 
 from network_utils import set_secure_dns, disable_connman_ipv6, enable_connman_ipv6, get_default_gateway
 
@@ -128,45 +129,73 @@ def connect_vpn(vpn_name, sid):
     raw_state = get_active_vpn()
     active_clean = raw_state.replace('_', ' ').strip() if raw_state else None
     target_clean = vpn_name.replace('_', ' ').strip()
-    if active_clean == target_clean: return True
+
+    if active_clean == target_clean: 
+        return True
+
+    gw = get_default_gateway()
+    if not gw:
+        log_message(f"Ops: Cannot connect to {vpn_name}. No local gateway detected.", xbmc.LOGERROR)
+        if KODI_AVAILABLE:
+            title = "[B][COLOR ffff0000]VPN ERROR[/COLOR][/B]"
+            msg = "[COLOR fffffff00]No Internet detected. Check your modem/router.[/COLOR]"
+            xbmcgui.Dialog().notification(title, msg, ICON_ERROR_NETWORK, 1000)
+        return False
 
     log_message(f"Ops: Connecting to {vpn_name}", xbmc.LOGINFO)
     disable_connman_ipv6()
+
     pbg = xbmcgui.DialogProgressBG() if KODI_AVAILABLE else None
     if pbg: pbg.create("VPN Manager", f"Connecting to {vpn_name}...")
-    
+
     subprocess.run(["connmanctl", "connect", sid], check=False)
     connected = False
+
     for i in range(1, 16):
         if pbg: pbg.update(int(i * 6.6), message=f"Verifying... ({i}s)")
-        log_message(f"WAIT_START: Connection Poll {i} ({CONN_POLL_INTERVAL}ms) | PURPOSE: {CONN_POLL_PURPOSE}", xbmc.LOGDEBUG)
+        log_message(f"WAIT_START: Connection Poll {i} ({CONN_POLL_INTERVAL}ms)", xbmc.LOGDEBUG)
+        
         if KODI_AVAILABLE: xbmc.sleep(CONN_POLL_INTERVAL)
         else: time.sleep(CONN_POLL_INTERVAL / 1000.0)
+        
         try:
             check = subprocess.check_output(["connmanctl", "services"], text=True)
             if any(sid in line and ("* R" in line or "* O" in line) for line in check.splitlines()):
+
                 if "wg0" in subprocess.check_output(["ip", "route"], text=True):
                     connected = True
                     break
         except: pass
+        
     if pbg: pbg.close()
 
     if connected:
         set_active_vpn(target_clean)
         set_secure_dns(vpn_name, vpn_active=True)
-        log_message(f"WAIT_START: Route Propagation ({ROUTE_PROP_DELAY}ms) | PURPOSE: {ROUTE_PROP_PURPOSE}", xbmc.LOGDEBUG)
+        
         if KODI_AVAILABLE: xbmc.sleep(ROUTE_PROP_DELAY)
         else: time.sleep(ROUTE_PROP_DELAY / 1000.0)
+        
         try:
             res = subprocess.check_output(["curl", "-s", "--max-time", "5", "https://ipinfo.io"], text=True)
             data = json.loads(res)
             ip, country = data.get("ip", "Unknown"), data.get("country", "??")
             msg = f"[B][COLOR ff00ff7f][CONNECTED][/COLOR][/B] {vpn_name}\nIP: [COLOR yellow]{ip}[/COLOR] ({country})"
-        except: msg = f"[B][COLOR ff00ff7f][CONNECTED][/COLOR][/B] {vpn_name}"
+        except: 
+            msg = f"[B][COLOR ff00ff7f][CONNECTED][/COLOR][/B] {vpn_name}"
+            
         if KODI_AVAILABLE: xbmcgui.Dialog().notification("VPN Secured", msg, ICON_CON, 2500)
         return True
-    
+
     if KODI_AVAILABLE:
-        xbmcgui.Dialog().notification("VPN Error", "Tunnel failed", ICON_ERROR, 5000)
+        current_gw = get_default_gateway()
+        if not current_gw:
+            err_msg = "Internet lost during connection attempt."
+        else:
+            err_msg = "Handshake failed. Check VPN credentials or server."
+            
+        title = "[B][COLOR ffff0000]VPN FAILURE[/COLOR][/B]"
+        xbmcgui.Dialog().notification(title, err_msg, ICON_ERROR, 2500)
+        
     disconnect_vpn(silent=True)
     return False
