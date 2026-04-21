@@ -14,18 +14,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install Linter
-        run: pip install flake8
+      - name: Install dependencies
+        run: pip install flake8 kodi-addon-checker
 
       - name: Run Python Lint (flake8)
         run: |
-          # Stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # Exit-zero treats all errors as warnings (useful if you have many old style issues)
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Run Kodi Addon Checker
-        uses: xbmc/action-kodi-addon-checker@master
-        with:
-          kodi-version: omega
-          addon-id: service.wireguard.manager
+        run: kodi-addon-checker --kodi-version omega .
