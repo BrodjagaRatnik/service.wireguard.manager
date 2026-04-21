@@ -124,9 +124,17 @@ msgctxt "#32029"
 msgid "This uninstalls vpn-watchdog.service, WireGuard manager key file and all WireGuard config files."
 msgstr "This uninstalls vpn-watchdog.service, WireGuard manager key file and all WireGuard config files."
 
+msgctxt "#32995"
+msgid "Independent project, not affiliated with NordVPN. Use at your own risk, read Full Disclaimer!"
+msgstr "Independent project, not affiliated with NordVPN. Use at your own risk, read Full Disclaimer!"
+
 msgctxt "#32996"
 msgid "Safety & Reset."
 msgstr "Safety & Reset."
+
+msgctxt "#32997"
+msgid "Legal."
+msgstr "Legal."
 
 msgctxt "#32998"
 msgid "◄ Legal & Maintenance ►"

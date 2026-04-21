@@ -9,7 +9,7 @@
                         <label>32002</label>
                     </control>
                 </setting>
-				<setting id="import_token_file" type="action" label="32016">
+		<setting id="import_token_file" type="action" label="32016">
                     <level>0</level>
                     <data>RunScript(service.wireguard.manager,import_token)</data>
                     <control type="button" format="action">
@@ -27,43 +27,43 @@
                 <setting id="first_run" type="boolean" label="First Run Handled">
                     <level>4</level> <!-- Hidden from standard view -->
                     <default>true</default>
-				</setting>
+		</setting>
             </group>
         </category>
         <category id="service" label="32004">
             <group id="8" label="32013">
-				<setting id="selected_countries" type="string" label="32007">
-				     <level>0</level>
-					 <default>21,81,227,153</default> <!-- Default: BE, DE, UK, NL -->
-					 <control type="edit" format="string">
-					 </control>
+		<setting id="selected_countries" type="string" label="32007">
+		     <level>0</level>
+		     <default>21,81,227,153</default> <!-- Default: BE, DE, UK, NL -->
+		     <control type="edit" format="string">
+		     </control>
                 </setting>
-				<setting id="show_codes_EU" type="action" parent="selected_countries" label="32008">
-				     <level>0</level>
-				     <control type="button" format="action">
-				        <data>RunScript(special://home/addons/service.wireguard.manager/resources/lib/show_codes.py, europe)</data>
-				     </control>
+		<setting id="show_codes_EU" type="action" parent="selected_countries" label="32008">
+		    <level>0</level>
+		    <control type="button" format="action">
+		        <data>RunScript(special://home/addons/service.wireguard.manager/resources/lib/show_codes.py, europe)</data>
+		    </control>
                 </setting>
-				<setting id="show_codes_americas" type="action" parent="selected_countries" label="32009">
-				     <level>0</level>
-				     <control type="button" format="action">
-				        <data>RunScript(special://home/addons/service.wireguard.manager/resources/lib/show_codes.py, americas)</data>
-				     </control>
+		<setting id="show_codes_americas" type="action" parent="selected_countries" label="32009">
+		     <level>0</level>
+		     <control type="button" format="action">
+			 <data>RunScript(special://home/addons/service.wireguard.manager/resources/lib/show_codes.py, americas)</data>
+		     </control>
                 </setting>
-				<setting id="show_codes_mea" type="action" parent="selected_countries" label="32010">
-				     <level>0</level>
-				     <control type="button" format="action">
-				        <data>RunScript(special://home/addons/service.wireguard.manager/resources/lib/show_codes.py, mea)</data>
-				     </control>
+		<setting id="show_codes_mea" type="action" parent="selected_countries" label="32010">
+		    <level>0</level>
+		    <control type="button" format="action">
+		       <data>RunScript(special://home/addons/service.wireguard.manager/resources/lib/show_codes.py, mea)</data>
+		    </control>
                 </setting>
-				<setting id="regen_configs" type="action" parent="regen" label="32011">
+		<setting id="regen_configs" type="action" parent="regen" label="32011">
                      <level>0</level>
                      <control type="button" format="action">
-					     <close>false</close>
-					     <data>RunScript(service.wireguard.manager, regen)</data>
+			<close>false</close>
+			<data>RunScript(service.wireguard.manager, regen)</data>
                      </control>
                 </setting>
-				<setting id="clear_configs" type="action" label="32017">
+		<setting id="clear_configs" type="action" label="32017">
                     <level>0</level>
                     <control type="button" format="action">
                       <data>RunScript(service.wireguard.manager,clear)</data>
@@ -73,15 +73,15 @@
         </category>
         <category id="vpn_mapping" label="32018">
            <group id="2" label="32022">
-			    <setting id="run_helper" type="action" label="32019]" help="32028">
-				   <level>0</level>
-				   <control type="button" format="action">
-				   <data>RunScript(service.wireguard.manager,resources/lib/list_assets.py)</data>
-				   </control>
+		<setting id="run_helper" type="action" label="32019]" help="32028">
+		   <level>0</level>
+		   <control type="button" format="action">
+		     <data>RunScript(service.wireguard.manager,resources/lib/list_assets.py)</data>
+		   </control>
                 </setting>
             </group>
-		    <group id="3" label="32023">
-				<setting id="vpn_1_name" type="string" label="32020" help="32028">
+	    <group id="3" label="32023">
+		<setting id="vpn_1_name" type="string" label="32020" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -91,7 +91,7 @@
                    <enabled>false</enabled>
                    </control>
                 </setting>
-				<setting id="map_1_addon" type="string" label="32021" help="32028">
+		<setting id="map_1_addon" type="string" label="32021" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -102,8 +102,8 @@
                    </control>
                 </setting>
             </group>
-		    <group id="4" label="32024">
-				<setting id="vpn_2_name" type="string" label="32020" help="32028">
+	    <group id="4" label="32024">
+		<setting id="vpn_2_name" type="string" label="32020" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -113,7 +113,7 @@
                    <enabled>false</enabled>
                    </control>
                 </setting>
-				<setting id="map_2_addon" type="string" label="32021" help="32028">
+		<setting id="map_2_addon" type="string" label="32021" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -124,8 +124,8 @@
                    </control>
                 </setting>
             </group>
-		    <group id="5" label="32025">
-				<setting id="vpn_3_name" type="string" label="32020" help="32028">
+	    <group id="5" label="32025">
+		<setting id="vpn_3_name" type="string" label="32020" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -135,7 +135,7 @@
                    <enabled>false</enabled>
                    </control>
                 </setting>
-				<setting id="map_3_addon" type="string" label="32021" help="32028">
+		<setting id="map_3_addon" type="string" label="32021" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -146,8 +146,8 @@
                    </control>
                 </setting>
             </group>
-		    <group id="6" label="32026">
-				<setting id="vpn_4_name" type="string" label="32020" help="32028">
+	    <group id="6" label="32026">
+		<setting id="vpn_4_name" type="string" label="32020" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -157,7 +157,7 @@
                    <enabled>false</enabled>
                    </control>
                 </setting>
-				<setting id="map_4_addon" type="string" label="32021" help="32028">
+		<setting id="map_4_addon" type="string" label="32021" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -168,8 +168,8 @@
                    </control>
                 </setting>
             </group>
-		    <group id="7" label="32027">
-				<setting id="vpn_5_name" type="string" label="32020" help="32028">
+	    <group id="7" label="32027">
+		<setting id="vpn_5_name" type="string" label="32020" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -179,7 +179,7 @@
                    <enabled>false</enabled>
                    </control>
                 </setting>
-				<setting id="map_5_addon" type="string" label="32021" help="32028">
+		<setting id="map_5_addon" type="string" label="32021" help="32028">
                    <level>0</level>
                    <default/>
                    <constraints>
@@ -192,32 +192,34 @@
             </group>
         </category>
         <category id="legal" label="32998" help="">
-            <group id="99" label="32996">
-				<setting id="watchdog_status" type="action" label="32006">
-				     <level>0</level>
-					 <control type="button" format="action">
-					     <data>RunScript(service.wireguard.manager,status)</data>
+            <group id="98" label="32996">
+		<setting id="watchdog_status" type="action" label="32006">
+			<level>0</level>
+			<control type="button" format="action">
+			<data>RunScript(service.wireguard.manager,status)</data>
                      </control>
                 </setting>
-			    <setting id="watchdog_restart" type="action"  parent="watchdog_status" label="32005">
+	        <setting id="watchdog_restart" type="action"  parent="watchdog_status" label="32005">
                      <level>0</level>
                      <control type="button" format="action">
                          <data>RunScript(service.wireguard.manager,restart)</data>
                      </control>
                 </setting>
-				<setting id="force_reinstall" type="action" label="32014">
-				     <level>0</level>
+		<setting id="force_reinstall" type="action" label="32014">
+		     <level>0</level>
                      <control type="button" format="action">
-					    <data>RunScript(service.wireguard.manager,"reinstall")</data>
+		       <data>RunScript(service.wireguard.manager,"reinstall")</data>
                      </control>
                 </setting>
-				<setting id="factory_reset" type="action" label="32015" help="32029">
+		<setting id="factory_reset" type="action" label="32015" help="32029">
                     <level>0</level>
                     <control type="button" format="action">
                       <data>RunScript(service.wireguard.manager,cleanup)</data>
-					</control>
+		    </control>
                 </setting>
-                <setting id="legal_notice" type="action" label="32999">
+            </group>
+			<group id="99" label="32997">
+                <setting id="legal_notice" type="action" label="32999" help="32995">
                     <level>0</level>
                     <control type="button" format="action">
                         <data>RunScript(special://home/addons/service.wireguard.manager/resources/lib/show_disclaimer.py)</data>
