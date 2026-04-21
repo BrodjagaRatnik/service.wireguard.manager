@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="service.wireguard.manager" name="WireGuard Manager NordVPN" version="1.2.0" provider-name="Doemela">
     <requires>
-        <import addon="xbmc.python" version="3.0.0"/>
+        <import addon="xbmc.python" version="3.0.1"/>
     </requires>
     <extension point="xbmc.python.script" library="main.py">
         <provides>executable</provides>
@@ -24,137 +24,7 @@ v1.1.9 (2026-04-20)
 - FIXED (Stability): Refined interface tracking to ignore virtual wg0 tunnels, ensuring the retry counter only resets on real hardware events.
 - IMPROVED (Log Clarity): Reduced log levels for routine heartbeat checks to keep the system journal clean.
 - IMPROVED (Performance): Increased polling frequency to 1Hz for near-instant physical disconnect detection.
-- IMPROVED (Stability): Integrated aggressive "Double Stop" logic in a non-blocking thread to resolve player hangs faster.
-
-v1.1.8 (2026-04-20)
-
-- ADDED (Smart Recovery): Implemented a 10-minute (120-attempt) gateway timeout with automatic Systemd retry.
-- FIXED (Logic): Throttled UI notifications to once per minute to prevent user annoyance.
-- FIXED (Systemd): Moved rate-limiters from [Service] to [Unit] to fix the "unknown key" error.
-- IMPROVED (Architecture): Moved hardware-level carrier detection to network_utils.py.
-- IMPROVED (Centralization): Unified all network functions into network_utils.py, allowing multiple files (vpn_ops.py, service.py, vpn_core.py) to share the same reliable logic.
-- REMOVED (Hardcoding): Deleted GATEWAY_FALLBACK and DNS_FALLBACK; system now uses dynamic OS/API values.
-
-v1.1.7 (2026-04-19)
-- fixed service watchdog spamming journal when not on DEBUG logging on.
-
-v1.1.6 (2026-04-19)
-- IMPROVED: Major overhaul of watchdog logic for stable Pi 5 network failover.
-- FIXED: Resolved "script aborted" errors in reconnect helper by mocking Kodi modules for standalone execution.
-- FIXED: Added SID discovery logic to ensure successful reconnections when VPN names contain spaces.
-- OPTIMIZED: Level-based logging (INFO/DEBUG) to prevent log spam while maintaining high-detail troubleshooting.
-- UPDATED: Faster recovery timers and hardened DNS/IPv6 handling during interface swaps.
-- Optimized for Raspberry Pi 5: Increased OS interface release delay to 1000ms to prevent routing table race conditions.
-- Implemented "Safety Pin" Session Protection: Manual VPN connections now persist through Home screen transitions, even with WiFi latency.
-- Smart Override: Mapped addons now correctly override manual sessions and perform auto-cleanup on exit.
-- Hard-coded Gateway Fallback: Added support for 192.168.178.1 (Fritz!Box) or other routing restoration if the system fails to auto-detect the route.
-- Robust Logging: Integrated Watchdog and Network Utility events into the primary Kodi log for better troubleshooting.
-- Improved Auto-Cleanup: Added a 6-second grace period when exiting streams to prevent accidental disconnects during UI refreshes.
-
-v1.1.5 (2026-04-16)
-- Optimized for Raspberry Pi 5: Total VPN switch time reduced to ~1.0s.
-- Centralized Timings: All delays moved to vpn_config.py for easy tuning.
-- Robust Reconnect: Refined Ethernet-to-WiFi failover and interface priority logic.
-- Standalone Watchdog: Background service decoupled from Kodi modules to prevent crashes.
-- Improved Monitoring: Added detailed PURPOSE DEBUG logging for all wait states via SSH.
-- Dynamic Tagging: Version-independent log tagging for cleaner SSH monitoring.
-- Security: Forced file-based flags for manual session persistence during network swaps.
-
-v1.1.4 (2026-04-15)
-- Fixed infinite reconnect loop when navigating to Home screen.
-- Added 'Intentional Disconnect' flag to mute Watchdog during auto-cleanup.
-- Improved Home screen detection to bypass stale Kodi plugin labels.
-- Optimized Watchdog to ignore 'Ethernet back' events if VPN is already active.
-- Increased Watchdog grace period to 45s for stable Pi 5 network switching.
-- Added optional Debug Logging for trigger matching (visible when Kodi Debug is enabled).
-
-v1.1.3 (2026-04-15)
-- Added: Automatic Ethernet-to-Wi-Fi Failover and Failback support.
-- Added: Background Watchdog service for connection persistence.
-- Added: Kernel-level IPv6 disabling to prevent DNS leaks.
-- Added: Dynamic gateway discovery (works on any router/network).
-- Added: 5-second grace period for auto-mappings to prevent race conditions.
-- Added: Visual notifications for network state changes and failover.
-- Improved: Deep-cleaning of "ghost" routes during disconnect.
-- Improved: Monitoring logic to reduce false "Network Loss" alerts.
-
-v1.1.2 (2026-04-15)
-- FIXED: Resolved "Keymapping error" by implementing a direct-write logging system for background processes.
-- IMPROVED: Enhanced Watchdog with a 30-second network-aware boot delay to prevent startup crashes.
-- IMPROVED: Standardized log formatting (Thread ID and alignment) to match native Kodi logs.
-- FIXED: Improved Bash Regen script compatibility with BusyBox/LibreELEC for reliable version detection.
-- SECURITY: Removed unused system dependencies to eliminate "missing addon" warnings at startup.
-
-v1.1.1 (2026-04-13)
-- Fixed install-from-zip issue by moving file setup to service startup
-- Improved Kodi 19-21+ compatibility by migrating to xbmcvfs.translatePath
-- Renamed addon to WireGuard Manager for better consistency
-- Added automated installation and cleanup of vpn-watchdog.service
-- Integrated logger.py for comprehensive system-wide logging
-- Streamlined setup process for template configs and keymaps
-- Fixed token import logic to handle direct file browsing
-
-v1.1.0 (2026-04-13)
-- SECURITY: Added DNS Search Domain hardening to prevent local network metadata leaks.
-- FIXED: Watchdog service path resolution and startup syntax errors.
-- IMPROVED: Standardized logging level to LOGINFO for better visibility.
-- IMPROVED: Refined connection state tracking for v1.1 series.
-
-v1.0.9 (2026-04-12)
-- Added "Manual Override" state tracking to prevent auto-disconnect conflicts.
-- Integrated friendly addon name resolution for improved trigger logging.
-- Standardized logging across all modules (Service, Menu, Core, and Watchdog).
-- Optimized network metric and IPv6 handling with centralized vpn_ops logic.
-- Improved connection verification with strict curl timeouts and country detection.
-
-v1.0.8
-- Fixed error in def run_loop of class WGManagerService.
-
-- v1.0.7
-- Fixed DNS leaks by forcing VPN nameservers on physical interfaces.
-- Added automatic IPv6 disabling to prevent "around-the-tunnel" leaks.
-- Improved code efficiency by moving network logic to a shared library.
-- Enhanced logging with a rotating file handler for easier debugging.
-
-v1.0.6
-- NordVPN's Linux client and NordLynx protocol (based on WireGuard) generally prioritize IPv4 traffic and often do not support IPv6 natively, leading to potential IPv6 leaks or connectivity issues.
-- Added: Automatic IPv6 leak protection (forces IPv6 OFF before connecting).
-- Added: IPv6 restoration to "Auto" mode upon VPN disconnection.
-- Added: Routing table cleanup (cache flush) to remove stagnant host routes.
-- Fixed: Improved network stability by managing interface metrics and WiFi states.
-- Optimized: Full compatibility with LibreELEC/ConnMan for Raspberry Pi 5.
-
-v1.0.5
-- fix logging service, service_helper and menu
-
-v1.0.4
-- Cleaned up logging
-
-v1.0.3
-- Cleaned up files and new icons
-
-v1.0.2
-- Security: Added automatic IPv6 Leak Protection. The manager now identifies and disables IPv6 on Ethernet and Wi-Fi.
-- Routing Fix: Implemented Metric priority (Metric 100) for Ethernet to ensure VPN traffic always takes precedence.
-- Hardware: Added Wi-Fi Kill Switch. Automatically disables Wi-Fi when Ethernet is connected to prevent multi-interface leaks.
-- Setup: Improved first-run logic with a dedicated Keymap installation, mandatory Restart prompt, and Token Import wizard.
-- Mapping: Slot assignments are now "Regen-Proof." They use Friendly Names (e.g., NordVPN_Belgium) instead of static IPs.
-- UI: Synchronized notifications between the manual menu and background service, including progress bars and IP info lookups.
-- Keymap: Removed the Blue button mapping from the keymap as it was found to be incompatible.
-- Cleanup: Enhanced Factory Reset to purge NordVPN-specific configs and properly decommission legacy system services.
-
-v1.0.1
-- Added: Smart Add-on Mapping (Auto-connect VPN based on which TV add-on is open)
-- Added: Visual Setup Wizard to easily assign WireGuard profiles to slots
-- Added: Dynamic background monitoring for Kodi 21.3 (Omega)
-- Improved: Log-less trigger detection for better performance on Pi 5
-- Fixed: Resolved service-start delays in LibreELEC 12.2.1
-
-v1.0.0
-- Fixed: RunScript reinstall command argument parsing
-- Improved: Main logic execution order for better setup handling
-- Added: Enhanced logging for LibreELEC
-        </news>
+- IMPROVED (Stability): Integrated aggressive "Double Stop" logic in a non-blocking thread to resolve player hangs faster.</news>
         <language>en_gb</language>
         <platform>linux</platform>
         <license>MIT</license>
@@ -164,8 +34,8 @@ v1.0.0
             <icon>resources/media/icon.png</icon>
             <fanart>resources/media/fanart.jpg</fanart>
             <screenshot>resources/media/screenshot00000.png</screenshot>
-            <screenshot>resources/media/screenshot00001.png</screenshot>
-            <screenshot>resources/media/screenshot00002.png</screenshot>
+            <screenshot>resources/media/screenshot00001.jpg</screenshot>
+            <screenshot>resources/media/screenshot00002.jpg</screenshot>
         </assets>
     </extension>
 </addon>
