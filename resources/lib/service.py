@@ -73,7 +73,7 @@ def trigger_blackout_ui():
     except: pass
 
 def watchdog_logic():
-    global LAST_INTERFACE, SAVED_GATEWAY, BLACKOUT_ALERTED
+    global LAST_INTERFACE, BLACKOUT_ALERTED
 
     eth_link, wifi_link = is_physically_connected("eth0"), is_physically_connected("wlan0")
     if not eth_link and not wifi_link:
