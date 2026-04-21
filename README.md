@@ -1,4 +1,3 @@
-![Events](https://github.com/github/docs/actions/workflows/main.yml/badge.svg?event=push)
 # WireGuard Manager for NordVPN (LibreELEC)
 A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 Omega)**. This tool manages WireGuard connections natively via `connmanctl`, providing a faster and more stable experience than traditional OpenVPN-based addons.
 
