@@ -1,6 +1,14 @@
 # WireGuard Manager for NordVPN (LibreELEC)
-A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 Omega)**. This tool manages WireGuard connections natively via `connmanctl`, providing a faster and more stable experience than traditional OpenVPN-based addons.
+![Release](https://img.shields.io/github/v/release/BrodjagaRatnik/service.wireguard.manager)
+![Kodi](https://img.shields.io/badge/Kodi-21.3%20(Omega)-blue?logo=kodi)
+![Python](https://img.shields.io/badge/python-3.12-blue?logo=python)
+![LibreELEC](https://img.shields.io/badge/LibreELEC-12.2.1-blue)
+![Linux Kernel](https://img.shields.io/badge/Linux-6.16-blue?logo=linux&logoColor=white)
+![License](https://img.shields.io/github/license/BrodjagaRatnik/service.wireguard.manager)
+![Size](https://img.shields.io/github/repo-size/BrodjagaRatnik/service.wireguard.manager)
+![Last Commit](https://img.shields.io/github/last-commit/BrodjagaRatnik/service.wireguard.manager)
 
+A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 Omega)**. This tool manages WireGuard connections natively via `connmanctl`, providing a faster and more stable experience than traditional OpenVPN-based addons.
 ## 🚀 Features
 *   **Native WireGuard**: Interfaces directly with LibreELEC's network stack for maximum speed and minimal overhead.
 *   **Raspberry Pi 5 Optimized**: Specifically tuned timing profiles and multi-threaded execution reduce VPN switching and recovery times.
