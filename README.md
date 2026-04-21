@@ -73,9 +73,8 @@ If you already know what you're doing, grab the repository installer here:
 4. Select **Install**.
 5. Once the installation is complete, the **Setup Wizard** will launch automatically to guide you through the initial configuration and token import.
 > **Tip:** Installing via the Repository is the recommended method. It ensures you receive **automatic updates** for bug fixes and new Raspberry Pi 5 performance optimizations as soon as they are released.
-
+---
 <img src="resources/media/screenshot00002.jpg" alt="Alt text" width="800">
 
 ---
-
 *Created by Doemela*
