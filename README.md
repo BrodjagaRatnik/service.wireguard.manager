@@ -2,7 +2,7 @@
 ![Size](https://img.shields.io/github/repo-size/BrodjagaRatnik/service.wireguard.manager)
 ![Last Commit](https://img.shields.io/github/last-commit/BrodjagaRatnik/service.wireguard.manager)
 ![Lint Status](https://img.shields.io/github/actions/workflow/status/BrodjagaRatnik/service.wireguard.manager/test_addon.yml?label=linting)
-![Build Status](https://://github.com)
+![Build Status](https://github.com/BrodjagaRatnik/service.wireguard.manager/actions/workflows/test_addon.yml/badge.svg)
 ---
 # WireGuard Manager for NordVPN (LibreELEC)
 ![Kodi](https://img.shields.io/badge/Kodi-21.3%20(Omega)-blue?logo=kodi)
