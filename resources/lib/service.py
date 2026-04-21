@@ -26,7 +26,7 @@ HELPER_SCRIPT = os.path.join(LIB_PATH, "reconnect_helper.py")
 HELPER_LOCK = "/tmp/vpn_helper.lock"
 RETRY_FILE = "/tmp/vpn_reconnect_count.txt"
 
-LAST_INTERFACE, SAVED_GATEWAY, BLACKOUT_ALERTED = None, None, False
+LAST_INTERFACE, BLACKOUT_ALERTED = None, None, False
 
 def log_message(msg, level=1):
     try:
