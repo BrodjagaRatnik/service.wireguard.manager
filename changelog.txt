@@ -1,6 +1,24 @@
 CHANGELOG
 =========
 
+v1.2.1 (2026-04-22)
+- changes to Icon, screenshot images.
+- FIXED service.py removed unused global variable
+
+v1.2.0 (2026-04-21)
+- IMPROVED settings.xml.
+
+v1.1.9 (2026-04-20)
+- ADDED (Auto-Healing): Watchdog automatically resets the retry budget when a physical network change (Eth/WiFi) is detected.
+- ADDED (High-Visibility Alerts): Enhanced blackout notifications with Red/Bold formatting and custom ICON_ERROR support.
+- ADDED (Intelligent Throttling): Helper now stands down after 10 failed attempts to preserve system resources and NordVPN API limits.
+- ADDED (Smarter Connection Logic): Added pre-connection gateway validation to identify "No Internet" vs "VPN Handshake Failure."
+- FIXED (Stability): Implemented a global lock-file to prevent Watchdog/Helper race conditions and "double-triggers."
+- FIXED (Stability): Refined interface tracking to ignore virtual wg0 tunnels, ensuring the retry counter only resets on real hardware events.
+- IMPROVED (Log Clarity): Reduced log levels for routine heartbeat checks to keep the system journal clean.
+- IMPROVED (Performance): Increased polling frequency to 1Hz for near-instant physical disconnect detection.
+- IMPROVED (Stability): Integrated aggressive "Double Stop" logic in a non-blocking thread to resolve player hangs faster.
+
 v1.2.0 (2026-04-21)
 
 - IMPROVED settings.xml.
