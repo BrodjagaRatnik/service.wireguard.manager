@@ -1,3 +1,4 @@
+''' ./resources/lib/vpn_menu.py '''
 import os
 import sys
 import xbmc
@@ -84,7 +85,8 @@ def show_menu(media_path, shell_script, token):
                             continue
                 except Exception as e:
                     log_message(f"Menu Flag Error: {e}", xbmc.LOGERROR)
-                
+
+                log_message(f"WAIT: UI Buffer Menu ({UI_BUFFER_DELAY_MENU}ms) | PURPOSE: {UI_BUFFER_PURPOSE_MENU}", xbmc.LOGDEBUG)              
                 xbmc.sleep(UI_BUFFER_DELAY_MENU)
 
                 log_message(f"Menu: Manual connection requested for {target_name}", xbmc.LOGINFO)

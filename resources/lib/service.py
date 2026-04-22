@@ -26,7 +26,9 @@ HELPER_SCRIPT = os.path.join(LIB_PATH, "reconnect_helper.py")
 HELPER_LOCK = "/tmp/vpn_helper.lock"
 RETRY_FILE = "/tmp/vpn_reconnect_count.txt"
 
-LAST_INTERFACE, BLACKOUT_ALERTED = None, None, False
+LAST_INTERFACE = None
+BLACKOUT_ALERTED = False
+SAVED_GATEWAY = None
 
 def log_message(msg, level=1):
     try:
@@ -73,7 +75,14 @@ def trigger_blackout_ui():
     except: pass
 
 def watchdog_logic():
-    global LAST_INTERFACE, BLACKOUT_ALERTED
+    global LAST_INTERFACE, BLACKOUT_ALERTED, SAVED_GATEWAY
+
+    if os.path.exists(HELPER_LOCK):
+        if time.time() - os.path.getmtime(HELPER_LOCK) > 120:
+            try: os.remove(HELPER_LOCK)
+            except: pass
+        else: 
+            return
 
     eth_link, wifi_link = is_physically_connected("eth0"), is_physically_connected("wlan0")
     if not eth_link and not wifi_link:
@@ -85,14 +94,9 @@ def watchdog_logic():
     
     BLACKOUT_ALERTED = False
 
-    if os.path.exists(HELPER_LOCK):
-        if time.time() - os.path.getmtime(HELPER_LOCK) > 120:
-            try: os.remove(HELPER_LOCK)
-            except: pass
-        else: return 
-
     eth_online, wifi_online = check_interface_status()
     current_iface = get_active_interface()
+
     if not os.path.exists(STATE_FILE) or os.path.exists(INTENTIONAL_FILE): return
 
     if (eth_online or wifi_online) and not current_iface and SAVED_GATEWAY:
@@ -103,8 +107,12 @@ def watchdog_logic():
 
     try:
         vpn_active = subprocess.run(['ip', 'link', 'show', 'wg0'], capture_output=True).returncode == 0
-        if (not vpn_active or (LAST_INTERFACE == "wlan0" and eth_online) or (LAST_INTERFACE == "eth0" and not eth_online)):
-            open(HELPER_LOCK, 'w').close()
+        if not vpn_active:
+            if os.path.exists(HELPER_LOCK):
+                return
+
+            with open(HELPER_LOCK, 'w') as f: f.write("locked")
+            
             log_message("Network change or tunnel loss. Triggering Helper...", 1)
             subprocess.run(['kodi-send', f'--action=RunScript("{HELPER_SCRIPT}")'], check=False)
             time.sleep(WATCHDOG_SETTLE_DELAY / 1000.0)

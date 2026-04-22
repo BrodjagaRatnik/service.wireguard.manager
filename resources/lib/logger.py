@@ -1,3 +1,4 @@
+''' ./resources/lib/logger.py '''
 import sys
 import os
 import xml.etree.ElementTree as ET

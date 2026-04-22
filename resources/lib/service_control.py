@@ -1,3 +1,4 @@
+''' ./resources/lib/service_control.py '''
 import sys, os, subprocess
 
 ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
@@ -82,6 +83,9 @@ def control_service():
 
             if os.path.exists("/tmp/vpn_manager_active.txt"):
                 os.remove("/tmp/vpn_manager_active.txt")
+
+            if os.path.exists("/tmp/vpn_helper.lock"): os.remove("/tmp/vpn_helper.lock")
+            if os.path.exists("/tmp/vpn_reconnect_count.txt"): os.remove("/tmp/vpn_reconnect_count.txt")
                 
             subprocess.run(["systemctl", "restart", "connman-vpn"])
             

@@ -1,3 +1,4 @@
+''' ./resources/lib/setup_helper.py '''
 import os
 import shutil
 import subprocess

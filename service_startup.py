@@ -1,3 +1,4 @@
+''' ./service_startup.py '''
 import xbmc, xbmcgui, xbmcaddon, xbmcvfs, os, sys, subprocess, time
 
 _ADDON = xbmcaddon.Addon('service.wireguard.manager')
@@ -6,11 +7,8 @@ LIB_PATH = os.path.join(ADDON_PATH, 'resources', 'lib')
 if LIB_PATH not in sys.path: sys.path.append(LIB_PATH)
 
 from vpn_config import *
-from logger import log_message as original_log_message
 import vpn_ops
-
-def log_message(msg, level=xbmc.LOGDEBUG):
-    original_log_message(msg, level)
+from logger import log_message 
 
 CLEANUP_COUNT = 0
 
@@ -87,13 +85,13 @@ class WGManagerService(xbmc.Monitor):
                 return 
 
             if is_home:
-                log_message("Auto-cleanup: Home detected for mapped addon. Disconnecting.")
+                log_message("Auto-cleanup: Home detected for mapped addon. Disconnecting.", xbmc.LOGINFO)
                 vpn_ops.disconnect_vpn(silent=False)
                 CLEANUP_COUNT = 0
             else:
                 CLEANUP_COUNT += 1
                 if CLEANUP_COUNT >= 3:
-                    log_message("Auto-cleanup: Confirmed outside mapping for 6s. Disconnecting.", xbmc.LOGINFO)
+                    log_message("Auto-cleanup: Confirmed outside mapping for 3s. Disconnecting.", xbmc.LOGINFO)
                     vpn_ops.disconnect_vpn(silent=False)
                     CLEANUP_COUNT = 0
 

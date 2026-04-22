@@ -1,3 +1,4 @@
+''' ./resources/lib/list_assets.py '''
 import xbmc
 import xbmcgui
 import xbmcaddon

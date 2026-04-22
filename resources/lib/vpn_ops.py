@@ -17,6 +17,7 @@ except ImportError:
     PROP_SYNC_DELAY, OS_RELEASE_DELAY = 100, 600
     CONN_POLL_INTERVAL, ROUTE_PROP_DELAY = 300, 200
     DNS_FALLBACK = ["103.86.96.100", "103.86.99.100"]
+    DHCP_RECOVERY_DELAY = 2000
 
 try:
     from logger import log_message as kodi_log
@@ -89,18 +90,21 @@ def disconnect_vpn(silent=False):
     log_message(f"WAIT_START: OS Interface Release ({OS_RELEASE_DELAY}ms) | PURPOSE: {OS_RELEASE_PURPOSE}")
     if KODI_AVAILABLE: xbmc.sleep(OS_RELEASE_DELAY)
     else: time.sleep(OS_RELEASE_DELAY / 1000.0)
-
-    time.sleep(2) 
+ 
     gw = get_default_gateway()
-    
+
     if not gw:
-        log_message("Network: Default route lost. Attempting restoration...", xbmc.LOGWARNING)
+        log_message("Network: Default route lost. Attempting restoration...", xbmc.LOGDEBUG)
         try:
             out = subprocess.check_output(["connmanctl", "services"], text=True)
             phys_service = next((line.split()[-1] for line in out.splitlines() if line.startswith(('*', 'R')) and "vpn_" not in line), None)
             if phys_service:
                 subprocess.run(["connmanctl", "config", phys_service, "--ipv4", "dhcp"], check=False)
-                time.sleep(2)
+                
+                log_message(f"WAIT: DHCP Recovery ({DHCP_RECOVERY_DELAY}ms)", xbmc.LOGINFO)
+                if KODI_AVAILABLE: xbmc.sleep(DHCP_RECOVERY_DELAY)
+                else: time.sleep(DHCP_RECOVERY_DELAY / 1000.0)
+                
                 gw = get_default_gateway()
         except: pass
 

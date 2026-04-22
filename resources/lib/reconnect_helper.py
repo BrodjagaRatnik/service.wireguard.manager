@@ -12,7 +12,11 @@ ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
 LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
 if LIB_PATH not in sys.path: sys.path.insert(0, LIB_PATH)
 
-from vpn_config import *
+try:
+    from vpn_config import *
+except ImportError:
+    WATCHDOG_SETTLE_DELAY = 10000
+
 from vpn_ops import disconnect_vpn, connect_vpn
 from logger import log_message
 
@@ -54,6 +58,7 @@ def run_reconnect():
         count = get_retry_count()
         if count >= MAX_RETRIES:
             log_message(f"Helper: Max retries ({MAX_RETRIES}) reached. Standing down.", 2)
+            if os.path.exists(RETRY_FILE): os.remove(RETRY_FILE)
             return
 
         gw_ready = False
@@ -80,8 +85,6 @@ def run_reconnect():
 
         log_message(f"Helper: Connection lost to {vpn_name}. Starting cleanup...", 1)
         disconnect_vpn(silent=True)
-        time.sleep(2.0)
-
         try:
             search_term = vpn_name.replace(' ', '_')
             out = subprocess.check_output(["connmanctl", "services"], text=True)
