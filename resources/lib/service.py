@@ -75,7 +75,7 @@ def trigger_blackout_ui():
     except: pass
 
 def watchdog_logic():
-    global LAST_INTERFACE, BLACKOUT_ALERTED, SAVED_GATEWAY
+    global LAST_INTERFACE, BLACKOUT_ALERTED
 
     if os.path.exists(HELPER_LOCK):
         if time.time() - os.path.getmtime(HELPER_LOCK) > 120:
