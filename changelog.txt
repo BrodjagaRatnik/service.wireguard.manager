@@ -1,6 +1,21 @@
 CHANGELOG
 =========
 
+v1.2.2 (2026-04-22)
+- FIX: Resolved ValueError: too many values to unpack in service.py.
+- FIX: Resolved IndentationError in vpn_ops.py gateway restoration logic.
+- FIX: Optimized Watchdog/Helper synchronization to prevent reconnect loops/spam.
+- NEW: Centralized all timing and delays into vpn_config.py for Pi 5 optimization.
+- NEW: Added DHCP Recovery delay to ensure internet restoration after VPN drops.
+- IMPROVED: Refined Auto-Cleanup timing in service_startup.py to match the 1s heartbeat.
+
+v1.2.1 (2026-04-22)
+- Changes to icon, screenshot images.
+- FIXED service.py removed unused global variable
+
+v1.2.0 (2026-04-21)
+- IMPROVED settings.xml.
+
 v1.2.1 (2026-04-22)
 - changes to Icon, screenshot images.
 - FIXED service.py removed unused global variable
