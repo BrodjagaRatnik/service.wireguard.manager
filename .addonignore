@@ -7,3 +7,5 @@ resources/update_servers.sh
 .gitignore
 .DS_Store
 resources/media/*.png.bak
+.git/
+.github/

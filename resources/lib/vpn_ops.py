@@ -84,7 +84,7 @@ def disconnect_vpn(silent=False):
     set_active_vpn(None)
     
     if not silent and KODI_AVAILABLE:
-        xbmcgui.Dialog().notification("Network", "VPN Disconnected", ICON_DIS, 3000)
+        xbmcgui.Dialog().notification("Network", "VPN Disconnected...", ICON_DIS, 3000)
 
     log_message(f"WAIT_START: OS Interface Release ({OS_RELEASE_DELAY}ms) | PURPOSE: {OS_RELEASE_PURPOSE}")
     if KODI_AVAILABLE: xbmc.sleep(OS_RELEASE_DELAY)
@@ -140,9 +140,9 @@ def connect_vpn(vpn_name, sid):
     if not gw:
         log_message(f"Operation: Cannot connect to {vpn_name}. No local gateway detected.", xbmc.LOGERROR)
         if KODI_AVAILABLE:
-            title = "[B][COLOR ffff0000]VPN ERROR[/COLOR][/B]"
-            msg = "[COLOR fffffff00]No Internet detected. Check your modem/router.[/COLOR]"
-            xbmcgui.Dialog().notification(title, msg, ICON_ERROR_NETWORK, 1000)
+            title = "[B][COLOR ffff0000]NETWORK ERROR[/COLOR][/B]"
+            msg = "[COLOR fffffff00]No Internet detected. Check your Modem/Router.[/COLOR]"
+            xbmcgui.Dialog().notification(title, msg, ICON_ERROR_NETWORK, 3000)
         return False
 
     log_message(f"Operation: Connecting to {vpn_name}", xbmc.LOGINFO)
@@ -187,7 +187,7 @@ def connect_vpn(vpn_name, sid):
         except: 
             msg = f"[B][COLOR ff00ff7f][CONNECTED][/COLOR][/B] {vpn_name}"
             
-        if KODI_AVAILABLE: xbmcgui.Dialog().notification("VPN Secured", msg, ICON_CON, 2500)
+        if KODI_AVAILABLE: xbmcgui.Dialog().notification("VPN Connection is Secured", msg, ICON_CON, 3000)
         return True
 
     if KODI_AVAILABLE:
@@ -199,8 +199,8 @@ def connect_vpn(vpn_name, sid):
             err_msg = "Handshake failed. Check VPN credentials or server."
             log_message(f"Operation: Handshake failed. Check VPN credentials or server.", xbmc.LOGERROR)
             
-        title = "[B][COLOR ffff0000]VPN FAILURE[/COLOR][/B]"
-        xbmcgui.Dialog().notification(title, err_msg, ICON_ERROR, 2500)
+        title = "[B][COLOR ffff0000]VPN FAILURE (Internet,Handshake)[/COLOR][/B]"
+        xbmcgui.Dialog().notification(title, err_msg, ICON_ERROR, 3000)
         
     disconnect_vpn(silent=True)
     return False

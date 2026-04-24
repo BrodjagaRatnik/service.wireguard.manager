@@ -1,21 +1,18 @@
 CHANGELOG
 =========
 
-v1.2.3 (2026-04-24)
+v1.2.4
 
+- Added a custom Terms of Service, disclaimer dialog accessible from settings.
+- Added extra slots to VPN mapping and rearrange settings.
+- Improved UI accessibility, simplified TOS, disclaimer window background for better readability and size windows.
+
+v1.2.3
 - Added deep-flush file writing to ensure the reconnection counter is never corrupted.
 - Implemented a lock system to prevent the Monitor Service from fighting the Reconnect Helper.
 - Increased DHCP stabilization buffers and added a "proven connection" check before resetting counters.
 - Optimized log levels (INFO/WARNING/ERROR) and added DEBUG heartbeats to show "Shield Active" status.
 - Re-engineered the Helper to handle all 10 attempts internally for faster, more stable recovery.
-
-v1.2.2 (2026-04-22)
-- FIX: Resolved ValueError: too many values to unpack in service.py.
-- FIX: Resolved IndentationError in vpn_ops.py gateway restoration logic.
-- FIX: Optimized Watchdog/Helper synchronization to prevent reconnect loops/spam.
-- NEW: Centralized all timing and delays into vpn_config.py for Pi 5 optimization.
-- NEW: Added DHCP Recovery delay to ensure internet restoration after VPN drops.
-- IMPROVED: Refined Auto-Cleanup timing in service_startup.py to match the 1s heartbeat.
 
 v1.2.2 (2026-04-22)
 - FIX: Resolved ValueError: too many values to unpack in service.py.

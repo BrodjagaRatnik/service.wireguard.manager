@@ -64,8 +64,8 @@ def set_secure_dns(vpn_name=None, vpn_active=True):
                     subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
                     if dns_servers:
                         subprocess.run(["connmanctl", "config", sid, "--nameservers"] + dns_servers, check=False)
-                    subprocess.run(["connmanctl", "config", sid, "--domains", "."], check=False)
-                    subprocess.run(["connmanctl", "config", sid, "--ipv6", "off"], check=False)
+                        subprocess.run(["connmanctl", "config", sid, "--domains", "."], check=False)
+                        subprocess.run(["connmanctl", "config", sid, "--ipv6", "off"], check=False)
 
                 else:
                     subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)

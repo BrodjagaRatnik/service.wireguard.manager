@@ -144,7 +144,7 @@ def ensure_setup(addon_path, media_path):
                         token_content = f.read().strip()
                         _ADDON.setSetting("vpn_token", token_content)
                         log_message("Setup: VPN Token imported from file successfully.", xbmc.LOGINFO)
-                        xbmcgui.Dialog().notification("WireGuard Manager", "Token saved.", xbmcgui.NOTIFICATION_INFO, 5000)
+                        xbmcgui.Dialog().notification("WireGuard Manager", "Token saved.", xbmcgui.NOTIFICATION_INFO, 3000)
                         return True
                 except Exception as e:
                     log_message(f"Setup: Token Read Error {e}", xbmc.LOGERROR)
@@ -156,7 +156,7 @@ def ensure_setup(addon_path, media_path):
             if keyboard.isConfirmed() and keyboard.getText():
                 _ADDON.setSetting("vpn_token", keyboard.getText())
                 log_message("Setup: VPN Token entered manually.", xbmc.LOGINFO)
-                xbmcgui.Dialog().notification("WireGuard Manager", "Token saved.", xbmcgui.NOTIFICATION_INFO, 5000)
+                xbmcgui.Dialog().notification("WireGuard Manager", "Token saved.", xbmcgui.NOTIFICATION_INFO, 4000)
                 return True
         
         elif choice == 2 or choice == -1:

@@ -64,7 +64,7 @@ def trigger_blackout_ui():
         subprocess.run(['kodi-send', '--action=Dialog.Close(all,true)'], check=False)
         
         title = "[B][COLOR ffff0000]NO INTERNET CONNECTION DETECTED![/COLOR][/B]"
-        msg = "[COLOR fffffff00]Check Wifi, Wire, Modem or Telecom provider.[/COLOR]"
+        msg = "[COLOR fffffff00]Check Wifi|Wire|Modem|Telecom provider.[/COLOR]"
         
         subprocess.run(['kodi-send', f'--action=Notification("{title}", "{msg}", 15000, "{icon}")'], check=False)
         log_message("Service: NO INTERNET CONNECTION DETECTED!", 3)

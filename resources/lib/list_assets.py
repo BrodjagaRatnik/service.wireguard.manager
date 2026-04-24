@@ -29,7 +29,7 @@ def get_wg_services():
     return services
 
 def run_wizard():
-    slots = ["Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5"]
+    slots = ["Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Slot 6", "Slot 7", "Slot 8"]
     sel_slot = xbmcgui.Dialog().select("Assign VPN to which Slot?", slots)
     if sel_slot == -1: return
     slot_id = sel_slot + 1
@@ -39,7 +39,7 @@ def run_wizard():
     if sel_action == -1: return
 
     if sel_action == 1:
-        log_message(f"Wizard: Resetting Slot {slot_id}", xbmc.LOGINFO)
+        log_message(f"Wizard: Resetting Slot {slot_id}", xbmc.LOGDEBUG)
         _ADDON.setSetting(f"vpn_{slot_id}_name", "")
         _ADDON.setSetting(f"map_{slot_id}_addon", "")
         xbmcgui.Dialog().notification("WireGuard Manager", f"Slot {slot_id} reset", "", 3000)
@@ -68,14 +68,14 @@ def run_wizard():
         addons = []
         
     if not addons:
-        xbmcgui.Dialog().ok("Error", "No video addons found.")
+        xbmcgui.Dialog().ok("Error", "No video addons found.", xbmc.LOGERROR)
         return
 
     sel_addon = xbmcgui.Dialog().select("Select Trigger Addon", addons)
     if sel_addon == -1: return
     chosen_addon_id = addons[sel_addon]
 
-    log_message(f"Wizard: Successfully assigned Slot {slot_id} -> {chosen_vpn_name} (Trigger: {chosen_addon_id})", xbmc.LOGINFO)
+    log_message(f"Wizard: Successfully assigned Slot {slot_id} -> {chosen_vpn_name} (Trigger: {chosen_addon_id})", xbmc.LOGDEBUG)
     
     _ADDON.setSetting(f"vpn_{slot_id}_name", chosen_vpn_name)
     _ADDON.setSetting(f"map_{slot_id}_addon", chosen_addon_id)

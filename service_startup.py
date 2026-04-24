@@ -90,8 +90,8 @@ class WGManagerService(xbmc.Monitor):
                 CLEANUP_COUNT = 0
             else:
                 CLEANUP_COUNT += 1
-                if CLEANUP_COUNT >= 3:
-                    log_message("Service Startup: Confirmed outside mapping for 3s. Disconnecting.", xbmc.LOGINFO)
+                if CLEANUP_COUNT >= 5:
+                    log_message("Service Startup: Confirmed outside mapping for 5s. Disconnecting.", xbmc.LOGINFO)
                     vpn_ops.disconnect_vpn(silent=False)
                     CLEANUP_COUNT = 0
 
