@@ -1,18 +1,18 @@
 CHANGELOG
 =========
 
-v1.2.4
+v1.2.5
 
+- Refactored main and service entry points for Kodi repository compliance
+- Moved core logic to dedicated launcher modules (main_launcher, service_launcher)
+- Improved code structure and performance by reducing entry point complexity
+- Fixed potential memory leaks in background service monitoring
+- Fixed mapping not working after slot 6 made chamges to service_launcher 
+
+v1.2.4
 - Added a custom Terms of Service, disclaimer dialog accessible from settings.
 - Added extra slots to VPN mapping and rearrange settings.
 - Improved UI accessibility, simplified TOS, disclaimer window background for better readability and size windows.
-
-v1.2.3
-- Added deep-flush file writing to ensure the reconnection counter is never corrupted.
-- Implemented a lock system to prevent the Monitor Service from fighting the Reconnect Helper.
-- Increased DHCP stabilization buffers and added a "proven connection" check before resetting counters.
-- Optimized log levels (INFO/WARNING/ERROR) and added DEBUG heartbeats to show "Shield Active" status.
-- Re-engineered the Helper to handle all 10 attempts internally for faster, more stable recovery.
 
 v1.2.2 (2026-04-22)
 - FIX: Resolved ValueError: too many values to unpack in service.py.

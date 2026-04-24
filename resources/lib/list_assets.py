@@ -29,6 +29,7 @@ def get_wg_services():
     return services
 
 def run_wizard():
+    """  If adding slots change for i in range(1, 9): in resources/lib/service_launcher.py """
     slots = ["Slot 1", "Slot 2", "Slot 3", "Slot 4", "Slot 5", "Slot 6", "Slot 7", "Slot 8"]
     sel_slot = xbmcgui.Dialog().select("Assign VPN to which Slot?", slots)
     if sel_slot == -1: return
