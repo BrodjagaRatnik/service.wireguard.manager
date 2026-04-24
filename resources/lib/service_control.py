@@ -21,7 +21,6 @@ try:
 except ImportError:
     KODI_MODE = False
     SYSTEMD_POLL_DELAY = 300
-    SYSTEMD_POLL_PURPOSE = "Systemd state transition wait"
 
 def log_event(msg, level=None):
     if level is None:

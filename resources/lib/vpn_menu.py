@@ -93,4 +93,4 @@ def show_menu(media_path, shell_script, token):
                 vpn_ops.connect_vpn(target_name, target_sid)
 
     except Exception as e:
-        log_message(f"Menu Error: {e}", xbmc.LOGERROR)
+        log_message(f"Menu: Error {e}", xbmc.LOGERROR)

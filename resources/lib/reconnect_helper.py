@@ -15,7 +15,7 @@ if LIB_PATH not in sys.path: sys.path.insert(0, LIB_PATH)
 try:
     from vpn_config import *
 except ImportError:
-    WATCHDOG_SETTLE_DELAY = 10000
+    WATCHDOG_SETTLE_DELAY = 20000
 
 from vpn_ops import disconnect_vpn, connect_vpn
 from logger import log_message
@@ -34,7 +34,10 @@ def get_retry_count():
 def increment_retry():
     count = get_retry_count() + 1
     try:
-        with open(RETRY_FILE, "w") as f: f.write(str(count))
+        with open(RETRY_FILE, "w") as f: 
+            f.write(str(count))
+            f.flush()
+            os.fsync(f.fileno()) 
     except: pass
     return count
 
@@ -43,63 +46,58 @@ def run_reconnect():
     sid = None
     state_path = "/tmp/vpn_manager_active.txt"
 
-    if not os.path.exists(HELPER_LOCK):
-        open(HELPER_LOCK, 'w').close()
-    
-    try:
-        check_wg = subprocess.run(['ip', 'link', 'show', 'wg0'], capture_output=True)
-        if check_wg.returncode == 0:
-            log_message("Helper: Tunnel already active or in progress. Exiting instance.", 0)
-            return
-
-        if os.path.exists("/tmp/vpn_intentional_disconnect.txt"):
-            return
-
-        count = get_retry_count()
-        if count >= MAX_RETRIES:
-            log_message(f"Helper: Max retries ({MAX_RETRIES}) reached. Standing down.", 2)
-            if os.path.exists(RETRY_FILE): os.remove(RETRY_FILE)
-            return
-
-        gw_ready = False
-        for i in range(1, 7):
-            if get_default_gateway():
-                gw_ready = True
-                break
-            time.sleep(5)
-        
-        if not gw_ready:
-            increment_retry()
-            return
-
-        if os.path.exists(state_path):
-            try:
-                with open(state_path, "r") as f: vpn_name = f.read().strip()
-            except: pass
-
-        if (not vpn_name or vpn_name.lower() == "true") and KODI_AVAILABLE:
-            vpn_name = xbmcgui.Window(10000).getProperty('vpn_manual_session')
-
-        if not vpn_name or vpn_name.lower() == "true":
-            return
-
-        log_message(f"Helper: Connection lost to {vpn_name}. Starting cleanup...", 1)
-        disconnect_vpn(silent=True)
+    if os.path.exists(state_path):
         try:
-            search_term = vpn_name.replace(' ', '_')
-            out = subprocess.check_output(["connmanctl", "services"], text=True)
-            sid = next((line.split()[-1] for line in out.splitlines() if search_term in line), None)
+            with open(state_path, "r") as f: vpn_name = f.read().strip()
         except: pass
 
-        if vpn_name and sid:
-            log_message(f"Helper: Reconnecting to {vpn_name} (Attempt {count + 1}/{MAX_RETRIES})...", 1)
-            if connect_vpn(vpn_name, sid):
-                if os.path.exists(RETRY_FILE):
-                    try: os.remove(RETRY_FILE)
-                    except: pass
-            else:
+    if (not vpn_name or vpn_name.lower() == "true") and KODI_AVAILABLE:
+        vpn_name = xbmcgui.Window(10000).getProperty('vpn_manual_session')
+
+    if not vpn_name or vpn_name.lower() == "true":
+        return
+
+    try:
+        while True:
+            count = get_retry_count()
+            if count >= MAX_RETRIES:
+                log_message(f"Helper: Max retries ({MAX_RETRIES}) reached. Standing down.", 2)
+                if os.path.exists(RETRY_FILE): os.remove(RETRY_FILE)
+                break
+
+            gw_ready = False
+            for i in range(1, 7):
+                if get_default_gateway():
+                    gw_ready = True
+                    break
+                time.sleep(5)
+            
+            if not gw_ready:
                 new_count = increment_retry()
-                log_message(f"Helper: Reconnect failed ({new_count}/{MAX_RETRIES}).", 2)
+                log_message(f"Helper: No gateway. Attempt {new_count}/{MAX_RETRIES}", 1)
+                continue
+
+            log_message(f"Helper: Reconnecting to {vpn_name} (Attempt {count + 1}/{MAX_RETRIES})...", 1)
+            disconnect_vpn(silent=True)
+
+            try:
+                search_term = vpn_name.replace(' ', '_')
+                out = subprocess.check_output(["connmanctl", "services"], text=True)
+                sid = next((line.split()[-1] for line in out.splitlines() if search_term in line), None)
+            except: sid = None
+
+            if sid and connect_vpn(vpn_name, sid):
+                log_message(f"Helper: Connected. Waiting for stability...", 0)
+                time.sleep(5) 
+                
+                check_wg = subprocess.run(['ip', 'link', 'show', 'wg0'], capture_output=True)
+                if check_wg.returncode == 0:
+                    log_message("Helper: Connection stable. Resetting counter.", 0)
+                    if os.path.exists(RETRY_FILE): os.remove(RETRY_FILE)
+                    break
+
+            increment_retry()
+            log_message("Helper: Reconnect failed. Retrying...", 0)
 
     finally:
         if os.path.exists(HELPER_LOCK):

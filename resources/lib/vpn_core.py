@@ -27,7 +27,7 @@ def install_service(source, dest, name, media_path):
                 xbmc.sleep(SERVICE_INIT_DELAY)
                 log_message("WAIT_END: Service Initialization", xbmc.LOGDEBUG)
     except Exception as e:
-        log_message(f"Core Error: Service Installation failed: {e}", xbmc.LOGERROR)
+        log_message(f"Core: Service Installation failed: {e}", xbmc.LOGERROR)
 
 def check_for_updates(media_path):
     config_dir = '/storage/.config/wireguard/'
@@ -41,7 +41,7 @@ def check_for_updates(media_path):
                 log_message("Core: Server list is over 7 days old. Notifying user.", xbmc.LOGINFO)
                 xbmcgui.Dialog().notification("NordVPN Manager", "Server list is over 7 days old.", os.path.join(media_path, 'update.png'), 5000)
     except Exception as e:
-        log_message(f"Core Error: Update Check failed: {e}", xbmc.LOGERROR)
+        log_message(f"Core: Update Check failed: {e}", xbmc.LOGERROR)
 
 def run_update(shell_script, token):
     countries = _ADDON.getSettings().getString("selected_countries")
@@ -66,9 +66,9 @@ def run_update(shell_script, token):
             xbmcgui.Dialog().ok("Success", f"Configs Regenerated for:[CR][COLOR yellow]{countries}[/COLOR]")
             xbmc.executebuiltin('Container.Refresh')
         else:
-            log_message(f"Core Error: Update script failed: {res.stderr}", xbmc.LOGERROR)
+            log_message(f"Core: Update script failed: {res.stderr}", xbmc.LOGERROR)
             progress.close()
             xbmcgui.Dialog().ok("Error", "Update failed. Check token and network.")
     except Exception as e:
-        log_message(f"Core Error: Update failed: {e}", xbmc.LOGERROR)
+        log_message(f"Core: Update failed: {e}", xbmc.LOGERROR)
         if progress: progress.close()

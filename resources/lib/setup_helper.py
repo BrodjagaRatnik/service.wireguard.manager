@@ -18,31 +18,31 @@ def perform_cleanup(silent=False):
     template_file = os.path.join(wg_config_path, 'template.config')
     
     try:
-        log_message("Starting factory reset cleanup...", xbmc.LOGINFO)
+        log_message("Setup: Starting factory reset cleanup...", xbmc.LOGINFO)
 
         if os.path.exists(keymap):
             os.remove(keymap)
-            log_message(f"Removed keymap: {keymap}", xbmc.LOGDEBUG)
+            log_message(f"Setup: Removed keymap {keymap}", xbmc.LOGDEBUG)
 
         if os.path.exists(connman_config):
             os.remove(connman_config)
-            log_message("Removed connman_main.conf", xbmc.LOGDEBUG)
+            log_message("Setup: Removed connman_main.conf", xbmc.LOGDEBUG)
 
         if os.path.exists(wg_config_path):
             if os.path.exists(template_file):
                 os.remove(template_file)
-                log_message("Removed WireGuard template.config", xbmc.LOGDEBUG)
+                log_message("Setup: Removed WireGuard template.config", xbmc.LOGDEBUG)
 
             for filename in os.listdir(wg_config_path):
                 if filename.startswith("nord_") and filename.endswith(".config"):
                     try:
                         os.remove(os.path.join(wg_config_path, filename))
-                        log_message(f"Cleanup: Removed config {filename}", xbmc.LOGDEBUG)
+                        log_message(f"Setup: Removed config {filename}", xbmc.LOGDEBUG)
                     except:
                         pass
 
         if os.path.exists(service_file):
-            log_message("Disabling and removing vpn-watchdog.service")
+            log_message("Setup: Disabling and removing vpn-watchdog.service")
             subprocess.run(["systemctl", "stop", "vpn-watchdog.service"], check=False)
             subprocess.run(["systemctl", "disable", "vpn-watchdog.service"], check=False)
             os.remove(service_file)
@@ -52,7 +52,7 @@ def perform_cleanup(silent=False):
             xbmcgui.Dialog().ok("WireGuard Manager", "All configs, templates, and services successfully removed.")
             
     except Exception as e:
-        log_message(f"Cleanup Error: {e}", xbmc.LOGERROR)
+        log_message(f"Setup: Cleanup Error {e}", xbmc.LOGERROR)
 
 def ensure_setup(addon_path, media_path):
     keymap_dest = xbmcvfs.translatePath('special://userdata/keymaps/wireguard_manager_key.xml')
@@ -72,18 +72,18 @@ def ensure_setup(addon_path, media_path):
 
     if not os.path.exists(connman_dest):
         try:
-            log_message("ConnMan config missing. Installing connman_main.conf...", xbmc.LOGINFO)
+            log_message("Setup: ConnMan config missing. Installing connman_main.conf...", xbmc.LOGINFO)
             if os.path.exists(connman_source):
                 shutil.copy2(connman_source, connman_dest)
                 subprocess.run(["systemctl", "restart", "connman"], check=False)
-                log_message("connman_main.conf installed and ConnMan restarted.", xbmc.LOGINFO)
+                log_message("Setup: connman_main.conf installed and ConnMan restarted.", xbmc.LOGINFO)
                 setup_updated = True
         except Exception as e:
-            log_message(f"ConnMan Setup Error: {e}", xbmc.LOGERROR)
+            log_message(f"Setup: ConnMan Setup Error {e}", xbmc.LOGERROR)
 
     if not os.path.exists(service_dest):
         try:
-            log_message("Service file missing. Installing vpn-watchdog.service...", xbmc.LOGINFO)
+            log_message("Setup: Service file missing. Installing vpn-watchdog.service...", xbmc.LOGINFO)
             if not os.path.exists(os.path.dirname(service_dest)):
                 os.makedirs(os.path.dirname(service_dest))
             if os.path.exists(service_source):
@@ -91,26 +91,26 @@ def ensure_setup(addon_path, media_path):
                 subprocess.run(["systemctl", "daemon-reload"], check=False)
                 subprocess.run(["systemctl", "enable", "vpn-watchdog.service"], check=False)
                 subprocess.run(["systemctl", "start", "vpn-watchdog.service"], check=False)
-                log_message("vpn-watchdog.service installed and started.", xbmc.LOGDEBUG)
+                log_message("Setup: vpn-watchdog.service installed and started.", xbmc.LOGDEBUG)
                 setup_updated = True
         except Exception as e:
-            log_message(f"Service Install Error: {e}", xbmc.LOGERROR)
+            log_message(f"Setup: Service Install Error {e}", xbmc.LOGERROR)
 
     if not os.path.exists(template_dest):
         try:
-            log_message("Copying WireGuard template.config...", xbmc.LOGINFO)
+            log_message("Setup: Copying WireGuard template.config...", xbmc.LOGINFO)
             if not os.path.exists(wg_config_path):
                 os.makedirs(wg_config_path)
             if os.path.exists(template_source):
                 shutil.copy2(template_source, template_dest)
-                log_message("template.config copied to wireguard folder.", xbmc.LOGDEBUG)
+                log_message("Setup: template.config copied to wireguard folder.", xbmc.LOGDEBUG)
         except Exception as e:
-            log_message(f"Template Copy Error: {e}", xbmc.LOGERROR)
+            log_message(f"Setup: Template Copy Error {e}", xbmc.LOGERROR)
 
     keymap_installed = False
     if not os.path.exists(keymap_dest) or _ADDON.getSettingBool("first_run"):
         try:
-            log_message("Installing WireGuard Manager keymaps...", xbmc.LOGDEBUG)
+            log_message("Setup: Installing WireGuard Manager keymaps...", xbmc.LOGDEBUG)
             if os.path.exists(keymap_source):
                 dest_dir = os.path.dirname(keymap_dest)
                 if not os.path.exists(dest_dir):
@@ -119,17 +119,17 @@ def ensure_setup(addon_path, media_path):
                 _ADDON.setSettingBool("first_run", False)
                 keymap_installed = True
         except Exception as e:
-            log_message(f"Keymap Setup Error: {e}", xbmc.LOGERROR)
+            log_message(f"Setup: Keymap Setup Error {e}", xbmc.LOGERROR)
 
     if keymap_installed:
         if xbmcgui.Dialog().yesno("WireGuard Manager", 
             "Keymaps installed. Restart Kodi now to activate them?"):
-            log_message("User triggered RestartApp for keymaps.", xbmc.LOGDINFO)
+            log_message("Setup: User triggered RestartApp for keymaps.", xbmc.LOGDINFO)
             xbmc.executebuiltin('RestartApp')
             return True
 
     if _ADDON.getSetting("vpn_token") == "":
-        log_message("No VPN Token found. Prompting user...", xbmc.LOGDEBUG)
+        log_message("Setup: No VPN Token found. Prompting user...", xbmc.LOGDEBUG)
         choice = xbmcgui.Dialog().select("WireGuard Manager: Token Required", [
             "Import Token from File (Recommended)",
             "Enter Token Manually",
@@ -143,11 +143,11 @@ def ensure_setup(addon_path, media_path):
                     with open(token_file, 'r') as f:
                         token_content = f.read().strip()
                         _ADDON.setSetting("vpn_token", token_content)
-                        log_message("VPN Token imported from file successfully.", xbmc.LOGINFO)
+                        log_message("Setup: VPN Token imported from file successfully.", xbmc.LOGINFO)
                         xbmcgui.Dialog().notification("WireGuard Manager", "Token saved.", xbmcgui.NOTIFICATION_INFO, 5000)
                         return True
                 except Exception as e:
-                    log_message(f"Token Read Error: {e}", xbmc.LOGERROR)
+                    log_message(f"Setup: Token Read Error {e}", xbmc.LOGERROR)
             return False
 
         elif choice == 1:
@@ -155,12 +155,12 @@ def ensure_setup(addon_path, media_path):
             keyboard.doModal()
             if keyboard.isConfirmed() and keyboard.getText():
                 _ADDON.setSetting("vpn_token", keyboard.getText())
-                log_message("VPN Token entered manually.", xbmc.LOGINFO)
+                log_message("Setup: VPN Token entered manually.", xbmc.LOGINFO)
                 xbmcgui.Dialog().notification("WireGuard Manager", "Token saved.", xbmcgui.NOTIFICATION_INFO, 5000)
                 return True
         
         elif choice == 2 or choice == -1:
-            log_message("User exited token setup.", xbmc.LOGDEBUG)
+            log_message("Setup: User exited token setup.", xbmc.LOGDEBUG)
             return "EXIT_SIGNAL"
 
     return setup_updated

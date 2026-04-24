@@ -14,9 +14,8 @@ INTENTIONAL_DISCONNECT_FILE = "/tmp/vpn_intentional_disconnect.txt"
 try:
     from vpn_config import *
 except ImportError:
-    PROP_SYNC_DELAY, OS_RELEASE_DELAY = 100, 600
+    PROP_SYNC_DELAY, OS_RELEASE_DELAY = 100, 1000
     CONN_POLL_INTERVAL, ROUTE_PROP_DELAY = 300, 200
-    DNS_FALLBACK = ["103.86.96.100", "103.86.99.100"]
     DHCP_RECOVERY_DELAY = 2000
 
 try:
@@ -52,7 +51,7 @@ def set_active_vpn(name):
         if name:
             with open(STATE_FILE, "w") as f: f.write(name.strip())
         elif os.path.exists(STATE_FILE): os.remove(STATE_FILE)
-    except Exception as e: log_message(f"State Error: {e}")
+    except Exception as e: log_message(f"Operation: State Error {e}")
 
 def disconnect_vpn(silent=False):
     if not silent:
@@ -78,7 +77,7 @@ def disconnect_vpn(silent=False):
         for line in out.splitlines():
             if "vpn_" in line and ("* " in line or "R " in line):
                 subprocess.run(["connmanctl", "disconnect", line.split()[-1]], check=False)
-    except Exception as e: log_message(f"Disconnect Error: {e}")
+    except Exception as e: log_message(f"Operation: Disconnect Error {e}")
 
     enable_connman_ipv6()
     set_secure_dns(vpn_active=False)
@@ -94,7 +93,7 @@ def disconnect_vpn(silent=False):
     gw = get_default_gateway()
 
     if not gw:
-        log_message("Network: Default route lost. Attempting restoration...", xbmc.LOGDEBUG)
+        log_message("Operation: Default route lost. Attempting restoration...", xbmc.LOGDEBUG)
         try:
             out = subprocess.check_output(["connmanctl", "services"], text=True)
             phys_service = next((line.split()[-1] for line in out.splitlines() if line.startswith(('*', 'R')) and "vpn_" not in line), None)
@@ -118,11 +117,11 @@ def disconnect_vpn(silent=False):
             subprocess.run(["ip", "route", "replace", "default", "via", gw, "dev", target_dev], check=False)
             
             if route_is_missing:
-                log_message(f"Network: Route restored via {gw} on {target_dev}", xbmc.LOGINFO)
+                log_message(f"Operation: Route restored via {gw} on {target_dev}", xbmc.LOGINFO)
         except Exception as e:
-            log_message(f"Route Restore Error: {e}", xbmc.LOGERROR)
+            log_message(f"Operation: Route Restore Error {e}", xbmc.LOGERROR)
     else:
-        log_message("Network: Fatal - No gateway found after restoration attempt.", xbmc.LOGERROR)
+        log_message("Operation: Fatal - No gateway found after restoration attempt.", xbmc.LOGERROR)
 
     if KODI_AVAILABLE: xbmcgui.Window(10000).setProperty('vpn_intentional_disconnect', '')
     if os.path.exists(INTENTIONAL_DISCONNECT_FILE):
@@ -139,14 +138,14 @@ def connect_vpn(vpn_name, sid):
 
     gw = get_default_gateway()
     if not gw:
-        log_message(f"Ops: Cannot connect to {vpn_name}. No local gateway detected.", xbmc.LOGERROR)
+        log_message(f"Operation: Cannot connect to {vpn_name}. No local gateway detected.", xbmc.LOGERROR)
         if KODI_AVAILABLE:
             title = "[B][COLOR ffff0000]VPN ERROR[/COLOR][/B]"
             msg = "[COLOR fffffff00]No Internet detected. Check your modem/router.[/COLOR]"
             xbmcgui.Dialog().notification(title, msg, ICON_ERROR_NETWORK, 1000)
         return False
 
-    log_message(f"Ops: Connecting to {vpn_name}", xbmc.LOGINFO)
+    log_message(f"Operation: Connecting to {vpn_name}", xbmc.LOGINFO)
     disable_connman_ipv6()
 
     pbg = xbmcgui.DialogProgressBG() if KODI_AVAILABLE else None
@@ -195,8 +194,10 @@ def connect_vpn(vpn_name, sid):
         current_gw = get_default_gateway()
         if not current_gw:
             err_msg = "Internet lost during connection attempt."
+            log_message(f"Operation: Internet lost during connection attempt.", xbmc.LOGERROR)
         else:
             err_msg = "Handshake failed. Check VPN credentials or server."
+            log_message(f"Operation: Handshake failed. Check VPN credentials or server.", xbmc.LOGERROR)
             
         title = "[B][COLOR ffff0000]VPN FAILURE[/COLOR][/B]"
         xbmcgui.Dialog().notification(title, err_msg, ICON_ERROR, 2500)

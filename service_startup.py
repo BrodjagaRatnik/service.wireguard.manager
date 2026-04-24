@@ -25,7 +25,7 @@ class WGManagerService(xbmc.Monitor):
                 except: pass
 
         vpn_ops.disconnect_vpn(silent=True)
-        log_message("Monitor Service Initialized", xbmc.LOGINFO)
+        log_message("Service Startup: Monitor Service Initialized", xbmc.LOGINFO)
 
     def get_service_id_by_name(self, name):
         try:
@@ -66,7 +66,7 @@ class WGManagerService(xbmc.Monitor):
                     a_clean = active_now.replace('_', ' ').strip() if active_now else None
                     
                     if a_clean != v_clean:
-                        log_message(f"Trigger: Mapped addon {target} override detected. Switching to {vpn}.", xbmc.LOGINFO)
+                        log_message(f"Service Startup: {target} override, switching to {vpn}.", xbmc.LOGINFO)
 
                         xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
                         for path in ['/tmp/vpn_manual_active.txt', '/storage/.kodi/temp/vpn_manual_active.txt']:
@@ -85,13 +85,13 @@ class WGManagerService(xbmc.Monitor):
                 return 
 
             if is_home:
-                log_message("Auto-cleanup: Home detected for mapped addon. Disconnecting.", xbmc.LOGINFO)
+                log_message("Service Startup: Home detected for mapped addon. Disconnecting.", xbmc.LOGINFO)
                 vpn_ops.disconnect_vpn(silent=False)
                 CLEANUP_COUNT = 0
             else:
                 CLEANUP_COUNT += 1
                 if CLEANUP_COUNT >= 3:
-                    log_message("Auto-cleanup: Confirmed outside mapping for 3s. Disconnecting.", xbmc.LOGINFO)
+                    log_message("Service Startup: Confirmed outside mapping for 3s. Disconnecting.", xbmc.LOGINFO)
                     vpn_ops.disconnect_vpn(silent=False)
                     CLEANUP_COUNT = 0
 
