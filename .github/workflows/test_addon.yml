@@ -25,4 +25,4 @@ jobs:
       - name: Run Kodi Addon Checker
         run: |
           kodi-addon-checker --branch omega --allow-folder-id-mismatch \
-          --ignore ".git,.github,.gitignore,.gitattributes,.addonignore,resources/update_servers.sh,resources/data/vpn-watchdog.service,resources/data/template.config,resources/data/connman_main.conf" .
+          -i ".git,.github,.gitignore,.gitattributes,.addonignore,resources/update_servers.sh,resources/data/vpn-watchdog.service,resources/data/template.config,resources/data/connman_main.conf" .
