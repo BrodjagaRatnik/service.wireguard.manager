@@ -1,5 +1,5 @@
 ''' resources/lib/service_launcher.py '''
-import xbmc, xbmcgui, xbmcaddon, xbmcvfs, os, sys, subprocess
+import xbmc, xbmcgui, xbmcaddon, xbmcvfs, os, sys, subprocess, time
 
 def start():
     _ADDON = xbmcaddon.Addon('service.wireguard.manager')
@@ -22,6 +22,7 @@ def start():
             xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
 
             xbmc.log("service.wireguard.manager: [STARTUP] Cleaning up stale files...", xbmc.LOGINFO)
+            time.sleep(2)
             for path in ['/tmp/vpn_manual_active.txt', '/storage/.kodi/temp/vpn_manual_active.txt']:
                 if os.path.exists(path):
                     try: 
@@ -31,6 +32,7 @@ def start():
 
             xbmc.log("service.wireguard.manager: [STARTUP] Disconnecting existing VPN for fresh start.", xbmc.LOGINFO)
             vpn_ops.disconnect_vpn(silent=True)
+            time.sleep(1)
             xbmc.log("service.wireguard.manager: [STARTUP] Monitor Service Initialized & Ready", xbmc.LOGINFO)
 
         def get_service_id_by_name(self, name):
