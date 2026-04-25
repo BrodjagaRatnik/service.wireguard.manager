@@ -10,7 +10,9 @@ _ADDON = xbmcaddon.Addon('service.wireguard.manager')
 ADDON_PATH = _ADDON.getAddonInfo('path')
 sys.path.append(os.path.join(ADDON_PATH, 'resources', 'lib'))
 
-from vpn_config import *
+UI_BUFFER_DELAY_MENU = 500 
+UI_BUFFER_PURPOSE_MENU = "Makes the menu feel snappy and responsive to clicks"
+
 from logger import log_message
 import vpn_ops
 

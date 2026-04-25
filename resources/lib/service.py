@@ -18,7 +18,10 @@ if LIB_PATH not in sys.path: sys.path.append(LIB_PATH)
 try:
     from vpn_config import *
 except ImportError:
-    WATCHDOG_HEARTBEAT, WATCHDOG_SETTLE_DELAY, WATCHDOG_RECOVERY_DELAY = 1000, 20000, 1500
+    WATCHDOG_HEARTBEAT = 1000
+    WATCHDOG_SETTLE_DELAY = 20000
+    WATCHDOG_RECOVERY_DELAY = 2000
+    SHIELD_SLEEP_DELAY = 5000
 
 STATE_FILE = "/tmp/vpn_manager_active.txt"
 INTENTIONAL_FILE = "/tmp/vpn_intentional_disconnect.txt"
@@ -81,7 +84,6 @@ def watchdog_logic():
     if os.path.exists(HELPER_LOCK):
         log_message("Service: Shield Active (Helper is running). Skipping check.", 0)
         if time.time() - os.path.getmtime(HELPER_LOCK) > 180:
-            log_message("Service: Helper lock appears stuck. Clearing.", 2)
             try: os.remove(HELPER_LOCK)
             except: pass
         return 
@@ -95,7 +97,6 @@ def watchdog_logic():
         return 
     
     BLACKOUT_ALERTED = False
-
     eth_online, wifi_online = check_interface_status()
     current_iface = get_active_interface()
 
@@ -111,17 +112,9 @@ def watchdog_logic():
     try:
         vpn_active = subprocess.run(['ip', 'link', 'show', 'wg0'], capture_output=True).returncode == 0
         if not vpn_active:
-            try:
-                f = open("/tmp/vpn_helper.lock", 'w')
-                f.write("locked")
-                f.close()
-                log_message("Service: Lock created at /tmp/vpn_helper.lock", 0)
-            except Exception as e:
-                log_message(f"Service: FATAL - Could not create lock file: {e}", 3)
-            
-            log_message("Service: Network change or tunnel loss. Triggering Helper...", 1)
+            log_message("Service: Tunnel loss detected. Triggering Helper...", 1)
             subprocess.run(['kodi-send', f'--action=RunScript("{HELPER_SCRIPT}")'], check=False)
-            
+
             time.sleep(WATCHDOG_SETTLE_DELAY / 1000.0)
             return
 
@@ -137,18 +130,29 @@ def watchdog_logic():
         LAST_INTERFACE = current_iface
 
 if __name__ == "__main__":
+    if os.path.exists("/tmp/vpn_helper.lock"):
+        try: os.remove("/tmp/vpn_helper.lock")
+        except: pass
+
     while SAVED_GATEWAY is None:
         SAVED_GATEWAY = get_default_gateway()
         if SAVED_GATEWAY: break
+        
+        if not BLACKOUT_ALERTED:
+            threading.Thread(target=trigger_blackout_ui, daemon=True).start()
+            BLACKOUT_ALERTED = True
+            
         log_message("Service: Waiting for gateway...", 2)
-        time.sleep(5)
+        time.sleep(SHIELD_SLEEP_DELAY / 1000.0) 
     
+    BLACKOUT_ALERTED = False
     LAST_INTERFACE = get_active_interface()
     log_message(f"Service: Initialized on {LAST_INTERFACE}. Monitoring started.", 1)
+    
     while True:
         if os.path.exists("/tmp/vpn_helper.lock"):
             log_message("Service: SHIELD ACTIVE - LOCK FOUND. Sleeping...", 0)
-            time.sleep(5)
+            time.sleep(SHIELD_SLEEP_DELAY / 1000.0)
             continue
 
         watchdog_logic()

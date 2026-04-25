@@ -14,8 +14,10 @@ INTENTIONAL_DISCONNECT_FILE = "/tmp/vpn_intentional_disconnect.txt"
 try:
     from vpn_config import *
 except ImportError:
-    PROP_SYNC_DELAY, OS_RELEASE_DELAY = 100, 1000
-    CONN_POLL_INTERVAL, ROUTE_PROP_DELAY = 300, 200
+    PROP_SYNC_DELAY = 100
+    OS_RELEASE_DELAY = 1000
+    CONN_POLL_INTERVAL = 300
+    ROUTE_PROP_DELAY = 200
     DHCP_RECOVERY_DELAY = 2000
 
 try:

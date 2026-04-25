@@ -1,9 +1,12 @@
 ''' ./resources/lib/vpn_core.py '''
 import os, sys, xbmc, xbmcaddon, subprocess, shutil, xbmcgui, time
-from vpn_config import *
 
 _ADDON = xbmcaddon.Addon('service.wireguard.manager')
 ADDON_PATH = _ADDON.getAddonInfo('path')
+UI_BUFFER_DELAY = 800
+UI_BUFFER_PURPOSE = "Keeps the 'Connected' message on screen long enough to read"
+SERVICE_INIT_DELAY = 400
+SERVICE_INIT_PURPOSE = "Systemd PID spawning buffer"
 
 sys.path.append(os.path.join(ADDON_PATH, 'resources', 'lib'))
 from logger import log_message

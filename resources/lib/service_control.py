@@ -11,16 +11,20 @@ try:
     KODI_MODE = True
     _ADDON = xbmcaddon.Addon('service.wireguard.manager')
     ADDON_PATH = _ADDON.getAddonInfo('path')
-    
     from logger import log_message
-    from vpn_config import *
-    
+except ImportError:
+    KODI_MODE = False
+
+try:
+    from vpn_config import SYSTEMD_POLL_DELAY, SYSTEMD_POLL_PURPOSE
+except ImportError:
+    SYSTEMD_POLL_DELAY = 300
+    SYSTEMD_POLL_PURPOSE = "Systemd state transition wait"
+
+if KODI_MODE:
     MEDIA_PATH = os.path.join(ADDON_PATH, 'resources', 'media')
     ICON_OK = os.path.join(MEDIA_PATH, 'update_ok.png')
     ICON_ERR = os.path.join(MEDIA_PATH, 'error.png')
-except ImportError:
-    KODI_MODE = False
-    SYSTEMD_POLL_DELAY = 300
 
 def log_event(msg, level=None):
     if level is None:
