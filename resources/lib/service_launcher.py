@@ -21,19 +21,27 @@ def start():
             self.start_buffer = 0
             xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
 
-            xbmc.log("service.wireguard.manager: [STARTUP] Cleaning up stale files...", xbmc.LOGINFO)
-            time.sleep(2)
+            xbmc.log("service.wireguard.manager: Cleaning up stale files...", xbmc.LOGDEBUG)
+
             for path in ['/tmp/vpn_manual_active.txt', '/storage/.kodi/temp/vpn_manual_active.txt']:
                 if os.path.exists(path):
                     try: 
                         os.remove(path)
-                        xbmc.log(f"service.wireguard.manager: [STARTUP] Removed Safety Pin at {path}", xbmc.LOGINFO)
+                        xbmc.log(f"service.wireguard.manager: Removed Safety Pin at {path}", xbmc.LOGDEBUG)
                     except: pass
 
-            xbmc.log("service.wireguard.manager: [STARTUP] Disconnecting existing VPN for fresh start.", xbmc.LOGINFO)
+            try:
+                active_services = subprocess.check_output(["connmanctl", "services"], text=True)
+                has_active_vpn = any("vpn_" in line and ("* " in line or "R " in line) for line in active_services.splitlines())
+            except:
+                has_active_vpn = False
+
+            if has_active_vpn:
+                xbmc.log("service.wireguard.manager: Active VPN found and disconnected for fresh start.", xbmc.LOGDEBUG)
+
             vpn_ops.disconnect_vpn(silent=True)
-            time.sleep(1)
-            xbmc.log("service.wireguard.manager: [STARTUP] Monitor Service Initialized & Ready", xbmc.LOGINFO)
+
+            xbmc.log("service.wireguard.manager: Monitor Service Initialized & Ready", xbmc.LOGINFO)
 
         def get_service_id_by_name(self, name):
             try:
@@ -68,7 +76,7 @@ def start():
                         a_clean = active_now.replace('_', ' ').strip() if active_now else None
                         
                         if a_clean != v_clean:
-                            log_message(f"Service Startup: {target} override, switching to {vpn}.", xbmc.LOGINFO)
+                            log_message(f"Service Startup: {target} override, switching 2 {vpn}.", xbmc.LOGINFO)
 
                             xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
                             for p in ['/tmp/vpn_manual_active.txt', '/storage/.kodi/temp/vpn_manual_active.txt']:
@@ -93,7 +101,7 @@ def start():
                     return 
 
                 if is_home:
-                    log_message("Service Startup: Home detected. Disconnecting.", xbmc.LOGINFO)
+                    log_message("Service Startup: Home detected. Disconnecting. {vpn}", xbmc.LOGINFO)
                     vpn_ops.disconnect_vpn(silent=False)
                     self.cleanup_count = 0
                     self.start_buffer = 0
@@ -101,7 +109,7 @@ def start():
 
                 self.cleanup_count += 1
                 if self.cleanup_count >= 5:
-                    log_message("Service Startup: Outside mapping. Disconnecting.", xbmc.LOGINFO)
+                    log_message("Service Startup: Outside mapping. Disconnecting. {vpn}", xbmc.LOGINFO)
                     vpn_ops.disconnect_vpn(silent=False)
                     self.cleanup_count = 0
                     self.start_buffer = 0
