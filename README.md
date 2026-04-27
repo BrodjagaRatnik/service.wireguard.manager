@@ -17,8 +17,8 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 *   **1Hz Physical Watchdog**: A standalone `systemd` service monitors hardware carrier status every second for near-instant detection of cable pulls or link loss.
 *   **Aggressive Stream Recovery**: Automatically kills "frozen" video players during network blackouts to prevent UI hangs and provide immediate error feedback.
 *   **Intelligent Throttling**: Implements a "Safety Fuse" logic that stands down after 10 failed reconnection attempts to preserve system resources and NordVPN API limits.
-*   **Auto-Healing Failover**: Detects physical interface changes (Ethernet <-> Wi-Fi) and automatically resets retry budgets to ensure seamless recovery.
-*   **High-Visibility Alerts**: Enhanced Kodi notifications with ARGB color formatting and custom audio cues (`error.wav`) for critical network events.
+*   **Auto-Healing Failover**: Detects physical interface changes (Ethernet ⇆ Wi-Fi) and automatically resets retry budgets to ensure seamless recovery.
+*   **High-Visibility Alerts**: Enhanced Kodi notifications with ARGB color formatting and custom audio cues (`networkerror.wav`) for critical network events.
 *   **IPv6 Leak Protection**: Kernel-level hardening and dynamic DNS management prevent data leaks during VPN transitions.
 *   **Remote Optimized**: Automatically maps **F11** to trigger the VPN menu from anywhere in Kodi.
 *   **Smart Auto-Mappings**: Dynamically switches VPN locations based on the specific Kodi addon or folder being browsed.
