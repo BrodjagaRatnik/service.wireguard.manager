@@ -11,7 +11,6 @@
         <summary lang="en_GB">Hardened NordVPN WireGuard Manager for Raspberry Pi 5</summary>
         <description lang="en_GB">High-performance VPN manager for LibreELEC. Uses NordLynx for maximum speed with an automated Systemd watchdog to prevent connection drops.[CR][CR][B]Note:[/B] This addon is designed specifically for the LibreELEC filesystem and will not work on standard Android or Windows Kodi installations.[CR][CR][B]Features:[/B][CR]• WireGuard Native (NordLynx)[CR]• Smart Watchdog &amp; Auto-Regen[CR]• Hard Reset Routing Tables[CR][CR][B]Disclaimer:[/B] Not an official NordVPN product. Use at your own risk. This addon is provided "as is" without warranty. The developer is not liable for data loss or security breaches. Full disclaimer available in addon settings.</description>
         <news>v1.2.7 (2026-04-27)
-
 - Improved boot synchronization with nss-lookup and time-sync targets.
 - Enhanced watchdog reliability to prevent handshake failures on slow networks.
 - Optimized systemd service limits for continuous background monitoring.
@@ -46,6 +45,5 @@ v1.2.4 (2026-04-25)
             <screenshot>resources/media/screenshot00001.jpg</screenshot>
             <screenshot>resources/media/screenshot00002.jpg</screenshot>
         </assets>
-      <genre>network</genre>
     </extension>
 </addon>
