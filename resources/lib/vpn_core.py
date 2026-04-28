@@ -1,8 +1,8 @@
 ''' ./resources/lib/vpn_core.py '''
-import os, sys, xbmc, xbmcaddon, subprocess, shutil, xbmcgui, time
+import os, sys, xbmc, xbmcaddon, xbmcvfs, subprocess, shutil, xbmcgui, time
 
 _ADDON = xbmcaddon.Addon('service.wireguard.manager')
-ADDON_PATH = _ADDON.getAddonInfo('path')
+ADDON_PATH = xbmcvfs.translatePath(_ADDON.getAddonInfo('path'))
 UI_BUFFER_DELAY = 800
 UI_BUFFER_PURPOSE = "Keeps the 'Connected' message on screen long enough to read"
 SERVICE_INIT_DELAY = 400
@@ -47,31 +47,56 @@ def check_for_updates(media_path):
         log_message(f"Core: Update Check failed: {e}", xbmc.LOGERROR)
 
 def run_update(shell_script, token):
-    countries = _ADDON.getSettings().getString("selected_countries")
+    raw_path = xbmcvfs.translatePath(_ADDON.getAddonInfo('path'))
+    addon_path = os.path.normpath(raw_path) 
+    full_script_path = os.path.join(addon_path, 'resources', 'update_servers.sh')
+
+    if not os.path.exists(full_script_path):
+        full_script_path = os.path.join(addon_path, 'resources', 'lib', 'update_servers.sh')
+
+    if not os.path.exists(full_script_path):
+        res_dir = os.path.join(addon_path, 'resources')
+        content = os.listdir(res_dir) if os.path.exists(res_dir) else "DIR NOT FOUND"
+        xbmc.log(f"service.wireguard.manager: File missing! Content of {res_dir}: {content}", xbmc.LOGERROR)
+        xbmcgui.Dialog().ok("Error", "Update script not found in resources folder.")
+        return
+
+    countries = _ADDON.getSetting("selected_countries")
+    
     if not token or token.strip() == "":
         xbmcgui.Dialog().ok("VPN Manager", "Please enter your [B]NordVPN Token[/B] in the settings first.")
         return
+
     progress = xbmcgui.DialogProgress()
     progress.create("VPN Manager", "Updating NordVPN Servers...")
     progress.update(20, f"Generating: {countries}")
+
     try:
-        subprocess.run(["sed", "-i", "s/\\r//", shell_script])
-        subprocess.run(["chmod", "+x", shell_script])
-        log_message(f"Core: Running config update for: {countries}", xbmc.LOGINFO)
-        res = subprocess.run([shell_script, token, countries], capture_output=True, text=True, timeout=60)
+        if os.path.exists(full_script_path):
+            subprocess.run(["sed", "-i", "s/\\r//", full_script_path])
+            subprocess.run(["chmod", "+x", full_script_path])
+        else:
+            xbmc.log(f"service.wireguard.manager: Script not found at {full_script_path}", xbmc.LOGERROR)
+            progress.close()
+            xbmcgui.Dialog().ok("Error", "Core update script missing.")
+            return
+
+        xbmc.log(f"service.wireguard.manager: Running config update for: {countries}", xbmc.LOGINFO)
+
+        res = subprocess.run([full_script_path, token, countries], capture_output=True, text=True, timeout=90)
+        
         if res.returncode == 0:
-            log_message("Core: Config update successful.", xbmc.LOGINFO)
+            xbmc.log("service.wireguard.manager: Config update successful.", xbmc.LOGINFO)
             progress.update(100, "Update Complete!")
-            log_message(f"WAIT_START: UI Buffer ({UI_BUFFER_DELAY}ms) | PURPOSE: {UI_BUFFER_PURPOSE}", xbmc.LOGDEBUG)
-            xbmc.sleep(UI_BUFFER_DELAY)
-            log_message("WAIT_END: UI Buffer", xbmc.LOGDEBUG)
+            xbmc.sleep(1000)
             progress.close()
             xbmcgui.Dialog().ok("Success", f"Configs Regenerated for:[CR][COLOR yellow]{countries}[/COLOR]")
             xbmc.executebuiltin('Container.Refresh')
         else:
-            log_message(f"Core: Update script failed: {res.stderr}", xbmc.LOGERROR)
+            xbmc.log(f"service.wireguard.manager: Update script failed: {res.stderr}", xbmc.LOGERROR)
             progress.close()
             xbmcgui.Dialog().ok("Error", "Update failed. Check token and network.")
+
     except Exception as e:
-        log_message(f"Core: Update failed: {e}", xbmc.LOGERROR)
+        xbmc.log(f"service.wireguard.manager: Update exception: {e}", xbmc.LOGERROR)
         if progress: progress.close()
