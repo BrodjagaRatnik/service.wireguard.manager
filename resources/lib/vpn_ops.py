@@ -158,7 +158,6 @@ def connect_vpn(vpn_name, sid):
 
     for i in range(1, 16):
         if pbg: pbg.update(int(i * 6.6), message=f"Verifying... ({i}s)")
-        log_message(f"WAIT_START: Connection Poll {i} ({CONN_POLL_INTERVAL}ms)", xbmc.LOGDEBUG)
         
         if KODI_AVAILABLE: xbmc.sleep(CONN_POLL_INTERVAL)
         else: time.sleep(CONN_POLL_INTERVAL / 1000.0)
@@ -166,7 +165,6 @@ def connect_vpn(vpn_name, sid):
         try:
             check = subprocess.check_output(["connmanctl", "services"], text=True)
             if any(sid in line and ("* R" in line or "* O" in line) for line in check.splitlines()):
-
                 if "wg0" in subprocess.check_output(["ip", "route"], text=True):
                     connected = True
                     break
@@ -191,6 +189,21 @@ def connect_vpn(vpn_name, sid):
             
         if KODI_AVAILABLE: xbmcgui.Dialog().notification("VPN Connection is Secured", msg, ICON_CON, 3000)
         return True
+
+    if KODI_AVAILABLE:
+        current_gw = get_default_gateway()
+        if not current_gw:
+            err_msg = "Internet lost during connection attempt."
+            log_message("Operation: Internet lost during connection attempt.", xbmc.LOGERROR)
+        else:
+            err_msg = "Handshake failed. Check VPN credentials or server."
+            log_message("Operation: Handshake failed. Check VPN credentials or server.", xbmc.LOGERROR)
+            
+        title = "[B][COLOR ffff0000]VPN FAILURE[/COLOR][/B]"
+        xbmcgui.Dialog().notification(title, err_msg, ICON_ERROR, 3000)
+
+    disconnect_vpn(silent=True)
+    return False
 
     if KODI_AVAILABLE:
         current_gw = get_default_gateway()

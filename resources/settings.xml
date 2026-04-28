@@ -9,7 +9,9 @@
                         <label>32002</label>
                     </control>
                 </setting>
-		<setting id="import_token_file" type="action" label="32016">
+            </group>
+            <group id="13" label="32035">
+		        <setting id="import_token_file" type="action" label="32016">
                     <level>0</level>
                     <data>RunScript(service.wireguard.manager,import_token)</data>
                     <control type="button" format="action">
@@ -24,17 +26,26 @@
                     </constraints>
                     <control type="edit" format="string" />
                 </setting>
+            </group>
+            <group id="14" label="32034">
+                <setting id="disconnect_on_start" type="boolean" label="32033" help="32036">
+                    <level>0</level>
+                    <default>false</default>
+                    <control type="toggle">
+		            </control>
+                </setting>
+<!-- Hidden from standard view. Keep this here for ensuring setup! -->
                 <setting id="first_run" type="boolean" label="First Run Handled">
-                    <level>4</level> <!-- Hidden from standard view -->
+                    <level>4</level>
                     <default>true</default>
-		</setting>
+		        </setting>
             </group>
         </category>
         <category id="service" label="32004">
             <group id="8" label="32013">
 		<setting id="selected_countries" type="string" label="32007">
 		     <level>0</level>
-		     <default>21,81,227,153</default> <!-- Default: BE, DE, UK, NL -->
+		     <default>21,81,227,153</default>
 		     <control type="edit" format="string">
 		     </control>
                 </setting>

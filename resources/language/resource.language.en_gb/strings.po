@@ -53,12 +53,12 @@ msgid "╠═Update═╬═Regenerate═╬═NordVPN═Configs═╣"
 msgstr "╠═Update═╬═Regenerate═╬═NordVPN═Configs═╣"
 
 msgctxt "#32012"
-msgid "Account Credentials≡"
+msgid "Account Credentials"
 msgstr "Account Credentials"
 
 msgctxt "#32013"
-msgid "NordVPN Management"
-msgstr "NordVPN Management"
+msgid "VPN Management"
+msgstr "VPN Management"
 
 msgctxt "#32014"
 msgid "Force Reinstall systemd watchdog service."
@@ -93,8 +93,8 @@ msgid "Triggered TV add-on¦"
 msgstr "Triggered TV add-on¦"
 
 msgctxt "#32022"
-msgid "Assign VPN Profiles to TV add-on's."
-msgstr "Assign VPN Profiles to TV add-on's."
+msgid "Assign VPN Profiles to TV add-on's"
+msgstr "Assign VPN Profiles to TV add-on's"
 
 msgctxt "#32023"
 msgid "▒ Slot 1. ▒"
@@ -136,6 +136,22 @@ msgctxt "#32032"
 msgid "▒ Slot 8. ▒"
 msgstr "▒ Slot 8. ▒"
 
+msgctxt "#32033"
+msgid "Disconnect VPN on restart kodi."
+msgstr "Disconnect VPN on restart kodi."
+
+msgctxt "#32034"
+msgid "General Settings"
+msgstr "General Settings"
+
+msgctxt "#32035"
+msgid "Access Token"
+msgstr "Access Token"
+
+msgctxt "#32036"
+msgid "When enabled, this forces a total disconnect of ALL active VPN sessions (Manual or Mapped) whenever Kodi starts. Use this to ensure a fresh, direct internet connection on every boot."
+msgstr "When enabled, this forces a total disconnect of ALL active VPN sessions (Manual or Mapped) whenever Kodi starts. Use this to ensure a fresh, direct internet connection on every boot."
+
 msgctxt "#32992"
 msgid "Independent project, not affiliated with NordVPN. Use at your own risk, read Terms of Service!"
 msgstr "Independent project, not affiliated with NordVPN. Use at your own risk, read Terms of Service!"
@@ -153,12 +169,12 @@ msgid "Independent project, not affiliated with NordVPN. Use at your own risk, r
 msgstr "Independent project, not affiliated with NordVPN. Use at your own risk, read Full Disclaimer!"
 
 msgctxt "#32996"
-msgid "Safety & Reset."
-msgstr "Safety & Reset."
+msgid "Safety & Reset"
+msgstr "Safety & Reset"
 
 msgctxt "#32997"
-msgid "Legal Notice."
-msgstr "Legal Notice."
+msgid "Legal Notice"
+msgstr "Legal Notice"
 
 msgctxt "#32998"
 msgid "◄ Legal ►"

@@ -1,31 +1,6 @@
 CHANGELOG
 =========
 
-v1.2.7 (2026-04-27)
-
-- Improved boot synchronization with nss-lookup and time-sync targets.
-- Enhanced watchdog reliability to prevent handshake failures on slow networks.
-- Optimized systemd service limits for continuous background monitoring.
-		
-v1.2.6 (2026-04-26)
-- Added automatic hardware detection for Raspberry Pi 5.
-- Optimized system and network timing constants specifically for Pi 5 performance.
-- Maintained stable legacy timings for Raspberry Pi 4 and older hardware.
-- Hardcoded UI and Menu delays to ensure consistent responsiveness across all devices.
-- Refactored internal configuration structure with descriptive purposes for all delay constants.
-
-v1.2.5 (2026-04-25)
-- Refactored main and service entry points for Kodi repository compliance
-- Moved core logic to dedicated launcher modules (main_launcher, service_launcher)
-- Improved code structure and performance by reducing entry point complexity
-- Fixed potential memory leaks in background service monitoring
-- Fixed mapping not working after slot 6 made chamges to service_launcher 
-
-v1.2.4 (2026-04-25)
-- Added a custom Terms of Service, disclaimer dialog accessible from settings.
-- Added extra slots to VPN mapping and rearrange settings.
-- Improved UI accessibility, simplified TOS, disclaimer window background for better readability and size windows.
-
 v1.2.2 (2026-04-22)
 - FIX: Resolved ValueError: too many values to unpack in service.py.
 - FIX: Resolved IndentationError in vpn_ops.py gateway restoration logic.
