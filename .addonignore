@@ -1,11 +1,7 @@
-__pycache__/
-*.pyc
-.addonignore
-resources/data/vpn-watchdog.service
-resources/data/vpn_config.PI4.example
-resources/update_servers.sh
-.gitignore
-.DS_Store
-resources/media/*.png.bak
 .git/
 .github/
+.gitignore
+.addonignore
+__pycache__/
+*.pyc
+.DS_Store
