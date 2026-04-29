@@ -33,14 +33,14 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 | **`main.py`** | Primary entry point for the GUI and menu logic. |
 | **`service_startup.py`** | Kodi Monitor service handling auto-mappings and UI context checks. |
 | **`resources/lib/vpn_config.py`** | Centralized configuration for all wait times, paths, and DNS fallbacks. |
-| **`resources/lib/service.py`** | Bulletproof, standalone background watchdog running at the OS level. |
-| **`resources/lib/reconnect_helper.py`** | Bridge script allowing the OS watchdog to trigger Kodi-aware VPN actions. |
+| **`resources/lib/service_launcher.py`** | The "Brain": Manages the background loop, mapping logic, and Home detection. |
 | **`resources/lib/vpn_ops.py`** | Core engine for Connect/Disconnect/Status logic with dependency-safe imports. |
-| **`resources/lib/setup_helper.py`** | Manages installation of systemd services, keymaps, and configs. |
+| **`resources/lib/vpn_core.py`** | Bridge between the UI and the system, managing regeneration and service installs. |
+| **`resources/lib/setup_helper.py`** | Manages installation of systemd services, keymaps, and initial configurations. |
 | **`resources/lib/network_utils.py`** | Hardens system DNS and manages IPv6 kernel states. |
-| **`resources/lib/logger.py`** | Centralized logging utility with dynamic version tagging. |
-| **`resources/data/`** | Contains `vpn-watchdog.service`, `connman_main.conf`, and tunnel templates. |
-| **`resources/update_servers.sh`** | Bash script utilizing NordVPN APIs to fetch and resolve the latest server IPs. |
+| **`resources/lib/logger.py`** | Centralized logging utility with dynamic version tagging and dual-mode (Kodi/Standalone) support. |
+| **`resources/scripts/update_nordvpn_servers.py`** | **[NEW]** Pure Python script utilizing NordVPN APIs to fetch and resolve the latest server IPs. |
+| **`resources/data/`** | Contains `vpn-watchdog.service`, and tunnel templates. |
 
 ## 🛠 Advanced Tuning
 All performance timings are centralized in `resources/lib/vpn_config.py`. Users on high-performance hardware like the **Raspberry Pi 5** can adjust variables like `PROP_SYNC_DELAY` and `OS_RELEASE_DELAY` to achieve near-instantaneous connection swaps.
