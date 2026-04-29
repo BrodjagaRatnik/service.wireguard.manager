@@ -40,7 +40,7 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 | **`resources/lib/network_utils.py`** | Hardens system DNS and manages IPv6 kernel states. |
 | **`resources/lib/logger.py`** | Centralized logging utility with dynamic version tagging and dual-mode (Kodi/Standalone) support. |
 | **`resources/scripts/update_nordvpn_servers.py`** | **[NEW]** Pure Python script utilizing NordVPN APIs to fetch and resolve the latest server IPs. |
-| **`resources/data/`** | Contains `vpn-watchdog.service`, and tunnel templates. |
+| **`resources/data/`** | Contains `vpn-watchdog.service`, `connman.main.conf`, and tunnel templates. |
 
 ## 🛠 Advanced Tuning
 All performance timings are centralized in `resources/lib/vpn_config.py`. Users on high-performance hardware like the **Raspberry Pi 5** can adjust variables like `PROP_SYNC_DELAY` and `OS_RELEASE_DELAY` to achieve near-instantaneous connection swaps.
