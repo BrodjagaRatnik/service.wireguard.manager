@@ -1,6 +1,13 @@
 CHANGELOG
 =========
 
+v1.3.0 (2026-04-29)
+- Major Architecture Update: Replaced legacy Bash scripts with pure Python 3 logic.
+- Improved Reliability: Server regeneration no longer depends on external shell environments.
+- Optimized Paths: Fixed "File Not Found" errors by using modern xbmcvfs translation.
+- UI Enhancements: Smoother progress transitions and snappier menu response.
+- Maintenance: Fixed .addonignore issues to ensure core scripts are always installed.
+
 v1.2.9 (2026-04-29)
 - Fixed critical "Missing Script" error: update_servers.sh is now correctly included in the addon package.
 - Updated .addonignore to prevent core assets from being stripped during installation.
@@ -17,13 +24,6 @@ v1.2.7 (2026-04-27)
 - Improved boot synchronization with nss-lookup and time-sync targets.
 - Enhanced watchdog reliability to prevent handshake failures on slow networks.
 - Optimized systemd service limits for continuous background monitoring.
-		
-v1.2.6 (2026-04-26)
-- Added automatic hardware detection for Raspberry Pi 5.
-- Optimized system and network timing constants specifically for Pi 5 performance.
-- Maintained stable legacy timings for Raspberry Pi 4 and older hardware.
-- Hardcoded UI and Menu delays to ensure consistent responsiveness across all devices.
-- Refactored internal configuration structure with descriptive purposes for all delay constants.
 
 v1.2.2 (2026-04-22)
 - FIX: Resolved ValueError: too many values to unpack in service.py.

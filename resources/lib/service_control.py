@@ -64,15 +64,15 @@ def control_service():
                     if real_status == "active":
                         break
                     if KODI_MODE:
-                        log_message(f"WAIT_START: Systemd Poll {i} ({SYSTEMD_POLL_DELAY}ms) | PURPOSE: {SYSTEMD_POLL_PURPOSE}", xbmc.LOGDEBUG)
+                        log_message(f"WAIT_START: Systemd Poll {i} ({SYSTEMD_POLL_DELAY}ms) | PURPOSE: {SYSTEMD_POLL_PURPOSE}", 0)
                         xbmc.sleep(SYSTEMD_POLL_DELAY)
-                        log_message(f"WAIT_END: Systemd Poll {i}", xbmc.LOGDEBUG)
+                        log_message(f"WAIT_END: Systemd Poll {i}", 0)
                 
                 if KODI_MODE:
                     icon = ICON_OK if real_status == "active" else ICON_ERR
                 if real_status == "activating": real_status = "Initializing..."
 
-            log_event(f"Status check: {real_status}", xbmc.LOGDEBUG)
+            log_event(f"Status check: {real_status}", 0)
             if KODI_MODE:
                 xbmcgui.Dialog().notification("Watchdog", f"Status: {real_status}", icon, 3000)
 

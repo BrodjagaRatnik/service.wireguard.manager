@@ -25,7 +25,7 @@ def get_wg_services():
                 name = "".join([p for p in parts if "NordVPN_" in p])
                 services.append({"name": name, "id": service_id})
     except Exception as e:
-        log_message(f"Wizard Error fetching services: {e}", xbmc.LOGERROR)
+        log_message(f"Wizard Error fetching services: {e}", 3)
     return services
 
 def run_wizard():
@@ -40,7 +40,7 @@ def run_wizard():
     if sel_action == -1: return
 
     if sel_action == 1:
-        log_message(f"Wizard: Resetting Slot {slot_id}", xbmc.LOGDEBUG)
+        log_message(f"Wizard: Resetting Slot {slot_id}", 0)
         _ADDON.setSetting(f"vpn_{slot_id}_name", "")
         _ADDON.setSetting(f"map_{slot_id}_addon", "")
         xbmcgui.Dialog().notification("WireGuard Manager", f"Slot {slot_id} reset", "", 3000)
@@ -48,7 +48,7 @@ def run_wizard():
 
     services = get_wg_services()
     if not services:
-        log_message("Wizard: No VPN services found in Connman", xbmc.LOGDEBUG)
+        log_message("Wizard: No VPN services found in Connman", 0)
         xbmcgui.Dialog().ok("Error", "No NordVPN services found. Regenerate configs first.")
         return
     
@@ -58,25 +58,25 @@ def run_wizard():
 
     chosen_vpn_name = services[sel_vpn]['name']
 
-    log_message("Wizard: Fetching installed Video Addons via JSON-RPC", xbmc.LOGDEBUG)
+    log_message("Wizard: Fetching installed Video Addons via JSON-RPC", 0)
     rpc = '{"jsonrpc":"2.0","method":"Addons.GetAddons","params":{"type":"xbmc.python.pluginsource","enabled":true},"id":1}'
     try:
         rpc_res = xbmc.executeJSONRPC(rpc)
         data = json.loads(rpc_res)
         addons = [a['addonid'] for a in data.get('result', {}).get('addons', [])]
     except Exception as e:
-        log_message(f"Wizard: JSON-RPC Error: {e}", xbmc.LOGERROR)
+        log_message(f"Wizard: JSON-RPC Error: {e}", 3)
         addons = []
         
     if not addons:
-        xbmcgui.Dialog().ok("Error", "No video addons found.", xbmc.LOGERROR)
+        xbmcgui.Dialog().ok("Error", "No video addons found.", 3)
         return
 
     sel_addon = xbmcgui.Dialog().select("Select Trigger Addon", addons)
     if sel_addon == -1: return
     chosen_addon_id = addons[sel_addon]
 
-    log_message(f"Wizard: Successfully assigned Slot {slot_id} -> {chosen_vpn_name} (Trigger: {chosen_addon_id})", xbmc.LOGDEBUG)
+    log_message(f"Wizard: Successfully assigned Slot {slot_id} -> {chosen_vpn_name} (Trigger: {chosen_addon_id})", 0)
     
     _ADDON.setSetting(f"vpn_{slot_id}_name", chosen_vpn_name)
     _ADDON.setSetting(f"map_{slot_id}_addon", chosen_addon_id)

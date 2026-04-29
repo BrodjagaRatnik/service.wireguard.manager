@@ -7,7 +7,9 @@ LIB_PATH = os.path.join(ADDON_PATH, 'resources', 'lib')
 if LIB_PATH not in sys.path:
     sys.path.append(LIB_PATH)
 
+from logger import log_message
 import vpn_ops 
+
 try:
     from vpn_config import WATCHDOG_HEARTBEAT
 except ImportError:
@@ -23,13 +25,13 @@ class WGManagerService(xbmc.Monitor):
         time.sleep(2) 
         
         is_enabled = self._ADDON.getSetting('disconnect_on_start').lower() == 'true'
-        xbmc.log(f"service.wireguard.manager: Startup Check [Enabled: {is_enabled}]", xbmc.LOGINFO)
+        log_message(f"Startup Check [Enabled: {is_enabled}]", 1)
 
         if is_enabled:
             try:
                 out = subprocess.check_output(["connmanctl", "services"], text=True)
                 if any("vpn_" in line and ("* " in line or "R " in line) for line in out.splitlines()):
-                    xbmc.log("service.wireguard.manager: Startup cleanup. Force disconnecting VPN...", xbmc.LOGINFO)
+                    log_message("Startup cleanup. Force disconnecting VPN...", 1)
 
                     xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
                     for p in ['/tmp/vpn_manual_active.txt', '/storage/.kodi/temp/vpn_manual_active.txt']:
@@ -40,7 +42,7 @@ class WGManagerService(xbmc.Monitor):
                     self.vpn_ops.disconnect_vpn(silent=True)
             except: pass
 
-        xbmc.log("service.wireguard.manager: Monitor Service Initialized & Ready", xbmc.LOGINFO)
+        log_message("Monitor Service Initialized & Ready", 1)
 
     def get_service_id_by_name(self, name):
         try:
@@ -76,7 +78,7 @@ class WGManagerService(xbmc.Monitor):
                     
                     if v_clean and a_clean != v_clean:
                         try:
-                            xbmc.log(f"service.wireguard.manager: {target} match! Switching to {vpn_target}", xbmc.LOGINFO)
+                            log_message(f"{target} match! Switching to {vpn_target}", 1)
 
                             xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
                             for p in ['/tmp/vpn_manual_active.txt', '/storage/.kodi/temp/vpn_manual_active.txt']:
@@ -92,7 +94,7 @@ class WGManagerService(xbmc.Monitor):
                             self.cleanup_count = 0
                             return 
                         except Exception as e:
-                            xbmc.log(f"service.wireguard.manager: Mapping error: {e}", xbmc.LOGERROR)
+                            log_message(f"Mapping error: {e}", 3)
                             return
                     
                     self.cleanup_count = 0
@@ -110,7 +112,7 @@ class WGManagerService(xbmc.Monitor):
 
                 if self.cleanup_count >= 5:
                     try:
-                        xbmc.log("service.wireguard.manager: Home timeout reached. Disconnecting.", xbmc.LOGINFO)
+                        log_message("Home timeout reached. Disconnecting.", 1)
                         self.vpn_ops.disconnect_vpn(silent=False)
                         self.cleanup_count = 0
                     except: pass

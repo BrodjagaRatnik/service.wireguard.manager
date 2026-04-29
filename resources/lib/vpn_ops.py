@@ -11,22 +11,18 @@ ADDON_ID = 'service.wireguard.manager'
 STATE_FILE = "/tmp/vpn_manager_active.txt"
 INTENTIONAL_DISCONNECT_FILE = "/tmp/vpn_intentional_disconnect.txt"
 
+from logger import log_message
+
 try:
     from vpn_config import *
 except ImportError:
     PROP_SYNC_DELAY = 100
+    PROP_SYNC_PURPOSE = "Sync Window Property"
     OS_RELEASE_DELAY = 1000
+    OS_RELEASE_PURPOSE = "Kernel Interface Release"
     CONN_POLL_INTERVAL = 300
     ROUTE_PROP_DELAY = 200
     DHCP_RECOVERY_DELAY = 2000
-
-try:
-    from logger import log_message as kodi_log
-    def log_message(msg, level=None):
-        if KODI_AVAILABLE: kodi_log(msg, level if level is not None else xbmc.LOGDEBUG)
-        else: print(f"{ADDON_ID} [OPS]: {msg}", flush=True)
-except ImportError:
-    def log_message(msg, level=None): print(f"LOG: {msg}", flush=True)
 
 if KODI_AVAILABLE:
     _ADDON = xbmcaddon.Addon(ADDON_ID)
@@ -53,7 +49,7 @@ def set_active_vpn(name):
         if name:
             with open(STATE_FILE, "w") as f: f.write(name.strip())
         elif os.path.exists(STATE_FILE): os.remove(STATE_FILE)
-    except Exception as e: log_message(f"Operation: State Error {e}")
+    except Exception as e: log_message(f"Operation: State Error {e}", 3)
 
 def disconnect_vpn(silent=False):
     if not silent:
@@ -70,7 +66,7 @@ def disconnect_vpn(silent=False):
         xbmcgui.Window(10000).setProperty('vpn_intentional_disconnect', 'true')
         xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
    
-    log_message(f"WAIT_START: Property Sync ({PROP_SYNC_DELAY}ms) | PURPOSE: {PROP_SYNC_PURPOSE}")
+    log_message(f"WAIT_START: Property Sync ({PROP_SYNC_DELAY}ms) | PURPOSE: {PROP_SYNC_PURPOSE}", 0)
     if KODI_AVAILABLE: xbmc.sleep(PROP_SYNC_DELAY)
     else: time.sleep(PROP_SYNC_DELAY / 1000.0)
 
@@ -79,7 +75,7 @@ def disconnect_vpn(silent=False):
         for line in out.splitlines():
             if "vpn_" in line and ("* " in line or "R " in line):
                 subprocess.run(["connmanctl", "disconnect", line.split()[-1]], check=False)
-    except Exception as e: log_message(f"Operation: Disconnect Error {e}")
+    except Exception as e: log_message(f"Operation: Disconnect Error {e}", 3)
 
     enable_connman_ipv6()
     set_secure_dns(vpn_active=False)
@@ -88,21 +84,21 @@ def disconnect_vpn(silent=False):
     if not silent and KODI_AVAILABLE:
         xbmcgui.Dialog().notification("Network", "VPN Disconnected...", ICON_DIS, 3000)
 
-    log_message(f"WAIT_START: OS Interface Release ({OS_RELEASE_DELAY}ms) | PURPOSE: {OS_RELEASE_PURPOSE}")
+    log_message(f"WAIT_START: OS Interface Release ({OS_RELEASE_DELAY}ms) | PURPOSE: {OS_RELEASE_PURPOSE}", 0)
     if KODI_AVAILABLE: xbmc.sleep(OS_RELEASE_DELAY)
     else: time.sleep(OS_RELEASE_DELAY / 1000.0)
  
     gw = get_default_gateway()
 
     if not gw:
-        log_message("Operation: Default route lost. Attempting restoration...", xbmc.LOGDEBUG)
+        log_message("Operation: Default route lost. Attempting restoration...", 0)
         try:
             out = subprocess.check_output(["connmanctl", "services"], text=True)
             phys_service = next((line.split()[-1] for line in out.splitlines() if line.startswith(('*', 'R')) and "vpn_" not in line), None)
             if phys_service:
                 subprocess.run(["connmanctl", "config", phys_service, "--ipv4", "dhcp"], check=False)
                 
-                log_message(f"WAIT: DHCP Recovery ({DHCP_RECOVERY_DELAY}ms)", xbmc.LOGINFO)
+                log_message(f"WAIT: DHCP Recovery ({DHCP_RECOVERY_DELAY}ms)", 1)
                 if KODI_AVAILABLE: xbmc.sleep(DHCP_RECOVERY_DELAY)
                 else: time.sleep(DHCP_RECOVERY_DELAY / 1000.0)
                 
@@ -119,11 +115,11 @@ def disconnect_vpn(silent=False):
             subprocess.run(["ip", "route", "replace", "default", "via", gw, "dev", target_dev], check=False)
             
             if route_is_missing:
-                log_message(f"Operation: Route restored via {gw} on {target_dev}", xbmc.LOGINFO)
+                log_message(f"Operation: Route restored via {gw} on {target_dev}", 1)
         except Exception as e:
-            log_message(f"Operation: Route Restore Error {e}", xbmc.LOGERROR)
+            log_message(f"Operation: Route Restore Error {e}", 3)
     else:
-        log_message("Operation: Fatal - No gateway found after restoration attempt.", xbmc.LOGERROR)
+        log_message("Operation: Fatal - No gateway found after restoration attempt.", 3)
 
     if KODI_AVAILABLE: xbmcgui.Window(10000).setProperty('vpn_intentional_disconnect', '')
     if os.path.exists(INTENTIONAL_DISCONNECT_FILE):
@@ -140,14 +136,14 @@ def connect_vpn(vpn_name, sid):
 
     gw = get_default_gateway()
     if not gw:
-        log_message(f"Operation: Cannot connect to {vpn_name}. No local gateway detected.", xbmc.LOGERROR)
+        log_message(f"Operation: Cannot connect to {vpn_name}. No local gateway detected.", 3)
         if KODI_AVAILABLE:
             title = "[B][COLOR ffff0000]NETWORK ERROR[/COLOR][/B]"
             msg = "[COLOR fffffff00]No Internet detected. Check your Modem/Router.[/COLOR]"
             xbmcgui.Dialog().notification(title, msg, ICON_ERROR_NETWORK, 3000)
         return False
 
-    log_message(f"Operation: Connecting to {vpn_name}", xbmc.LOGINFO)
+    log_message(f"Operation: Connecting to {vpn_name}", 1)
     disable_connman_ipv6()
 
     pbg = xbmcgui.DialogProgressBG() if KODI_AVAILABLE else None
@@ -194,28 +190,13 @@ def connect_vpn(vpn_name, sid):
         current_gw = get_default_gateway()
         if not current_gw:
             err_msg = "Internet lost during connection attempt."
-            log_message("Operation: Internet lost during connection attempt.", xbmc.LOGERROR)
+            log_message("Operation: Internet lost during connection attempt.", 3)
         else:
             err_msg = "Handshake failed. Check VPN credentials or server."
-            log_message("Operation: Handshake failed. Check VPN credentials or server.", xbmc.LOGERROR)
+            log_message("Operation: Handshake failed. Check VPN credentials or server.", 3)
             
         title = "[B][COLOR ffff0000]VPN FAILURE[/COLOR][/B]"
         xbmcgui.Dialog().notification(title, err_msg, ICON_ERROR, 3000)
 
-    disconnect_vpn(silent=True)
-    return False
-
-    if KODI_AVAILABLE:
-        current_gw = get_default_gateway()
-        if not current_gw:
-            err_msg = "Internet lost during connection attempt."
-            log_message(f"Operation: Internet lost during connection attempt.", xbmc.LOGERROR)
-        else:
-            err_msg = "Handshake failed. Check VPN credentials or server."
-            log_message(f"Operation: Handshake failed. Check VPN credentials or server.", xbmc.LOGERROR)
-            
-        title = "[B][COLOR ffff0000]VPN FAILURE (Internet,Handshake)[/COLOR][/B]"
-        xbmcgui.Dialog().notification(title, err_msg, ICON_ERROR, 3000)
-        
     disconnect_vpn(silent=True)
     return False

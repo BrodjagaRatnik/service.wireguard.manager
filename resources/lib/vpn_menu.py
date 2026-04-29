@@ -1,10 +1,5 @@
 ''' ./resources/lib/vpn_menu.py '''
-import os
-import sys
-import xbmc
-import xbmcgui
-import xbmcaddon
-import subprocess
+import os, sys, xbmc, xbmcgui, xbmcaddon, subprocess
 
 _ADDON = xbmcaddon.Addon('service.wireguard.manager')
 ADDON_PATH = _ADDON.getAddonInfo('path')
@@ -16,7 +11,7 @@ UI_BUFFER_PURPOSE_MENU = "Makes the menu feel snappy and responsive to clicks"
 from logger import log_message
 import vpn_ops
 
-def show_menu(media_path, shell_script, token):
+def show_menu(media_path, token):
     try:
         raw_state = vpn_ops.get_active_vpn()
         active_name = raw_state.replace('_', ' ').strip() if raw_state else None
@@ -61,13 +56,13 @@ def show_menu(media_path, shell_script, token):
             action = mapping[choice]
             
             if action == "DISCONNECT":
-                log_message(f"Menu: Manual disconnect requested for {active_name}", xbmc.LOGINFO)
+                log_message(f"Menu: Manual disconnect requested for {active_name}", 1)
                 vpn_ops.disconnect_vpn()
             
             elif action == "REGEN":
                 from vpn_core import run_update
-                run_update(shell_script, token)
-                show_menu(media_path, shell_script, token)
+                run_update(token)
+                show_menu(media_path, token)
             
             else:
                 target_name, target_sid = action
@@ -82,17 +77,16 @@ def show_menu(media_path, shell_script, token):
                         try:
                             with open(path, 'w') as f:
                                 f.write("manual")
-                            log_message(f"Menu: Safety Pin created at {path}", xbmc.LOGDEBUG)
+                            log_message(f"Menu: Safety Pin created at {path}", 0)
                         except:
                             continue
                 except Exception as e:
-                    log_message(f"Menu Flag Error: {e}", xbmc.LOGERROR)
+                    log_message(f"Menu Flag Error: {e}", 3)
 
-                log_message(f"WAIT: UI Buffer Menu ({UI_BUFFER_DELAY_MENU}ms) | PURPOSE: {UI_BUFFER_PURPOSE_MENU}", xbmc.LOGDEBUG)              
                 xbmc.sleep(UI_BUFFER_DELAY_MENU)
 
-                log_message(f"Menu: Manual connection requested for {target_name}", xbmc.LOGINFO)
+                log_message(f"Menu: Manual connection requested for {target_name}", 1)
                 vpn_ops.connect_vpn(target_name, target_sid)
 
     except Exception as e:
-        log_message(f"Menu: Error {e}", xbmc.LOGERROR)
+        log_message(f"Menu: Error {e}", 3)

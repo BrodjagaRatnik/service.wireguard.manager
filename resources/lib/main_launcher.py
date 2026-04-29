@@ -1,13 +1,8 @@
 ''' ./resources/lib/main_launcher.py '''
-import sys
-import os
-import xbmc
-import xbmcgui
-import xbmcaddon
-import xbmcvfs
+import sys, os, xbmc, xbmcgui, xbmcaddon, xbmcvfs
 
 def run():
-    ADDON = xbmcaddon.Addon()
+    ADDON = xbmcaddon.Addon('service.wireguard.manager')
     ADDON_PATH = xbmcvfs.translatePath(ADDON.getAddonInfo('path'))
     LIB_PATH = os.path.join(ADDON_PATH, 'resources', 'lib')
     if LIB_PATH not in sys.path:
@@ -15,9 +10,8 @@ def run():
         
     from logger import log_message
 
-    TOKEN = ADDON.getSettings().getString("vpn_token")
+    TOKEN = ADDON.getSetting("vpn_token")
     MEDIA_PATH = os.path.join(ADDON_PATH, 'resources', 'media')
-    SHELL_SCRIPT = os.path.join(ADDON_PATH, 'resources', 'update_servers.sh')
     SERVICE_NAME = "vpn-watchdog.service"
     SOURCE_SERVICE = os.path.join(ADDON_PATH, 'resources', 'data', SERVICE_NAME)
     DEST_SERVICE = os.path.join('/storage/.config/system.d/', SERVICE_NAME)
@@ -25,25 +19,25 @@ def run():
     try:
         from setup_helper import ensure_setup
         if ensure_setup(ADDON_PATH, MEDIA_PATH):
-            log_message("Setup check triggered a system action. Exiting.", xbmc.LOGDEBUG)
+            log_message("Setup check triggered a system action. Exiting.", 0)
             return
     except Exception as e:
-        log_message(f"Main: Critical Setup Error {e}", xbmc.LOGERROR)
+        log_message(f"Main: Critical Setup Error {e}", 3)
 
     args_str = "|".join(sys.argv).lower()
 
     if len(sys.argv) > 1 and ("resources/lib" in args_str or args_str.endswith(".py")):
         if "list_assets.py" in args_str:
-            log_message("Main: Launching Setup Wizard...", xbmc.LOGINFO)
+            log_message("Main: Launching Setup Wizard...", 1)
             try:
                 import list_assets
                 list_assets.run_wizard()
             except Exception as e:
-                log_message(f"Main: Wizard Error {e}", xbmc.LOGERROR)
+                log_message(f"Main: Wizard Error {e}", 3)
         return
 
     if any(cmd in args_str for cmd in ["status", "restart", "clear", "reinstall", "regen", "cleanup", "import_token"]):
-        log_message(f"Processing Command: {args_str}", xbmc.LOGINFO)
+        log_message(f"Processing Command: {args_str}", 1)
         try:
             if "reinstall" in args_str:
                 from vpn_core import install_service
@@ -56,7 +50,7 @@ def run():
             
             elif "regen" in args_str:
                 from vpn_core import run_update
-                run_update(SHELL_SCRIPT, TOKEN)
+                run_update(TOKEN)
                 if "manual" not in args_str:
                     xbmcgui.Dialog().notification("VPN Manager", "Servers Updated", os.path.join(MEDIA_PATH, 'update_ok.png'), 3000)
             
@@ -72,18 +66,18 @@ def run():
                         ADDON.setSetting("vpn_token", new_token)
                         TOKEN = new_token
         except Exception as e:
-            log_message(f"Main: Execution Error on {args_str}: {e}", xbmc.LOGERROR)
+            log_message(f"Main: Execution Error on {args_str}: {e}", 3)
             xbmcgui.Dialog().ok("Error", f"Command failed: {e}")
         return
 
     if "manual" in args_str or len(sys.argv) <= 1:
         if not TOKEN or TOKEN.strip() == "":
-            log_message("Main: No token found, redirecting to settings.", xbmc.LOGDEBUG)
+            log_message("Main: No token found, redirecting to settings.", 0)
             xbmc.executebuiltin('Addon.OpenSettings(service.wireguard.manager)')
         else:
             try:
                 import vpn_menu
-                vpn_menu.show_menu(MEDIA_PATH, SHELL_SCRIPT, TOKEN)
+                vpn_menu.show_menu(MEDIA_PATH, TOKEN)
             except Exception as e:
-                log_message(f"Main: Menu Load Error {e}", xbmc.LOGERROR)
+                log_message(f"Main: Menu Load Error {e}", 3)
                 xbmc.executebuiltin('Addon.OpenSettings(service.wireguard.manager)')

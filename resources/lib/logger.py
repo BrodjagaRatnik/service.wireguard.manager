@@ -1,4 +1,9 @@
-''' ./resources/lib/logger.py '''
+''' ./resources/lib/logger.py 
+log_message("message", 0) -> DEBUG
+log_message("message", 1) -> INFO
+log_message("message", 2) -> WARNING
+log_message("message", 3) -> ERROR
+'''
 import sys
 import os
 import xml.etree.ElementTree as ET
