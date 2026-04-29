@@ -7,6 +7,7 @@
 *.service text eol=lf
 *.conf text eol=lf
 *.sample text eol=lf
+*.txt text eol=lf
 
 # Denote binary files
 *.png binary
