@@ -60,13 +60,13 @@ def ensure_setup(addon_path, media_path):
     
     wg_config_path = '/storage/.config/wireguard/'
     template_dest = os.path.join(wg_config_path, 'template.config')
-    template_source = os.path.join(addon_path, 'resources', 'data', 'template.config')
+    template_source = os.path.join(addon_path, 'resources', 'data', 'template.config.sample')
     
     service_dest = '/storage/.config/system.d/vpn-watchdog.service'
-    service_source = os.path.join(addon_path, 'resources', 'data', 'vpn-watchdog.service')
+    service_source = os.path.join(addon_path, 'resources', 'data', 'vpn-watchdog.service.sample')
     
     connman_dest = '/storage/.config/connman_main.conf'
-    connman_source = os.path.join(addon_path, 'resources', 'data', 'connman_main.conf')
+    connman_source = os.path.join(addon_path, 'resources', 'data', 'connman_main.conf.sample')
     
     setup_updated = False
 

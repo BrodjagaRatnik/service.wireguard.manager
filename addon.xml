@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="service.wireguard.manager" name="WireGuard Manager NordVPN" version="1.3.0" provider-name="Doemela">
+<addon id="service.wireguard.manager" name="WireGuard Manager NordVPN" version="1.3.1" provider-name="Doemela">
     <requires>
         <import addon="xbmc.python" version="3.0.1"/>
     </requires>
@@ -10,7 +10,12 @@
     <extension point="xbmc.addon.metadata">
         <summary lang="en_GB">Hardened NordVPN WireGuard Manager for Raspberry Pi 5</summary>
         <description lang="en_GB">High-performance VPN manager for LibreELEC. Uses NordLynx for maximum speed with an automated Systemd watchdog to prevent connection drops.[CR][CR][B]Note:[/B] This addon is designed specifically for the LibreELEC filesystem and will not work on standard Android or Windows Kodi installations.[CR][CR][B]Features:[/B][CR]• WireGuard Native (NordLynx)[CR]• Smart Watchdog &amp; Auto-Regen[CR]• Hard Reset Routing Tables[CR][CR][B]Disclaimer:[/B] Not an official NordVPN product. Use at your own risk. This addon is provided "as is" without warranty. The developer is not liable for data loss or security breaches. Full disclaimer available in addon settings.</description>
-        <news>v1.3.0 (2026-04-29)
+        <news>v1.3.1 (2026-04-29)
+- Improved compatibility with Kodi addon submission guidelines
+- Fixed non-whitelisted file warnings by using .sample extensions
+- Optimized internal setup helper for resource deployment
+
+v1.3.0 (2026-04-29)
 - Major Architecture Update: Replaced legacy Bash scripts with pure Python 3 logic.
 - Improved Reliability: Server regeneration no longer depends on external shell environments.
 - Optimized Paths: Fixed "File Not Found" errors by using modern xbmcvfs translation.
@@ -21,18 +26,7 @@ v1.2.9 (2026-04-29)
 - Fixed critical "Missing Script" error: update_servers.sh is now correctly included in the addon package.
 - Updated .addonignore to prevent core assets from being stripped during installation.
 - Enhanced vpn_core.py with absolute path translation using modern xbmcvfs standards.
-- Improved server regeneration reliability for Kodi 21.3 Omega.
-
-v1.2.8 (2026-04-28)
-- Added "Disconnect VPN on startup" toggle in General Settings.
-- Improved "Priority System" logic to better protect manual VPN sessions.
-- Improved startup logic to check for active ConnMan services before attempting disconnect.
-- Enhanced connection error handling with specific Handshake/Internet failure alerts.
-
-v1.2.7 (2026-04-27)
-- Improved boot synchronization with nss-lookup and time-sync targets.
-- Enhanced watchdog reliability to prevent handshake failures on slow networks.
-- Optimized systemd service limits for continuous background monitoring.</news>
+- Improved server regeneration reliability for Kodi 21.3 Omega.</news>
         <language>en_gb</language>
         <platform>linux</platform>
         <license>MIT</license>

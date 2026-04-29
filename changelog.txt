@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+v1.3.1 (2026-04-29)
+- Improved compatibility with Kodi addon submission guidelines
+- Fixed non-whitelisted file warnings by using .sample extensions
+- Optimized internal setup helper for resource deployment
+
 v1.3.0 (2026-04-29)
 - Major Architecture Update: Replaced legacy Bash scripts with pure Python 3 logic.
 - Improved Reliability: Server regeneration no longer depends on external shell environments.
@@ -13,17 +18,6 @@ v1.2.9 (2026-04-29)
 - Updated .addonignore to prevent core assets from being stripped during installation.
 - Enhanced vpn_core.py with absolute path translation using modern xbmcvfs standards.
 - Improved server regeneration reliability for Kodi 21.3 Omega.
-
-v1.2.8 (2026-04-28)
-- Added "Disconnect VPN on startup" toggle in General Settings.
-- Improved "Priority System" logic to better protect manual VPN sessions.
-- Improved startup logic to check for active ConnMan services before attempting disconnect.
-- Enhanced connection error handling with specific Handshake/Internet failure alerts.
-
-v1.2.7 (2026-04-27)
-- Improved boot synchronization with nss-lookup and time-sync targets.
-- Enhanced watchdog reliability to prevent handshake failures on slow networks.
-- Optimized systemd service limits for continuous background monitoring.
 
 v1.2.2 (2026-04-22)
 - FIX: Resolved ValueError: too many values to unpack in service.py.
