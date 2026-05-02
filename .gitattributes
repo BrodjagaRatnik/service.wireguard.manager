@@ -14,6 +14,7 @@
 *.jpg binary
 *.gif binary
 *.ico binary
+*.zip binary
 
 # --- Export Management ---
 .gitattributes export-ignore
