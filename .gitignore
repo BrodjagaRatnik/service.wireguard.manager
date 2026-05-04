@@ -1,7 +1,6 @@
 __pycache__/
 *.pyc
 .DS_Store
-resources/media/*.png.bak
+resources/media/*.bak
 README.txt
 *.log
-
