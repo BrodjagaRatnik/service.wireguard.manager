@@ -8,13 +8,30 @@
 *.conf text eol=lf
 *.sample text eol=lf
 *.txt text eol=lf
+*.xml text eol=lf
+*.md text eol=lf
 
-# Denote binary files
+# Graphics
 *.png binary
 *.jpg binary
+*.jpeg binary
 *.gif binary
 *.ico binary
+*.svg binary
+
+# Sounds
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.m4a binary
+
+# Archive files (Treat as binary, do not fix line endings)
 *.zip binary
+*.tar binary
+*.tar.gz binary
+*.tgz binary
+*.rar binary
+*.7z binary
 
 # --- Export Management ---
 .gitattributes export-ignore
