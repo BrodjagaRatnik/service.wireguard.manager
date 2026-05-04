@@ -3,7 +3,7 @@
 ![Last Commit](https://img.shields.io/github/last-commit/BrodjagaRatnik/service.wireguard.manager)
 ![Build Status](https://github.com/BrodjagaRatnik/service.wireguard.manager/actions/workflows/test_addon.yml/badge.svg)
 ---
-# WireGuard Manager Service for VPN (LibreELEC)
+# WireGuard VPN Manager (LibreELEC)
 ![Kodi](https://img.shields.io/badge/Kodi-21.3%20(Omega)-blue?logo=kodi)
 ![Python](https://img.shields.io/badge/python-3.12-blue?logo=python)
 ![LibreELEC](https://img.shields.io/badge/LibreELEC-12.2.1-blue)
@@ -66,10 +66,10 @@ If you already know what you're doing, grab the repository installer here:
 5. Locate and select the `repository.doemela-x.x.x.zip` file.
 6. Wait for the **"Add-on installed"** notification.
 
-### Step 2: Install WireGuard Manager
+### Step 2: Install WireGuard VPN Manager
 1. While still in the Add-on Browser, select **Install from repository**.
 2. Choose the **Doemela Repo**.
-3. Navigate to **Services** > **WireGuard Manager for NordVPN**.
+3. Navigate to **Services** > **WireGuard VPN Manager**.
 4. Select **Install**.
 5. Once the installation is complete, the **Setup Wizard** will launch automatically to guide you through the initial configuration and token import.
 > **Tip:** Installing via the Repository is the recommended method. It ensures you receive **automatic updates** for bug fixes and new Raspberry Pi 5 performance optimizations as soon as they are released.
