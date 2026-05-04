@@ -1,6 +1,7 @@
+.vscode/
+.idea/
 __pycache__/
 *.pyc
 .DS_Store
-resources/media/*.bak
-README.txt
-*.log
+thumbs.db
+venv/
