@@ -69,7 +69,7 @@ If you already know what you're doing, grab the repository installer here:
 ### Step 2: Install WireGuard VPN Manager
 1. While still in the Add-on Browser, select **Install from repository**.
 2. Choose the **Doemela Repo**.
-3. Navigate to **Services** > **WireGuard VPN Manager**.
+3. Navigate to **Program add-ons** > **WireGuard VPN Manager**.
 4. Select **Install**.
 5. Once the installation is complete, the **Setup Wizard** will launch automatically to guide you through the initial configuration and token import.
 > **Tip:** Installing via the Repository is the recommended method. It ensures you receive **automatic updates** for bug fixes and new Raspberry Pi 5 performance optimizations as soon as they are released.
