@@ -1,7 +1,0 @@
-.vscode/
-.idea/
-__pycache__/
-*.pyc
-.DS_Store
-thumbs.db
-venv/
