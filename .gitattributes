@@ -33,6 +33,9 @@
 *.rar binary
 *.7z binary
 
+# Certificates
+*.crt binary
+
 # --- Export Management ---
 .gitattributes export-ignore
 .gitignore export-ignore
