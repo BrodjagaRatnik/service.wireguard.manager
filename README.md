@@ -65,23 +65,8 @@ For detailed instructions for this Add-on, please visit our **[Wiki](https://git
 If you already know what you're doing, grab the repository installer here:  
 **[📦 Download Doemela Repo ZIP](https://github.com/BrodjagaRatnik/doemela-kodi-repo/tree/main/zips/repository.doemela)**
 
-### Step 1: Install the Repository
-1. Download the **Doemela Repo ZIP** file to your device (or use a USB stick).
-2. Open Kodi and navigate to **Add-ons**.
-3. Click the **Box Icon** (Add-on Browser) in the top-left corner.
-4. Select **Install from zip file**.
-   * *If prompted, click 'Settings' and enable 'Unknown Sources', then go back.*
-5. Locate and select the `repository.doemela-x.x.x.zip` file.
-6. Wait for the **"Add-on installed"** notification.
-
-### Step 2: Install WireGuard VPN Manager
-1. While still in the Add-on Browser, select **Install from repository**.
-2. Choose the **Doemela Repo**.
-3. Navigate to **Program add-ons** > **WireGuard VPN Manager**.
-4. Select **Install**.
-5. Once the installation is complete, the **Setup Wizard** will launch automatically to guide you through the initial configuration and token import.
 > **Tip:** Installing via the Repository is the recommended method. It ensures you receive **automatic updates** for bug fixes and new Raspberry Pi 5 performance optimizations as soon as they are released.
----
+
 <img src="resources/media/screenshot00002.jpg" alt="Alt text" width="800">
 
 ---
