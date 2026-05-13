@@ -12,6 +12,20 @@
 ---
 A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 Omega)**. This tool manages WireGuard connections natively via `connmanctl`, providing a faster and more stable experience than traditional OpenVPN-based addons.
 ## 🚀 Features
+*   **Multi-Provider Architecture**: Native, integrated routing support across NordVPN, Private Internet Access (PIA), and Custom manual profile frameworks.
+*   **Dynamic PIA WireGuard Handshake**: Features an authenticated API endpoint handshake layer that automatically registers keys and parses split PGP signature tokens live.
+*   **Raspberry Pi 5 & 4 Optimized**: Automated platform detection checks structure profiles to apply separate, optimized high-speed network timing values for both Pi 4 and Pi 5.
+*   **Live API Country Selector**: Replaced manual configuration ID inputs with a live, provider-driven multi-select context menu interface.
+*   **Space-Safe Service Matching**: Space-to-underscore string normalization ensures 100% accurate tracking searches against complex ConnMan network names.
+*   **Automated Credential Ingest**: Separate, validated import loops read plaintext `.txt` or `.key` data files, execute instant Base64 encryption processing, and run auto-updates.
+*   **Asynchronous State Shield**: Centralized tracking flags inside `/tmp` prevent racing conditions and separate automated video plugin mapping sessions from manual menu overrides.
+*   **Smart Multi-Step UI Feedback**: Enhanced validation dialogs with art and ARGB color formatting use persistent on-screen reminders to enforce menu-saving actions.
+*   **Stabilized Watchdog Settle**: Fine-tuned delay metrics stop infinite connection loops during profile switches by allowing the interface routing table to normalize.
+*   **Silent Transition Engine**: Seamless background profile switching handles link changes quietly to prevent stream stuttering or player window failures.
+*   **Aggressive Stream Recovery**: Automatically kills "frozen" video players during network blackouts to prevent UI hangs and provide immediate error feedback.
+*   **Intelligent Throttling**: Implements a "Safety Fuse" logic that stands down after 10 failed reconnection attempts to preserve system resources and API limits.
+*   **IPv6 Leak Protection**: Kernel-level hardening and dynamic DNS management prevent data leaks during VPN transitions.
+*   **Remote Optimized**: Automatically maps **F11** to trigger the VPN menu from anywhere in Kodi.
 *   **Native WireGuard**: Interfaces directly with LibreELEC's network stack for maximum speed and minimal overhead.
 *   **Raspberry Pi 5 Optimized**: Specifically tuned timing profiles and multi-threaded execution reduce VPN switching and recovery times.
 *   **1Hz Physical Watchdog**: A standalone `systemd` service monitors hardware carrier status every second for near-instant detection of cable pulls or link loss.
@@ -23,24 +37,24 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 *   **Remote Optimized**: Automatically maps **F11** to trigger the VPN menu from anywhere in Kodi.
 *   **Smart Auto-Mappings**: Dynamically switches VPN locations based on the specific Kodi addon or folder being browsed.
 
-## 🛠 Advanced Monitoring
-*   **Real-time Logging**: Detailed `PURPOSE` tagging for all system waits, visible via `journalctl` or centralized logs.
-*   **Status Persistence**: Tracks active sessions and retry counts via secure temporary state files to survive script restarts.
-
 ## 📂 Project Structure
 | File/Folder | Description |
 | :--- | :--- |
-| **`main.py`** | Primary entry point for the GUI and menu logic. |
-| **`service_startup.py`** | Kodi Monitor service handling auto-mappings and UI context checks. |
-| **`resources/lib/vpn_config.py`** | Centralized configuration for all wait times, paths, and DNS fallbacks. |
-| **`resources/lib/service_launcher.py`** | The "Brain": Manages the background loop, mapping logic, and Home detection. |
-| **`resources/lib/vpn_ops.py`** | Core engine for Connect/Disconnect/Status logic with dependency-safe imports. |
-| **`resources/lib/vpn_core.py`** | Bridge between the UI and the system, managing regeneration and service installs. |
-| **`resources/lib/setup_helper.py`** | Manages installation of systemd services, keymaps, and initial configurations. |
-| **`resources/lib/network_utils.py`** | Hardens system DNS and manages IPv6 kernel states. |
-| **`resources/lib/logger.py`** | Centralized logging utility with dynamic version tagging and dual-mode (Kodi/Standalone) support. |
-| **`resources/scripts/update_nordvpn_servers.py`** | **[NEW]** Pure Python script utilizing NordVPN APIs to fetch and resolve the latest server IPs. |
-| **`resources/data/`** | Contains `vpn-watchdog.service`, `connman.main.conf`, and tunnel templates. |
+| **`main.py`** | Primary entry point for executing user-triggered GUI configurations and settings hooks. |
+| **`service_startup.py`** | Background system listener initializing standard service routines. |
+| **`resources/settings.xml`** | Storage schema defining provider profiles, mapping settings, and credential parameters. |
+| **`resources/keymaps/`** | Contains custom XML structural actions mapping global remote key inputs (F11) directly to the GUI menu. |
+| **`resources/language/`** | Core internationalization module managing clean layout strings and dynamic labels (`strings.po`). |
+| **`resources/lib/list_assets.py`** | Slot manager wizard pairing active ConnMan connection handles directly to target video plugins. |
+| **`resources/lib/service_launcher.py`** | The "Brain": Manages the background monitor thread loop, auto-mapping tracking, and Home window escape focus. |
+| **`resources/lib/vpn_ops.py`** | Core engine coordinating system handshakes, active profile caching, and dynamic connection sequences. |
+| **`resources/lib/vpn_config.py`** | Centralized constants mapping provider metadata dictionaries, timeouts, delay timers, and layout constants. |
+| **`resources/lib/network_utils.py`** | Network controller toggling ConnMan kernel states to secure DNS paths and prevent IPv6 leak issues. |
+| **`resources/lib/logger.py`** | High-visibility debugging output processor using dynamic version tags and standalone system execution compatibility. |
+| **`resources/lib/providers/`** | Isolated package handling provider logic: `nordvpn.py` (Tokens), `pia.py` (Credentials/Handshakes), and `custom.py` (.config file parser). |
+| **`resources/scripts/update_vpn.py`** | **[UPDATED]** Unified standalone update automation pipeline querying endpoint server lists and writing active WireGuard layouts. |
+| **`resources/data/`** | Contains static core configurations for `vpn-watchdog.service`, `connman_main.conf`, and profile setup templates. |
+| **`resources/media/`** | Repository asset bank for UI design elements, visual indicators, error warning popups, and custom warning wave sounds. |
 
 ## 🛠 Advanced Tuning
 All performance timings are centralized in `resources/lib/vpn_config.py`. Users on high-performance hardware like the **Raspberry Pi 5** can adjust variables like `PROP_SYNC_DELAY` and `OS_RELEASE_DELAY` to achieve near-instantaneous connection swaps.
