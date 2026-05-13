@@ -51,9 +51,6 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 
 | **`resources/data/`** | Contains static core configurations for `vpn-watchdog.service`, `connman_main.conf`, and profile setup templates. |
 | **`resources/media/`** | Repository asset bank for UI design elements, visual indicators, error warning popups, and custom warning wave sounds. |
 
-## 🛠 Advanced Tuning
-All performance timings are centralized in `resources/lib/vpn_config.py`. Users on high-performance hardware like the **Raspberry Pi 5** can adjust variables like `PROP_SYNC_DELAY` and `OS_RELEASE_DELAY` to achieve near-instantaneous connection swaps.
-
 ## 📖 Quick Links
 For detailed instructions for this Add-on, please visit our **[Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki)**:
 *   **[🔑 How to get your NordVPN Token](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/How-to-get-your-NordVPN-Token)**
