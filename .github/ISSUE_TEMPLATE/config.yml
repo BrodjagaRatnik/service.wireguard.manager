@@ -1,0 +1,8 @@
+# Disable the default blank/empty issue text box completely
+blank_issues_enabled: false
+
+# Add custom sidebar navigation links for support queries
+contact_links:
+  - name: 💬 Community Forum Support
+    url: https://forum.libreelec.tv/thread/30422-wireguard-vpn-manager/
+    about: Please visit libreelec forum thread for general usage questions or configuration support instead of opening GitHub developer issues.
