@@ -5,3 +5,6 @@ __pycache__/
 .DS_Store
 thumbs.db
 venv/
+!.github/
+!.github/ISSUE_TEMPLATE/
+!.github/ISSUE_TEMPLATE/*.yml
