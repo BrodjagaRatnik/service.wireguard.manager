@@ -1,4 +1,4 @@
-name: 🐛 Bug Report (RC4 / Stable)
+name: 🐛 Bug Report
 description: Report a bug or connection loop in the WireGuard Manager add-on.
 labels: ["bug", "triage"]
 body:
