@@ -13,7 +13,7 @@ body:
       label: Pre-Flight Checklist
       description: Please confirm you have completed these steps before opening an issue.
       options:
-        - label: I have updated the add-on to the latest release (`v1.4.0~rc4` or newer).
+        - label: I have updated the add-on to the latest release.
           required: true
         - label: I ran the **`regen`** command in settings after upgrading.
           required: true
