@@ -22,5 +22,12 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
+      - name: Prepare Workspace for Kodi Checker
+        # FIX: Temporarily strip out the un-whitelisted files/folders from the runner workspace before the checker launches
+        run: |
+          rm -f .gitattributes .gitignore
+          rm -rf zips/
+
       - name: Run Kodi Addon Checker
-        run: kodi-addon-checker --branch omega --allow-folder-id-mismatch --skip .gitattributes --skip .gitignore --skip zips/ .
+        # FIX: Clean, native execution command targeting only your actual remaining addon codebase folder layout
+        run: kodi-addon-checker --branch omega --allow-folder-id-mismatch .
