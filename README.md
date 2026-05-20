@@ -8,7 +8,7 @@
 ![Python](https://img.shields.io/badge/python-3.12-blue?logo=python)
 ![LibreELEC](https://img.shields.io/badge/LibreELEC-12.2.1-blue)
 ![Linux Kernel](https://img.shields.io/badge/Linux-6.16-blue?logo=linux&logoColor=white)
-![License](https://img.shields.io/github/license/BrodjagaRatnik/service.wireguard.manager)
+![License](https://shields.io/github/license/BrodjagaRatnik/doemela-kodi-repo)
 ---
 A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 Omega)**. This tool manages WireGuard connections natively via `connmanctl`, providing a faster and more stable experience than traditional OpenVPN-based addons.
 
