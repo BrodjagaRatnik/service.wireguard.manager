@@ -1,0 +1,73 @@
+name: 🚀 Feature Request / Suggestion
+description: Propose a new feature or an optimization for WireGuard Manager.
+labels: ["enhancement", "feature-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea to make WireGuard Manager even better? We'd love to hear it! Please fill out this form to propose your feature or a new public API integration.
+
+  - type: textarea
+    id: problem_statement
+    attributes:
+      label: 💡 Is your feature request related to a problem?
+      description: A clear and concise description of what the problem is. (e.g., I'm frustrated when..., I am missing a setting for...)
+      placeholder: "e.g., It is inconvenient to manually re-enter custom paths when changing devices..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: feature_description
+    attributes:
+      label: ✨ Describe the solution you'd like to see
+      description: Tell us exactly how this feature should work, look, or interact with the add-on settings menu.
+      placeholder: "e.g., I would love an option in the menu that lets you back up all 8 mapping slots to a single .json file on local storage..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: 🗂️ Scope of the Feature
+      description: Which part of the add-on does this suggestion target?
+      options:
+        - "New VPN Provider Integration (Read Requirements Below First!)"
+        - "Mapping Slots & Watchdog Monitoring Loop"
+        - "Settings GUI & Menu Layout"
+        - "Performance, MTU, or Network Routing Optimizations"
+        - "Other / Code Infrastructure"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: vpn_requirements
+    attributes:
+      label: 🛑 MANDATORY Checklist for New VPN Providers
+      description: If your request is for a new VPN Provider integration, you MUST verify that their backend infrastructure meets these clean development standards. Requests for providers with messy APIs (like PIA's dynamic handshake loops) will be rejected automatically.
+      options:
+        - label: "The provider has a clean, flat public JSON server list URL (No deeply nested protocol/region dictionary trees)."
+          required: false
+        - label: "The provider utilizes Static Key Authentication (Configs can be pre-built immediately like NordVPN or Surfshark, without needing real-time local port handshakes or short-lived token requests)."
+          required: false
+        - label: "The endpoints respect standard network routing and public DNS setups inside the tunnel without force-dropping requests."
+          required: false
+        - label: "My request is NOT for a new VPN provider (Skip this checklist)."
+          required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 🔄 Describe alternatives you've considered
+      description: Have you found any temporary workarounds or shell script combinations that achieve this right now?
+      placeholder: "e.g., Right now I copy the settings.xml file manually via SSH using WinSCP..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 📌 Additional Context or Screenshots
+      description: Add any other context, mockup design layouts, or sample public API documentation links. Must provide public developer API links if requesting a new VPN provider.
+      placeholder: "Links to official flat JSON endpoints, public API connection documentation, or code snippets go here..."
+    validations:
+      required: false
