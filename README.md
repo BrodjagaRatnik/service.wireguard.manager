@@ -58,7 +58,7 @@ For detailed instructions for this Add-on, please visit our **[Wiki](https://git
 | **`resources/lib/network_utils.py`** | Network controller toggling ConnMan kernel states to secure DNS paths and prevent IPv6 leak issues. |
 | **`resources/lib/logger.py`** | High-visibility debugging output processor using dynamic version tags and standalone system execution compatibility. |
 | **`resources/lib/providers/`** | Isolated package handling provider logic: `nordvpn.py` (Tokens), `pia.py` (Credentials/Handshakes), and `custom.py` (.config file parser). |
-| **`resources/scripts/update_vpn.py`** | **[UPDATED]** Unified standalone update automation pipeline querying endpoint server lists and writing active WireGuard layouts. |
+| **`resources/scripts/update_vpn.py`** | Unified standalone update automation pipeline querying endpoint server lists and writing active WireGuard layouts. |
 | **`resources/data/`** | Contains static core configurations for `vpn-watchdog.service`, `connman_main.conf`, and profile setup templates. |
 | **`resources/media/`** | Repository asset bank for UI design elements, visual indicators, error warning popups, and custom warning wave sounds. |
 
