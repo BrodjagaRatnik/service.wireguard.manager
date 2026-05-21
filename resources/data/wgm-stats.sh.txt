@@ -1,0 +1,100 @@
+#!/bin/bash
+<<'COMMENT'
+
+ mkdir /storage/.config/scripts
+ cp /storage/.kodi/addons/service.wireguard.manager/resources/data/wgm-stats.sh.txt /storage/.config/scripts/wgm-stats.sh
+ chmod +x /storage/.config/scripts/wgm-stats.sh
+
+ Start it with:
+ bash /storage/.config/scripts/wgm-stats.sh
+
+COMMENT
+
+GEO_COUNTER=0
+FIRST_RUN=1
+LE_VER=$(grep "VERSION=" /etc/os-release | cut -d'"' -f2)
+KODI_VER=$(/usr/lib/kodi/kodi.bin -v 2>/dev/null | grep -Eo '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n1)
+
+NC='\e[0m'; BLINK='\033[5m'
+B_RED='\e[1;31m'; B_GREEN='\e[1;32m'; B_YELLOW='\e[1;33m'
+B_BLUE='\e[1;34m'; B_PURPLE='\e[1;35m'; B_CYAN='\e[1;36m'
+B_WHITE='\e[1;37m'; B_ORANGE='\033[1;38;5;208m'
+
+is_recent() {
+    [ -z "$1" ] && return 1
+    local log_sec=$(date -d "$1" +%s 2>/dev/null)
+    local now_sec=$(date +%s)
+    [ -z "$log_sec" ] && return 1
+    [[ $((now_sec - log_sec)) -le 300 ]]
+}
+
+get_vpn_geo() {
+    local info=$(curl -s --connect-timeout 2 http://ip-api.com)
+    local cn=$(echo "$info" | sed -n 's/.*"country":"\([^"]*\)".*/\1/p')
+    local isp=$(echo "$info" | sed -n 's/.*"isp":"\([^"]*\)".*/\1/p')
+    local srv=$(wg show all endpoints 2>/dev/null | awk '{print $3}' | cut -d: -f1 | head -n1)
+    VPN_GEO_STR="VPN Geo:        ${B_CYAN}${cn:-Unknown}${NC} ${B_WHITE}→${NC} ${B_YELLOW}${isp:-N/A}${NC} ${B_WHITE}→${NC} ${B_PURPLE}${srv:-Searching...}${NC}"
+}
+
+RT1=$(awk '/tun0:/ {print $2}' /proc/net/dev); RT1=${RT1:-0}
+TT1=$(awk '/tun0:/ {print $10}' /proc/net/dev); TT1=${TT1:-0}
+START_BYTES_TUN=$RT1
+
+while true; do
+    printf '\033c'
+    echo -e "${B_CYAN}--- PI WireGuard VPN Manager System Stat, LibreELEC $LE_VER (Kodi $KODI_VER) ---${NC}"
+
+    VPN_IFACE=$(ls /sys/class/net | grep -vE 'lo|eth|wlan|veth|docker' | head -n1)
+    if [ -n "$VPN_IFACE" ]; then
+        [ "$GEO_COUNTER" -le 0 ] && { get_vpn_geo; GEO_COUNTER=30; }
+        GEO_COUNTER=$((GEO_COUNTER - 1))
+        RT2=$(awk "/$VPN_IFACE:/ {print \$2}" /proc/net/dev); RT2=${RT2:-0}
+        TT2=$(awk "/$VPN_IFACE:/ {print \$10}" /proc/net/dev); TT2=${TT2:-0}
+        
+        if [ "$FIRST_RUN" -eq 1 ]; then R_MBPS="0.00"; T_MBPS="0.00"; FIRST_RUN=0
+        else
+            R_MBPS=$(awk -v r2="$RT2" -v r1="$RT1" 'BEGIN { s=((r2-r1)*4)/1000000; printf "%.2f", (s>2000?0:s) }')
+            T_MBPS=$(awk -v t2="$TT2" -v t1="$TT1" 'BEGIN { s=((t2-t1)*4)/1000000; printf "%.2f", (s>2000?0:s) }')
+        fi
+        echo -e "\nVPN Status:     ${B_GREEN}CONNECTED ($VPN_IFACE)${NC}"
+        echo -e "Current Speed:  ${B_GREEN}↓ ${R_MBPS} Mbps${NC}  ${B_YELLOW}↑ ${T_MBPS} Mbps${NC}"
+        echo -e "Total Session:  ↓ $(awk "BEGIN {printf \"%.2f\", ($RT2-$START_BYTES_TUN)/1073741824}") GiB"
+        echo -e "$VPN_GEO_STR ${NC}\n"
+    else
+        echo -e "\nVPN Status:     ${B_RED}DISCONNECTED${NC}"; GEO_COUNTER=0; FIRST_RUN=1
+    fi
+
+
+    IGNORE_SYS="addhereyourignores"
+    LAST_SYS_ERR=$(journalctl -n 20 --no-pager -p 0..3 --format=short-iso 2>/dev/null | grep -Ev "$IGNORE_SYS" | tail -n 1)
+    SYS_TS=$(echo "$LAST_SYS_ERR" | cut -d' ' -f1)
+
+    if systemctl is-active --quiet vpn-watchdog.service; then
+        echo -e "${B_CYAN}--- VPN WATCHDOG ---${NC} ${B_YELLOW}(Monitoring Watchdog Service)${NC}"
+        journalctl -u vpn-watchdog.service --no-pager -n 8 | cut -c1-145
+    elif [ -n "$LAST_SYS_ERR" ] && is_recent "$SYS_TS"; then
+        echo -e "${B_CYAN}--- SYSTEM JOURNAL ---${NC} ${B_RED}!! ERRORS DETECTED !!${NC}"
+        journalctl -n 20 --no-pager -p 0..3 2>/dev/null | grep -Ev "$IGNORE_SYS" | tail -n 8 | cut -c1-145
+    else
+        echo -e "${B_CYAN}--- SYSTEM JOURNAL ---${NC} ${B_YELLOW}(No recent system errors)${NC}"
+        journalctl -n 10 --no-pager | grep -Ev "$IGNORE_SYS" | tail -n 8 | cut -c1-145
+    fi
+    echo -e "${NC}\n"
+    KODI_LOG="/storage/.kodi/temp/kodi.log"
+    WG_LOG_CONTENT=$(grep -i "service.wireguard.manager.*:" "$KODI_LOG" | tail -n 500)
+    IGNORE_WG="addhereyourignores"
+    LAST_WG_ERR=$(echo "$WG_LOG_CONTENT" | grep -Ei "error|warning" | grep -Eiv "$IGNORE_WG" | tail -n 1)
+    WG_TS=$(echo "$LAST_WG_ERR" | cut -c1-19)
+
+    if [ -n "$LAST_WG_ERR" ] && is_recent "$WG_TS"; then
+        echo -e "${B_CYAN}--- WG MANAGER ALERTS ---${NC} ${B_RED}!! ERRORS DETECTED !!${NC}"
+        echo "$WG_LOG_CONTENT" | grep -Ei "error|warning" | grep -Eiv "$IGNORE_WG" | tail -n 8 | cut -c1-145
+    else
+        echo -e "${B_CYAN}--- WIREGUARD MANAGER ---${NC} ${B_YELLOW}(Recent Activity)${NC}"
+        echo "$WG_LOG_CONTENT" | tail -n 8 | cut -c 1-150
+    fi
+
+    echo -e "${NC}\n${B_YELLOW}[Ctrl+C] to Exit${NC}"
+    RT1=$RT2; TT1=$TT2
+    read -t 2 -n 1 -s && break
+done

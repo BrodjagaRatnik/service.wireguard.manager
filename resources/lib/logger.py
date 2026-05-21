@@ -1,66 +1,71 @@
-''' ./resources/lib/logger.py 
-log_message("message", 0) -> DEBUG
-log_message("message", 1) -> INFO
-log_message("message", 2) -> WARNING
-log_message("message", 3) -> ERROR
-'''
-import sys
+''' ./resources/lib/logger.py '''
+import builtins
 import os
+import sys
 import xml.etree.ElementTree as ET
-from datetime import datetime
-
-def get_version_from_xml():
-    try:
-        xml_path = '/storage/.kodi/addons/service.wireguard.manager/addon.xml'
-        if os.path.exists(xml_path):
-            tree = ET.parse(xml_path)
-            return tree.getroot().get('version')
-    except: pass
-    return "Unknown"
 
 try:
     import xbmc
     import xbmcaddon
-    ADDON = xbmcaddon.Addon('service.wireguard.manager')
-    ADDON_ID = ADDON.getAddonInfo('id')
-    ADDON_VER = ADDON.getAddonInfo('version')
-    KODI_MODE = True
-except:
-    KODI_MODE = False
-    ADDON_ID = "service.wireguard.manager"
-    ADDON_VER = get_version_from_xml()
+    _ADDON = xbmcaddon.Addon('service.wireguard.manager')
+    ADDON_ID = _ADDON.getAddonInfo('id')
+    ADDON_VER = _ADDON.getAddonInfo('version')
+    HAS_KODI = True
+except Exception:
+    HAS_KODI = False
 
-def log_message(msg, level=None):
+    try:
+        _addon_xml_path = '/storage/.kodi/addons/service.wireguard.manager/addon.xml'
+        _tree = ET.parse(_addon_xml_path)
+        _root = _tree.getroot()
+        ADDON_ID = _root.get('id')
+        ADDON_VER = _root.get('version')
+    except Exception:
+        ADDON_ID = 'service.wireguard.manager'
+        ADDON_VER = 'unknown'
 
+
+def log_message(msg, level=1):
     if level is None:
         level = 1
-        
+
     formatted_msg = f"{ADDON_ID} v{ADDON_VER}: {msg}"
-    
-    if KODI_MODE:
-        import xbmc
+
+    if HAS_KODI:
         xbmc.log(formatted_msg, level)
     else:
-        print(formatted_msg)
-        sys.stdout.flush()
-
+        _is_debug_active = False
         try:
-            log_path = '/storage/.kodi/temp/kodi.log'
-            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-            pid = os.getpid()
-
-            if level == 0:
-                lvl_line = "    debug <general>:"
-            elif level == 2:
-                lvl_line = "    warning <general>:"
-            elif level == 3:
-                lvl_line = "    error <general>:"
-            else:
-                lvl_line = "    info <general>:"
-
-            log_line = f"{now} T:{pid}{lvl_line} {formatted_msg}\n"
-            
-            with open(log_path, 'a') as f:
-                f.write(log_line)
-        except:
+            _gui_xml = '/storage/.kodi/userdata/guisettings.xml'
+            if os.path.exists(_gui_xml):
+                _tree = ET.parse(_gui_xml)
+                _setting = _tree.find(".//setting[@id='core.logging.enabledebug']")
+                if _setting is not None and _setting.text:
+                    _is_debug_active = _setting.text.lower() == 'true'
+        except Exception:
             pass
+
+        if level == 0 and not _is_debug_active:
+            return
+
+        lvl_name = {0: "Debug", 1: "Info", 2: "Warning", 3: "Error"}.get(level, "Info")
+        console_msg = f"[{lvl_name}] {formatted_msg}\n"
+
+        if level in (2, 3):
+            sys.stderr.write(console_msg)
+            sys.stderr.flush()
+        else:
+            sys.stdout.write(console_msg)
+            sys.stdout.flush()
+
+
+if HAS_KODI:
+    builtins.log_event = lambda msg, lvl=0: xbmc.log(
+        f"service.wireguard.manager fallback: {msg}",
+        level=xbmc.LOGERROR if lvl >= 2 else xbmc.LOGINFO
+    )
+else:
+    builtins.log_event = lambda msg, lvl=0: (
+        sys.stderr.write(f"service.wireguard.manager fallback: {msg}\n") if lvl >= 2
+        else sys.stdout.write(f"service.wireguard.manager fallback: {msg}\n")
+    )

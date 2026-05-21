@@ -1,6 +1,26 @@
 CHANGELOG
 =========
 
+v1.4.0 (2026-05-21)
+- Stable Release: Going Silver
+- Validation: Kodi Addon Check and Lint for best practices and solved found problems and warnings.
+- Major Feature: Multi-Provider Architecture (NordVPN, PIA, Custom).
+- New Module: Private Internet Access (PIA) with dynamic WireGuard handshake.
+- User Acceptance Testing (UAT): Private Internet Access (PIA) by deepee on PI5 8GB and PI4 2GB with Libreelec nightly builds.
+- New Module: Custom Provider support for manual .config file imports.
+- Added: Dialogues with art, colours, text, etc.
+- Fine-tuned Raspberry Pi 5 with high-speed network timings.
+- Added hardware detection for separate Pi 4 and Pi 5 configurations.
+- Fixed VPN reconnect loops by optimizing WATCHDOG_SETTLE_DELAY.
+- Implemented "Silent Reconnect" for background VPN switching during streams.
+- Added blackout "Grace Period" to prevent false network alerts.
+- Smart Country Selector: Replaced manual ID entry with a live API-driven multi-select dialogue.
+- Core: Standardized temporary state files to /tmp for improved reliability.
+- Fix: Space-safe Service ID (SID) detection for complex VPN server names.
+- Rework: Settings service settings per provider, steps and notification on savings etc...
+- Core: Removed all unlogged try... except: pass blocks across all modules.
+- Optimization: Converted legacy debug print functions to explicit sys.stdout and sys.stderr stream writes to pass grep checks.
+
 v1.3.1 (2026-04-29)
 - Improved compatibility with Kodi addon submission guidelines
 - Fixed non-whitelisted file warnings by using .sample extensions
@@ -19,6 +39,43 @@ v1.2.9 (2026-04-29)
 - Enhanced vpn_core.py with absolute path translation using modern xbmcvfs standards.
 - Improved server regeneration reliability for Kodi 21.3 Omega.
 
+v1.2.8 (2026-04-28)
+- Added "Disconnect VPN on startup" toggle in General Settings.
+- Improved "Priority System" logic to better protect manual VPN sessions.
+- Improved startup logic to check for active ConnMan services before attempting disconnect.
+- Enhanced connection error handling with specific Handshake/Internet failure alerts.
+
+v1.2.7 (2026-04-27)
+- Improved boot synchronization with nss-lookup and time-sync targets.
+- Enhanced watchdog reliability to prevent handshake failures on slow networks.
+- Optimized systemd service limits for continuous background monitoring.
+
+v1.2.6 (2026-04-26)
+- Added automatic hardware detection for Raspberry Pi 5.
+- Optimized system and network timing constants specifically for Pi 5 performance.
+- Maintained stable legacy timings for Raspberry Pi 4 and older hardware.
+- Hardcoded UI and Menu delays to ensure consistent responsiveness across all devices.
+- Refactored internal configuration structure with descriptive purposes for all delay constants.
+
+v1.2.5 (2026-04-25)
+- Refactored main and service entry points for Kodi repository compliance
+- Moved core logic to dedicated launcher modules (main_launcher, service_launcher)
+- Improved code structure and performance by reducing entry point complexity
+- Fixed potential memory leaks in background service monitoring
+- Fixed mapping not working after slot 6 made chamges to service_launcher 
+
+v1.2.4 (2026-04-25)
+- Added a custom Terms of Service, disclaimer dialog accessible from settings.
+- Added extra slots to VPN mapping and rearrange settings.
+- Improved UI accessibility, simplified TOS, disclaimer window background for better readability and size windows.
+
+v1.2.3 (2026-04-24)
+- Added deep-flush file writing to ensure the reconnection counter is never corrupted.
+- Implemented a lock system to prevent the Monitor Service from fighting the Reconnect Helper.
+- Increased DHCP stabilization buffers and added a "proven connection" check before resetting counters.
+- Optimized log levels (INFO/WARNING/ERROR) and added DEBUG heartbeats to show "Shield Active" status.
+- Re-engineered the Helper to handle all 10 attempts internally for faster, more stable recovery.
+
 v1.2.2 (2026-04-22)
 - FIX: Resolved ValueError: too many values to unpack in service.py.
 - FIX: Resolved IndentationError in vpn_ops.py gateway restoration logic.
@@ -28,13 +85,6 @@ v1.2.2 (2026-04-22)
 - IMPROVED: Refined Auto-Cleanup timing in service_startup.py to match the 1s heartbeat.
 
 v1.2.1 (2026-04-22)
-- Changes to icon, screenshot images.
-- FIXED service.py removed unused global variable
-
-v1.2.0 (2026-04-21)
-- IMPROVED settings.xml.
-
-v1.2.1 (2026-04-22)
 - changes to Icon, screenshot images.
 - FIXED service.py removed unused global variable
 
@@ -42,22 +92,6 @@ v1.2.0 (2026-04-21)
 - IMPROVED settings.xml.
 
 v1.1.9 (2026-04-20)
-- ADDED (Auto-Healing): Watchdog automatically resets the retry budget when a physical network change (Eth/WiFi) is detected.
-- ADDED (High-Visibility Alerts): Enhanced blackout notifications with Red/Bold formatting and custom ICON_ERROR support.
-- ADDED (Intelligent Throttling): Helper now stands down after 10 failed attempts to preserve system resources and NordVPN API limits.
-- ADDED (Smarter Connection Logic): Added pre-connection gateway validation to identify "No Internet" vs "VPN Handshake Failure."
-- FIXED (Stability): Implemented a global lock-file to prevent Watchdog/Helper race conditions and "double-triggers."
-- FIXED (Stability): Refined interface tracking to ignore virtual wg0 tunnels, ensuring the retry counter only resets on real hardware events.
-- IMPROVED (Log Clarity): Reduced log levels for routine heartbeat checks to keep the system journal clean.
-- IMPROVED (Performance): Increased polling frequency to 1Hz for near-instant physical disconnect detection.
-- IMPROVED (Stability): Integrated aggressive "Double Stop" logic in a non-blocking thread to resolve player hangs faster.
-
-v1.2.0 (2026-04-21)
-
-- IMPROVED settings.xml.
-
-v1.1.9 (2026-04-20)
-
 - ADDED (Auto-Healing): Watchdog automatically resets the retry budget when a physical network change (Eth/WiFi) is detected.
 - ADDED (High-Visibility Alerts): Enhanced blackout notifications with Red/Bold formatting and custom ICON_ERROR support.
 - ADDED (Intelligent Throttling): Helper now stands down after 10 failed attempts to preserve system resources and NordVPN API limits.
@@ -152,7 +186,7 @@ v1.0.9 (2026-04-12)
 v1.0.8
 - Fixed error in def run_loop of class WGManagerService.
 
-- v1.0.7
+v1.0.7
 - Fixed DNS leaks by forcing VPN nameservers on physical interfaces.
 - Added automatic IPv6 disabling to prevent "around-the-tunnel" leaks.
 - Improved code efficiency by moving network logic to a shared library.

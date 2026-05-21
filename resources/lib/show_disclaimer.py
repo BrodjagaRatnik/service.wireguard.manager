@@ -1,10 +1,10 @@
 import xbmcgui
 import xbmcaddon
-import xbmc
 import os
 
 from logger import log_message
-      
+
+
 def show_disclaimer():
     try:
         addon = xbmcaddon.Addon('service.wireguard.manager')
@@ -13,14 +13,30 @@ def show_disclaimer():
 
         text = (
             "[B][COLOR yellow]LEGAL DISCLAIMER.[/COLOR][/B][CR][CR]"
-            "1. [B]Independent Project:[/B] This addon is an independent, community-driven project. It is NOT affiliated with, authorized, or endorsed by NordVPN, Nord Security, or its affiliates. 'NordVPN' and 'NordLynx' are trademarks of Nord Security.[CR][CR]"
-            "2. [B]No Warranty:[/B] This software is provided 'AS IS' without any warranty. The developer is not responsible for any loss of data, hardware damage (including Raspberry Pi 5 thermal or power issues), or network vulnerabilities resulting from the use of this script.[CR][CR]"
-            "3. [B]Security Risk:[/B] Handling WireGuard private keys and NordVPN tokens through third-party scripts carries inherent security risks. Users are solely responsible for verifying the safety of their own connection and account credentials.[CR][CR]"
-            "4. [B]Compliance:[/B] It is the user's responsibility to ensure that using this tool does not violate the NordVPN Terms of Service or local laws regarding VPN usage.[CR][CR]"
-            "[I]By using this manager, you acknowledge that you have read and agree to these terms.[/I]"
+            "1. [B]Independent Project:[/B] This addon is an independent, "
+            "community-driven project. It is NOT affiliated with, "
+            "authorized, or endorsed by NordVPN, Nord Security, or its "
+            "affiliates or any other VPN provider. 'NordVPN' and "
+            "'NordLynx' are trademarks of Nord Security.[CR][CR]"
+            "2. [B]No Warranty:[/B] This software is provided 'AS IS' "
+            "without any warranty. The developer is not responsible for "
+            "any loss of data, hardware damage (including Raspberry Pi 5 "
+            "thermal or power issues), or network vulnerabilities "
+            "resulting from the use of this script.[CR][CR]"
+            "3. [B]Security Risk:[/B] Handling WireGuard private keys and "
+            "tokens through third-party scripts carries inherent security "
+            "risks. Users are solely responsible for verifying the safety "
+            "of their own connection and account credentials.[CR][CR]"
+            "4. [B]Compliance:[/B] It is the user's responsibility to "
+            "ensure that using this tool does not violate the NordVPN "
+            "or any other VPN provider Terms of Service or "
+            "local laws regarding VPN usage.[CR][CR]"
+            "[I]By using this manager, you acknowledge that you have "
+            "read and agree to these terms.[/I]"
         )
 
         class StyledTermsDialog(xbmcgui.WindowDialog):
+
             def __init__(self, content, bg_image):
                 self.w, self.h = 1200, 600
                 self.x, self.y = (1280 - self.w) // 2, (720 - self.h) // 2
@@ -30,7 +46,7 @@ def show_disclaimer():
                 self.textbox.setText(content)
                 self.ok_button = xbmcgui.ControlButton(
                     self.x + (self.w // 2) - 80, self.y + self.h - 80, 160, 50, "OK",
-                    focusTexture=bg_image, 
+                    focusTexture=bg_image,
                     noFocusTexture=bg_image,
                     textColor="0xFFFFFFFF",
                     focusedColor="0xFFFFFF00",
@@ -50,9 +66,10 @@ def show_disclaimer():
         window = StyledTermsDialog(text, black_png)
         window.doModal()
         del window
-        
+
     except Exception as e:
-        log_message("ShowInfo: Error in disclaimer {e}", xbmc.LOGERROR)
+        log_message(f"ShowInfo: Error in disclaimer {e}", 3)
+
 
 if __name__ == '__main__':
     show_disclaimer()

@@ -2,165 +2,207 @@
 import os
 import shutil
 import subprocess
-import xbmc
-import xbmcgui
-import xbmcaddon
-import xbmcvfs
+import sys
 from logger import log_message
+from vpn_config import PROVIDER_MAP
 
-_ADDON = xbmcaddon.Addon('service.wireguard.manager')
+try:
+    import xbmc
+    import xbmcgui
+    import xbmcaddon
+    import xbmcvfs
+except ImportError:
+    pass
+
+
+def _setup_paths():
+    try:
+        addon_handle = xbmcaddon.Addon('service.wireguard.manager')
+        addon_path = xbmcvfs.translatePath(addon_handle.getAddonInfo('path'))
+        local_lib = os.path.join(addon_path, 'resources', 'lib')
+
+        if local_lib not in sys.path:
+            sys.path.insert(0, local_lib)
+
+        if 'utils' in sys.modules:
+            m = sys.modules['utils']
+            if hasattr(m, '__file__') and 'service.wireguard.manager' not in m.__file__:
+                del sys.modules['utils']
+    except Exception as e:
+        log_message(f"Path setup critical failure: {e}", 3)
+
+
+_setup_paths()
+
 
 def perform_cleanup(silent=False):
-    keymap = xbmcvfs.translatePath('special://userdata/keymaps/wireguard_manager_key.xml')
-    service_file = '/storage/.config/system.d/vpn-watchdog.service'
-    connman_config = '/storage/.config/connman_main.conf'
+    """Factory reset: Removes all configs, services, and temporary files."""
+    ADDON = xbmcaddon.Addon('service.wireguard.manager')
     wg_config_path = '/storage/.config/wireguard/'
-    template_file = os.path.join(wg_config_path, 'template.config')
-    
+
     try:
-        log_message("Setup: Starting factory reset cleanup...", 1)
+        log_message("Cleanup: Starting factory reset...", 1)
 
-        if os.path.exists(keymap):
-            os.remove(keymap)
-            log_message(f"Setup: Removed keymap {keymap}", 0)
-
-        if os.path.exists(connman_config):
-            os.remove(connman_config)
-            log_message("Setup: Removed connman_main.conf", 0)
-
-        if os.path.exists(wg_config_path):
-            if os.path.exists(template_file):
-                os.remove(template_file)
-                log_message("Setup: Removed WireGuard template.config", 0)
-
-            for filename in os.listdir(wg_config_path):
-                if filename.startswith("nord_") and filename.endswith(".config"):
-                    try:
-                        os.remove(os.path.join(wg_config_path, filename))
-                        log_message(f"Setup: Removed config {filename}", 0)
-                    except:
-                        pass
-
+        service_file = '/storage/.config/system.d/vpn-watchdog.service'
         if os.path.exists(service_file):
-            log_message("Setup: Disabling and removing vpn-watchdog.service")
             subprocess.run(["systemctl", "stop", "vpn-watchdog.service"], check=False)
             subprocess.run(["systemctl", "disable", "vpn-watchdog.service"], check=False)
             os.remove(service_file)
             subprocess.run(["systemctl", "daemon-reload"], check=False)
 
-        if not silent:
-            xbmcgui.Dialog().ok("WireGuard Manager", "All configs, templates, and services successfully removed.")
-            
-    except Exception as e:
-        log_message(f"Setup: Cleanup Error {e}", 3)
+        if os.path.exists(wg_config_path):
 
-def ensure_setup(addon_path, media_path):
+            cmd = "rm -f /storage/.config/wireguard/*_*.config"
+            subprocess.run(cmd, shell=True, check=False)
+            log_message("Cleanup: WireGuard configs wiped via shell.", 1)
+
+        ADDON.setSetting('selected_countries', '')
+        ADDON.setSetting('selected_countries_pia', '')
+        ADDON.setSetting('first_run', 'false')
+
+        for f in [
+            xbmcvfs.translatePath(
+                'special://userdata/keymaps/wireguard_manager_key.xml'
+            ),
+            '/storage/.config/connman_main.conf'
+        ]:
+
+            if os.path.exists(f):
+                os.remove(f)
+
+        for tf in [
+            "/tmp/vpn_manager_active.txt",
+            "/tmp/vpn_manual_active.txt",
+            "/tmp/vpn_reconnect_count.txt",
+            "/tmp/vpn_intentional_disconnect.txt"
+        ]:
+
+            if os.path.exists(tf):
+                try:
+                    os.remove(tf)
+                except Exception as e:
+                    log_message(f"Reset error removing {tf}: {e}", 3)
+
+        log_message("Cleanup: Reset complete.", 1)
+        if not silent:
+            title = "[B]≡ [ CLEANUP COMPLETE ] ≡[/B]"
+            msg = "[COLOR FFFFFF00]Cleanup successful. All files removed.[/COLOR]"
+            xbmcgui.Dialog().ok(title, msg)
+
+    except Exception as e:
+        log_message(f"Cleanup Error: {e}", 3)
+
+
+def ensure_setup(addon_path, silent=False):
+    ADDON = xbmcaddon.Addon('service.wireguard.manager')
     keymap_dest = xbmcvfs.translatePath('special://userdata/keymaps/wireguard_manager_key.xml')
     keymap_source = os.path.join(addon_path, 'resources', 'keymaps', 'wireguard_manager_key.xml')
-    
     wg_config_path = '/storage/.config/wireguard/'
-    template_dest = os.path.join(wg_config_path, 'template.config')
+    template_dest = os.path.join(wg_config_path, 'placeholder_template.config')
     template_source = os.path.join(addon_path, 'resources', 'data', 'template.config.txt')
-    
     service_dest = '/storage/.config/system.d/vpn-watchdog.service'
     service_source = os.path.join(addon_path, 'resources', 'data', 'vpn-watchdog.service.txt')
-
     connman_dest = '/storage/.config/connman_main.conf'
     connman_source = os.path.join(addon_path, 'resources', 'data', 'connman_main.conf.txt')
-    
+    cert_source = os.path.join(addon_path, 'resources', 'data', 'ca.rsa.4096.txt')
+    cert_dest = os.path.join(addon_path, 'resources', 'lib', 'providers', 'ca.rsa.4096.crt')
+
     setup_updated = False
 
+    progress = xbmcgui.DialogProgress()
+    progress.create("WireGuard Manager", "Starting system check...")
+
+    progress.update(10, "Checking Keymaps...")
+    if not os.path.exists(keymap_dest):
+        try:
+            os.makedirs(os.path.dirname(keymap_dest), exist_ok=True)
+            shutil.copy2(keymap_source, keymap_dest)
+            log_message("Setup: Keymap installed.", 1)
+            xbmc.executebuiltin('Action(ReloadKeymaps)')
+            log_message("Setup: Keymaps reloaded in Kodi.", 1)
+        except Exception as e:
+            log_message(f"Setup Error (Keymap): {e}", 3)
+
+    progress.update(20, "Checking network configuration...")
     if not os.path.exists(connman_dest):
         try:
-            log_message("Setup: ConnMan config missing. Installing connman_main.conf...", 1)
-            if os.path.exists(connman_source):
-                shutil.copy2(connman_source, connman_dest)
-                subprocess.run(["systemctl", "restart", "connman"], check=False)
-                log_message("Setup: connman_main.conf installed and ConnMan restarted.", 1)
-                setup_updated = True
+            shutil.copy2(connman_source, connman_dest)
+            subprocess.run(["systemctl", "restart", "connman"], check=False)
+            log_message("Setup: Connman config installed.", 1)
+            setup_updated = True
         except Exception as e:
-            log_message(f"Setup: ConnMan Setup Error {e}", 3)
+            log_message(f"Setup Error (Connman): {e}", 3)
 
+    progress.update(30, "Installing VPN Watchdog...")
     if not os.path.exists(service_dest):
         try:
-            log_message("Setup: Service file missing. Installing vpn-watchdog.service...", 1)
-            if not os.path.exists(os.path.dirname(service_dest)):
-                os.makedirs(os.path.dirname(service_dest))
-            if os.path.exists(service_source):
-                shutil.copy2(service_source, service_dest)
-                subprocess.run(["systemctl", "daemon-reload"], check=False)
-                subprocess.run(["systemctl", "enable", "vpn-watchdog.service"], check=False)
-                subprocess.run(["systemctl", "start", "vpn-watchdog.service"], check=False)
-                log_message("Setup: vpn-watchdog.service installed and started.", 0)
-                setup_updated = True
+            os.makedirs(os.path.dirname(service_dest), exist_ok=True)
+            shutil.copy2(service_source, service_dest)
+            subprocess.run(["systemctl", "daemon-reload"], check=False)
+            subprocess.run(["systemctl", "enable", "vpn-watchdog.service"], check=False)
+            subprocess.run(["systemctl", "start", "vpn-watchdog.service"], check=False)
+            log_message("Setup: Watchdog service installed.", 1)
+            setup_updated = True
         except Exception as e:
-            log_message(f"Setup: Service Install Error {e}", 3)
+            log_message(f"Setup Error (Service): {e}", 3)
 
+    progress.update(40, "Checking WireGuard templates...")
     if not os.path.exists(template_dest):
         try:
-            log_message("Setup: Copying WireGuard template.config...", 1)
-            if not os.path.exists(wg_config_path):
-                os.makedirs(wg_config_path)
-            if os.path.exists(template_source):
-                shutil.copy2(template_source, template_dest)
-                log_message("Setup: template.config copied to wireguard folder.", 0)
+            os.makedirs(wg_config_path, exist_ok=True)
+            shutil.copy2(template_source, template_dest)
         except Exception as e:
-            log_message(f"Setup: Template Copy Error {e}", 3)
+            log_message(f"Template deployment failure: {e}", 3)
 
-    keymap_installed = False
-    if not os.path.exists(keymap_dest) or _ADDON.getSettingBool("first_run"):
+    progress.update(60, "Deploying provider certificates...")
+    if not os.path.exists(cert_dest):
         try:
-            log_message("Setup: Installing WireGuard Manager keymaps...", 0)
-            if os.path.exists(keymap_source):
-                dest_dir = os.path.dirname(keymap_dest)
-                if not os.path.exists(dest_dir):
-                    os.makedirs(dest_dir)
-                shutil.copy2(keymap_source, keymap_dest)
-                _ADDON.setSettingBool("first_run", False)
-                keymap_installed = True
+            os.makedirs(os.path.dirname(cert_dest), exist_ok=True)
+            shutil.copy2(cert_source, cert_dest)
+            log_message("Setup: Secure verification certificate deployed.", 1)
         except Exception as e:
-            log_message(f"Setup: Keymap Setup Error {e}", 3)
+            log_message(f"Setup Error (Certificate Copy): {e}", 3)
 
-    if keymap_installed:
-        if xbmcgui.Dialog().yesno("WireGuard Manager", 
-            "Keymaps installed. Restart Kodi now to activate them?"):
-            log_message("Setup: User triggered RestartApp for keymaps.", 1)
-            xbmc.executebuiltin('RestartApp')
-            return True
+    progress.update(80, "Verifying VPN credentials...")
+    current_p_id = ADDON.getSettingInt("vpn_provider")
+    has_creds = False
+    if current_p_id == -1:
+        log_message("First-time setup: No VPN provider selected yet. Skipping credential check.", 0)
+    else:
+        p_data = PROVIDER_MAP.get(current_p_id, {"name": "Unknown", "prefix": "unknown_"})
+        token_setting = p_data.get("setting")
+        if token_setting:
+            has_creds = bool(ADDON.getSetting(token_setting).strip())
+        if current_p_id == 99 or not has_creds:
+            prefix = p_data["prefix"]
+            if os.path.exists(wg_config_path):
+                has_files = any(f.startswith((prefix, 'custom_')) for f in os.listdir(wg_config_path))
+                has_creds = has_creds or has_files
 
-    if _ADDON.getSetting("vpn_token") == "":
-        log_message("Setup: No VPN Token found. Prompting user...", 0)
-        choice = xbmcgui.Dialog().select("WireGuard Manager: Token Required", [
-            "Import Token from File (Recommended)",
-            "Enter Token Manually",
-            "Exit"
-        ])
-        
-        if choice == 0:
-            token_file = xbmcgui.Dialog().browse(1, "Select Token File", "files", ".txt|.key")
-            if token_file:
-                try:
-                    with open(token_file, 'r') as f:
-                        token_content = f.read().strip()
-                        _ADDON.setSetting("vpn_token", token_content)
-                        log_message("Setup: VPN Token imported from file successfully.", 1)
-                        xbmcgui.Dialog().notification("WireGuard Manager", "Token saved.", xbmcgui.NOTIFICATION_INFO, 3000)
-                        return True
-                except Exception as e:
-                    log_message(f"Setup: Token Read Error {e}", 3)
-            return False
+    progress.update(100, "Setup Complete.")
+    if setup_updated:
+        log_message("Setup: All system checks completed successfully.", 0)
+    progress.close()
 
-        elif choice == 1:
-            keyboard = xbmc.Keyboard("", "Enter NordVPN Token", False)
-            keyboard.doModal()
-            if keyboard.isConfirmed() and keyboard.getText():
-                _ADDON.setSetting("vpn_token", keyboard.getText())
-                log_message("Setup: VPN Token entered manually.", 1)
-                xbmcgui.Dialog().notification("WireGuard Manager", "Token saved.", xbmcgui.NOTIFICATION_INFO, 4000)
-                return True
-        
-        elif choice == 2 or choice == -1:
-            log_message("Setup: User exited token setup.", 0)
-            return "EXIT_SIGNAL"
+    wg_config_path = '/storage/.config/wireguard/'
+    has_configs = False
+    if os.path.exists(wg_config_path):
+        has_configs = any(f.endswith(('.config', '.conf')) for f in os.listdir(wg_config_path))
 
-    return setup_updated
+    if setup_updated and has_configs:
+        log_message("Setup: Success! System services and configurations installed. WireGuard manager active.", 1)
+
+        addon_handle = xbmcaddon.Addon('service.wireguard.manager')
+        path_fixed = xbmcvfs.translatePath(addon_handle.getAddonInfo('path'))
+        ICON_INFO = os.path.join(path_fixed, 'resources', 'media', 'icon.png')
+        title = "[B][COLOR FFEEFFEE]≡ [ SETUP SUCCESS ] ≡[/COLOR][/B]"
+        message = (
+            "[COLOR FFE6E6FA]System services installed.[/COLOR]\n"
+            "[COLOR FFFFFF00]WireGuard manager is now active.[/COLOR]"
+        )
+        xbmcgui.Dialog().notification(title, message, ICON_INFO, 6000)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1 and "cleanup" in sys.argv:
+        perform_cleanup()

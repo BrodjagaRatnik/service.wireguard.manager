@@ -1,41 +1,53 @@
 ''' ./resources/lib/network_utils.py '''
-import os, re, subprocess
-
-try:
-    import xbmc
-    KODI_AVAILABLE = True
-except ImportError:
-    KODI_AVAILABLE = False
+import os
+import re
+import subprocess
+from logger import log_message
+from vpn_config import PROVIDER_MAP
 
 CONFIG_DIR = "/storage/.config/wireguard/"
 
-def log_message(msg, level=None):
-    if KODI_AVAILABLE:
-        xbmc.log(f"NetworkUtils: {msg}", level if level is not None else 1)
-    else:
-        print(f"NetworkUtils: {msg}", flush=True)
 
-def get_default_gateway(ignore_vpn=True):
+def get_default_gateway():
+    import subprocess
     try:
-        out = subprocess.check_output(["ip", "-4", "route", "show", "default"], text=True)
-        for line in out.splitlines():
-            if "via" in line:
-                if ignore_vpn and "wg0" in line: continue
-                parts = line.split()
-                return parts[parts.index("via") + 1]
-    except: pass
+        out = subprocess.check_output(["ip", "route", "show", "default"], text=True).strip()
+        if not out:
+            return None
+
+        parts = out.split()
+        if "via" in parts:
+            return parts[parts.index("via") + 1]
+
+        if "dev" in parts:
+            dev = parts[parts.index("dev") + 1]
+            out_dev = subprocess.check_output(["ip", "route", "show", "dev", dev], text=True)
+            for line in out_dev.splitlines():
+                if "via" in line:
+                    return line.split()[2]
+
+    except Exception as e:
+        log_message(f"Failed to resolve default gateway: {e}", 3)
     return None
+
 
 def get_dns_from_config(vpn_name):
     dns_list = []
-    variations = [
-        f"{vpn_name}.config", 
-        f"{vpn_name.lower()}.config", 
-        f"{vpn_name.lower().replace('nordvpn', 'nord')}.config"
-    ]
-    
-    target_path = next((os.path.join(CONFIG_DIR, v) for v in variations if os.path.exists(os.path.join(CONFIG_DIR, v))), None)
-    
+    if not vpn_name:
+        return dns_list
+
+    clean_name = vpn_name.lower().replace(' ', '_')
+    for p in PROVIDER_MAP.values():
+        clean_name = clean_name.replace(p['prefix'].lower(), '')
+
+    target_path = None
+    for p in PROVIDER_MAP.values():
+        filename = f"{p['prefix'].lower()}{clean_name}.config"
+        path = os.path.join(CONFIG_DIR, filename)
+        if os.path.exists(path):
+            target_path = path
+            break
+
     if target_path:
         try:
             with open(target_path, 'r') as f:
@@ -44,87 +56,104 @@ def get_dns_from_config(vpn_name):
                 if match:
                     dns_list = [d.strip() for d in match.group(1).split(",")]
         except Exception as e:
-            log_message(f"NetworkUtils: Error reading DNS from config: {e}", xbmc.LOGERROR)
-
+            log_message(f"Error reading DNS from {target_path}: {e}", 3)
     return dns_list
+
 
 def set_secure_dns(vpn_name=None, vpn_active=True):
     dns_servers = get_dns_from_config(vpn_name) if vpn_active else []
-    
     try:
         ipv6_val = "1" if vpn_active else "0"
-        subprocess.run(["sysctl", "-w", f"net.ipv6.conf.all.disable_ipv6={ipv6_val}"], check=False)
-        subprocess.run(["sysctl", "-w", f"net.ipv6.conf.default.disable_ipv6={ipv6_val}"], check=False)
+        sysctl_cmd = ["sysctl", "-w", f"net.ipv6.conf.all.disable_ipv6={ipv6_val}"]
+        subprocess.run(
+            sysctl_cmd, check=False,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
 
         result = subprocess.check_output(["connmanctl", "services"], text=True)
         for line in result.splitlines():
             if "ethernet_" in line or "wifi_" in line:
                 sid = line.split()[-1]
-                if vpn_active:
-                    subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
-                    if dns_servers:
-                        subprocess.run(["connmanctl", "config", sid, "--nameservers"] + dns_servers, check=False)
-                        subprocess.run(["connmanctl", "config", sid, "--domains", "."], check=False)
-                        subprocess.run(["connmanctl", "config", sid, "--ipv6", "off"], check=False)
-
+                if vpn_active and dns_servers:
+                    subprocess.run(["connmanctl", "config", sid, "--nameservers"] + dns_servers, check=False)
+                    subprocess.run(["connmanctl", "config", sid, "--domains", "."], check=False)
                 else:
                     subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
                     subprocess.run(["connmanctl", "config", sid, "--domains"], check=False)
-                    subprocess.run(["connmanctl", "config", sid, "--ipv6", "auto"], check=False)
 
         if vpn_active and dns_servers:
-            log_message("NetworkUtils: Forcing manual resolv.conf overwrite for absolute privacy.", xbmc.LOGDEBUG)
             with open("/etc/resolv.conf", "w") as f:
-                f.write("# Hardened DNS by WireGuard Manager\n")
-                f.write("options timeout:2 attempts:1\n")
+                f.write("# Hardened VPN DNS\n")
                 for dns in dns_servers:
                     f.write(f"nameserver {dns}\n")
-        
-        log_message(f"NetworkUtils: DNS & IPv6 {'Hardened' if vpn_active else 'Restored'}", xbmc.LOGDEBUG)
+
     except Exception as e:
-        log_message(f"NetworkUtils: DNS hardening failed: {e}", xbmc.LOGERROR)
+        log_message(f"DNS setup failed: {e}", 3)
+
 
 def disable_connman_ipv6():
-    """Forces IPv6 off for all physical interfaces and Kernel."""
     try:
-        subprocess.run(["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=1"], check=False)
-        subprocess.run(["sysctl", "-w", "net.ipv6.conf.default.disable_ipv6=1"], check=False)
+        sysctl_cmd = ["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=1"]
+        subprocess.run(
+            sysctl_cmd, check=False,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
         result = subprocess.check_output(["connmanctl", "services"], text=True)
         for line in result.splitlines():
-            parts = line.split()
-            if not parts: continue           
-            service_id = parts[-1]
-            if service_id.startswith(("ethernet_", "wifi_")):
-                subprocess.run(["connmanctl", "config", service_id, "--ipv6", "off"], check=False)
-        
-        log_message("NetworkUtils: IPv6 disabled globally and on interfaces", xbmc.LOGDEBUG)
+            sid = line.split()[-1]
+            if sid.startswith(("ethernet_", "wifi_")):
+                subprocess.run(
+                    ["connmanctl", "config", sid, "--ipv6", "off"],
+                    check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
     except Exception as e:
-        log_message(f"NetworkUtils: IPv6 Disable failed: {e}", xbmc.LOGERROR)
+        log_message(f"IPv6 disabling routine failed: {e}", 3)
+
 
 def enable_connman_ipv6():
-    """Restores IPv6 to auto mode for physical interfaces and Kernel."""
     try:
-        subprocess.run(["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=0"], check=False)
-        subprocess.run(["sysctl", "-w", "net.ipv6.conf.default.disable_ipv6=0"], check=False)
+        sysctl_cmd = ["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=0"]
+        subprocess.run(
+            sysctl_cmd, check=False,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
         result = subprocess.check_output(["connmanctl", "services"], text=True)
         for line in result.splitlines():
-            parts = line.split()
-            if not parts: continue           
-            service_id = parts[-1]
-            if service_id.startswith(("ethernet_", "wifi_")):
-                subprocess.run(["connmanctl", "config", service_id, "--ipv6", "auto"], check=False)
-                
-        log_message("NetworkUtils: IPv6 restored to auto", xbmc.LOGDEBUG)
+            sid = line.split()[-1]
+            if sid.startswith(("ethernet_", "wifi_")):
+                subprocess.run(
+                    ["connmanctl", "config", sid, "--ipv6", "auto"],
+                    check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
     except Exception as e:
-        log_message(f"NetworkUtils: IPv6 Restore failed: {e}", xbmc.LOGERROR)
+        log_message(f"IPv6 enabling routine failed: {e}", 3)
+
 
 def is_physically_connected(interface):
-    """Checks the physical carrier status of a network interface (1=Connected, 0=Unplugged)."""
+    import os
+
+    carrier_path = f"/sys/class/net/{interface}/carrier"
+    operstate_path = f"/sys/class/net/{interface}/operstate"
+
     try:
-        path = f"/sys/class/net/{interface}/carrier"
-        if os.path.exists(path):
-            with open(path, 'r') as f:
-                return f.read().strip() == '1'
-    except:
-        pass
-    return False
+        if interface.startswith("wlan"):
+            if os.path.exists(operstate_path):
+                with open(operstate_path, 'r') as f:
+                    return f.read().strip().lower() in ['up', 'dormant']
+            return False
+
+        if os.path.exists(carrier_path):
+            try:
+                with open(carrier_path, 'r') as f:
+                    return f.read().strip() == '1'
+            except OSError as e:
+                if e.errno == 22 and os.path.exists(operstate_path):
+                    with open(operstate_path, 'r') as f:
+                        return f.read().strip().lower() == 'up'
+                return False
+
+        return False
+
+    except Exception as e:
+        log_message(f"Carrier status check failed for {interface}: {e}", 3)
+        return False

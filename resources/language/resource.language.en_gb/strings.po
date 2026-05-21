@@ -33,8 +33,8 @@ msgid "Check Service Status."
 msgstr "Check Service Status."
 
 msgctxt "#32007"
-msgid "Enter Country IDs (comma-separated, e.g. 21,81)¦"
-msgstr "Enter Country IDs (comma-separated, e.g. 21,81)¦"
+msgid "Country IDs (comma-separated, e.g. 21,81)¦"
+msgstr "Country IDs (comma-separated, e.g. 21,81)¦"
 
 msgctxt "#32008"
 msgid "View Country Codes: Europe."
@@ -49,12 +49,12 @@ msgid "View Country Codes: Middle East and Africa."
 msgstr "View Country Codes: Middle East and Africa."
 
 msgctxt "#32011"
-msgid "╠═Update═╬═Regenerate═╬═NordVPN═Configs═╣"
-msgstr "╠═Update═╬═Regenerate═╬═NordVPN═Configs═╣"
+msgid "╠═ Update ═╬═ Regenerate ═╬═ VPN Configs ═╣"
+msgstr "╠═ Update ═╬═ Regenerate ═╬═ VPN Configs ═╣"
 
 msgctxt "#32012"
-msgid "Account Credentials"
-msgstr "Account Credentials"
+msgid "◄ Account Credentials ►"
+msgstr "◄ Account Credentials ►"
 
 msgctxt "#32013"
 msgid "VPN Management"
@@ -73,24 +73,24 @@ msgid "Import Token from File¦ Select a txt file containing your NordVPN token.
 msgstr "Import Token from File¦ Select a txt file containing your NordVPN token."
 
 msgctxt "#32017"
-msgid "Clear All NordVPN Configs."
-msgstr "Clear All NordVPN Configs."
+msgid "Clear All WireGuard VPN Configs."
+msgstr "Clear All WireGuard VPN Configs."
 
 msgctxt "#32018"
 msgid "◄ VPN Mapping ►"
 msgstr "◄ VPN Mapping ►"
 
 msgctxt "#32019"
-msgid "▐ Step 1 ▐ Assign VPN Profiles to TV add-on █ Do not fill in slot's! █"
-msgstr "▐ Step 1 ▐ Assign VPN Profiles to TV add-on █ Do not fill in slot's! █"
+msgid "Assign VPN Profiles to TV add-on."
+msgstr "Assign VPN Profiles to TV add-on."
 
 msgctxt "#32020"
-msgid "Selected VPN Profile¦"
-msgstr "Selected VPN Profile¦"
+msgid "Selected VPN Profile"
+msgstr "Selected VPN Profile"
 
 msgctxt "#32021"
-msgid "Triggered TV add-on¦"
-msgstr "Triggered TV add-on¦"
+msgid "Triggered TV add-on"
+msgstr "Triggered TV add-on"
 
 msgctxt "#32022"
 msgid "Assign VPN Profiles to TV add-on's"
@@ -117,8 +117,8 @@ msgid "▒ Slot 5. ▒"
 msgstr "▒ Slot 5. ▒"
 
 msgctxt "#32028"
-msgid "▓ Automatic you do not fill in slot's! ▓ Press step 1 only to assign VPN Profiles to TV add-on's! ▓"
-msgstr "▓ Automatic you do not fill in slot's! ▓ Press step 1 only to assign VPN Profiles to TV add-on's! ▓"
+msgid "Press to assign VPN Profiles to TV add-on's."
+msgstr "Press to assign VPN Profiles to TV add-on's."
 
 msgctxt "#32029"
 msgid "This uninstalls vpn-watchdog.service, WireGuard manager key file and all WireGuard config files."
@@ -151,6 +151,87 @@ msgstr "Access Token"
 msgctxt "#32036"
 msgid "When enabled, this forces a total disconnect of ALL active VPN sessions (Manual or Mapped) whenever Kodi starts. Use this to ensure a fresh, direct internet connection on every boot."
 msgstr "When enabled, this forces a total disconnect of ALL active VPN sessions (Manual or Mapped) whenever Kodi starts. Use this to ensure a fresh, direct internet connection on every boot."
+
+msgctxt "#32037"
+msgid "VPN Provider Selection"
+msgstr "VPN Provider Selection"
+
+msgctxt "#32038"
+msgid "Active Provider"
+msgstr "Active Provider"
+
+msgctxt "#32039"
+msgid "NordVPN Account Credentials"
+msgstr "NordVPN Account Credentials"
+
+msgctxt "#32040"
+msgid "PIA Username"
+msgstr "PIA Username"
+
+msgctxt "#32041"
+msgid "PIA Password / Token"
+msgstr "PIA Password / Token"
+
+msgctxt "#32042"
+msgid "Select .config file and Import Config"
+msgstr "Select .config file and Import Config"
+
+msgctxt "#32043"
+msgid "Select VPN Countries / Regions"
+msgstr "Select VPN Countries / Regions"
+
+msgctxt "#32044"
+msgid "Choice your VPN provider. Then save settings! After that you can with NordVPN import token, for other VPN providers fill in user/passwrd. Or select Custom (Import .config file)."
+msgstr "Choice your VPN provider. Then save settings! After that you can with NordVPN import token, for other VPN providers fill in user/passwrd. Or select Custom (Import .config file)."
+
+msgctxt "#32045"
+msgid "Manual Cleanup"
+msgstr "Manual Cleanup"
+
+msgctxt "#32046"
+msgid "Update, regenrate VPN WireGuard config files."
+msgstr "Update, regenrate VPN WireGuard config files."
+
+msgctxt "#32047"
+msgid "Pick a WireGuard file from any folder. The addon automatically copies and renames it to custom_[country].config, then updates the internal name so the VPN matches your menu and folder mapping. The addon gets the country directly from the original filename you select. For example, if you pick a file named belgium.conf, the script strips the extension and uses \"Belgium\" to rename the file and set the internal connection name."
+msgstr "Pick a WireGuard file from any folder. The addon automatically copies and renames it to custom_[country].config, then updates the internal name so the VPN matches your menu and folder mapping. The addon gets the country directly from the original filename you select. For example, if you pick a file named belgium.conf, the script strips the extension and uses \"Belgium\" to rename the file and set the internal connection name."
+
+msgctxt "#32048"
+msgid "Import Username/Password. Select a txt file containing your PIA credentials."
+msgstr "Import Username/Password. Select a txt file containing your PIA credentials."
+
+msgctxt "#32049"
+msgid "File Format for Import:¦Line 1: Your Username (e.g., p1234567)¦Line 2: Your Password (e.g., MySecretPass)¦¦Make sure there are no extra spaces or empty lines in the text file."
+msgstr "File Format for Import:¦Line 1: Your Username (e.g., p1234567)¦Line 2: Your Password (e.g., MySecretPass)¦¦Make sure there are no extra spaces or empty lines in the text file."
+
+msgctxt "#32050"
+msgid "File Format for Import:¦Line 1: Your TOKEN¦¦Make sure there are no extra spaces or empty lines in the text file."
+msgstr "File Format for Import:¦Line 1: Your TOKEN¦¦Make sure there are no extra spaces or empty lines in the text file."
+
+msgctxt "#32051"
+msgid "Countries/Regions"
+msgstr "Countries/Regions"
+
+msgctxt "#32052"
+msgid "Home Timeout Delay (Seconds)"
+msgstr "Home Timeout Delay (Seconds)"
+
+msgctxt "#32053"
+msgid "Automatically disconnects the active \"VPN Mapping\" tunnel when the system remains idle on the home screen for a customizable duration, preventing unnecessary background bandwidth consumption."
+msgstr "Automatically disconnects the active \"VPN Mapping\" tunnel when the system remains idle on the home screen for a customizable duration, preventing unnecessary background bandwidth consumption."
+
+msgctxt "#32054"
+msgid "Automatic addon mapping is not supported for this VPN provider."
+msgstr "Automatic addon mapping is not supported for this VPN provider."
+
+msgctxt "#32055"
+msgid "Automatic addon mapping is not supported for this VPN provider; please use manual connection mode instead."
+msgstr "Automatic addon mapping is not supported for this VPN provider; please use manual connection mode instead."
+
+msgctxt "#32056"
+msgid "Home Timeout Automatic Addon Mapping Settings"
+msgstr "Home Timeout Automatic Addon Mapping Settings"
+
 
 msgctxt "#32992"
 msgid "Independent project, not affiliated with NordVPN. Use at your own risk, read Terms of Service!"

@@ -1,12 +1,13 @@
 [provider_wireguard]
 Type = WireGuard
-Name = Template
-Host = 0.0.0.0
-WireGuard.Address = 10.5.0.2/32
+Name = template
+Host = <SERVER_IP>
+WireGuard.Address = <CLIENT_IP>/32
 WireGuard.ListenPort = 51820
-WireGuard.PrivateKey = 
-WireGuard.PublicKey = 
-WireGuard.DNS = 103.86.96.100, 103.86.99.100
+WireGuard.MTU = 1420
+WireGuard.PrivateKey = <PRIVATE_KEY>
+WireGuard.PublicKey = <SERVER_PUBLIC_KEY>
+WireGuard.DNS = <PROVIDER_INTERNAL_DNS_IP>
 WireGuard.AllowedIPs = 0.0.0.0/0
 WireGuard.EndpointPort = 51820
 WireGuard.PersistentKeepalive = 25
