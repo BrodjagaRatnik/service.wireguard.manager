@@ -202,6 +202,13 @@ class WGManagerService(xbmc.Monitor):
             return
 
         match_found = False
+
+        is_local_video_dir = (
+            not is_home
+            and folder
+            and any(proto in folder.lower() for proto in ["smb://", "nfs://", "sftp://", "vfs://", "/storage/"])
+        )
+
         if not is_home and plugin.startswith("plugin.video."):
             provider_id = self._ADDON.getSettingInt("vpn_provider")
 
@@ -261,6 +268,10 @@ class WGManagerService(xbmc.Monitor):
                                 )
                                 log_message(err_msg, 3)
                         break
+
+        elif is_local_video_dir and active_now:
+            match_found = True
+            self.cleanup_count = 0
 
         if not match_found and active_now and not is_manual:
             self.cleanup_count += 1
