@@ -229,8 +229,8 @@ def update(user, password, country_ids, config_dir):
                         ikev2_ips = [s.get('ip') for s in servers_dict.get('ikev2', []) if isinstance(s, dict)]
                         ovpn_ips = [
                             s.get('ip') for s in (
-                                servers_dict.get('ovpnudp', []) +
-                                servers_dict.get('ovpntcp', [])
+                                servers_dict.get('ovpnudp', [])
+                                + servers_dict.get('ovpntcp', [])
                             ) if isinstance(s, dict)
                         ]
 

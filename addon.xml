@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="service.wireguard.manager" name="WireGuard VPN Manager" version="1.4.0" provider-name="Doemela">
+<addon id="service.wireguard.manager" name="WireGuard VPN Manager" version="1.4.1" provider-name="Doemela">
 	<requires>
 		<import addon="xbmc.python" version="3.0.1"/>
 	</requires>
@@ -10,28 +10,17 @@
 	<extension point="xbmc.addon.metadata">
 		<summary lang="en_GB">Multi-Provider WireGuard VPN Manager (NordVPN, PIA, Custom)</summary>
 		<description lang="en_GB">High-performance, hardened WireGuard VPN manager for LibreELEC. Now supports multiple providers including NordVPN (NordLynx), Private Internet Access (PIA), and Custom configurations. Features an automated Systemd watchdog to prevent connection drops.[CR][CR][B]Note:[/B] Designed specifically for LibreELEC. [CR][CR][B]Features:[/B][CR]• Multi-Provider Support (Nord, PIA, Custom)[CR]• Pure Python WireGuard Handshake logic[CR]• Smart Watchdog &amp; Auto-Reconnect[CR]• Hardened DNS &amp; IPv6 Leak Protection[CR][CR][B]Disclaimer:[/B] Not an official product of any VPN provider. Use at your own risk.</description>
-		<news>v1.4.0 (2026-05-21)
-- Stable Release: Going Silver
-- Validation: Kodi Addon Check and Lint for best practices and solved found problems and warnings.
-- Major Feature: Multi-Provider Architecture (NordVPN, PIA, Custom).
-- New Module: Private Internet Access (PIA) with dynamic WireGuard handshake.
-- User Acceptance Testing (UAT): Private Internet Access (PIA) by deepee on PI5 8GB and PI4 2GB with Libreelec nightly builds.
-- New Module: Custom Provider support for manual .config file imports.
-- Added: Dialogues with art, colours, text, etc.
-- Fine-tuned Raspberry Pi 5 with high-speed network timings.
-- Added hardware detection for separate Pi 4 and Pi 5 configurations.
-- Fixed VPN reconnect loops by optimizing WATCHDOG_SETTLE_DELAY.
-- Implemented "Silent Reconnect" for background VPN switching during streams.
-- Added blackout "Grace Period" to prevent false network alerts.
-- Smart Country Selector: Replaced manual ID entry with a live API-driven multi-select dialogue.
-- Core: Standardized temporary state files to /tmp for improved reliability.
-- Fix: Space-safe Service ID (SID) detection for complex VPN server names.
-- Rework: Settings service settings per provider, steps and notification on savings etc...
-- Core: Removed all unlogged try... except: pass blocks across all modules.
-- Optimization: Converted legacy debug print functions to explicit sys.stdout and sys.stderr stream writes to pass grep checks.</news>
+		<news>v1.4.1 (2026-05-26).
+- Extracted complete connect_vpn engine logic into separate vpn_connector.py.
+- Cleaned cross-module execution flow pointers between isolated files.
+- Codebase fully validated, compliant with PEP 8.
+- Refactor service_launcher.py into separate decoupled logic modules.
+- Extract background monitor execution loop into dedicated service_loop.py.
+- Isolate configuration updates and profile resolvers into clean modules.
+- Modernize multi-line binary operator placements (W504 compliance).</news>
 		<language>en_gb</language>
 		<platform>linux</platform>
-		<license>GPL-2.0-or-later</license>
+		<license>GPL-3.0-or-later</license>
 		<website>https://github.com/BrodjagaRatnik/service.wireguard.manager</website>
 		<forum>https://forum.libreelec.tv/thread/30422-wireguard-vpn-manager/</forum>
 		<source>https://github.com/BrodjagaRatnik/doemela-kodi-repo</source>

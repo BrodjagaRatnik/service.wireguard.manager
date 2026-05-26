@@ -108,7 +108,7 @@ def trigger_blackout_ui():
         xbmc.executebuiltin('PlayerControl(Stop)')
         xbmc.executebuiltin('Action(Stop)')
         xbmc.executebuiltin('Dialog.Close(all,true)')
-        xbmc.executebuiltin(f'Notification("{title}", "{msg}", 13000, "{icon}")')
+        xbmc.executebuiltin(f'Notification("{title}", "{msg}", 14000, "{icon}")')
 
         if os.path.exists(sound):
             subprocess.run(
@@ -135,7 +135,7 @@ def trigger_blackout_ui():
             subprocess.run(
                 [
                     'kodi-send',
-                    f'--action=Notification("{title}", "{msg}", 13000, "{icon}")'
+                    f'--action=Notification("{title}", "{msg}", 14000, "{icon}")'
                 ],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL

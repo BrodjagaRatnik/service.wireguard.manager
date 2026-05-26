@@ -1,7 +1,7 @@
 [Unit]
 Description=VPN Route Watchdog
-After=network.target connman.service kodi.service
-Wants=network.target
+After=network-online.target kodi.service
+Wants=network-online.target
 StartLimitIntervalSec=300
 StartLimitBurst=5
 
@@ -12,4 +12,4 @@ RestartSec=15
 Environment=PYTHONUNBUFFERED=1
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=kodi.target

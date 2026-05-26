@@ -20,8 +20,8 @@ _LIB = os.path.join(ADDON_PATH, 'resources', 'lib')
 if _LIB not in sys.path:
     sys.path.insert(0, _LIB)
 
-if ('utils' in sys.modules and
-        'service.wireguard.manager' not in str(sys.modules.get('utils'))):
+if ('utils' in sys.modules
+        and 'service.wireguard.manager' not in str(sys.modules.get('utils'))):
     del sys.modules['utils']
 
 
@@ -69,9 +69,10 @@ def run():
     elif provider == 1:
         regions = [
             r for r in data.get('regions', [])
-            if isinstance(r.get('servers', {}).get('wg'), list)
-            and len(r['servers']['wg']) > 0
+            if (isinstance(r.get('servers', {}).get('wg'), list)
+                and len(r['servers']['wg']) > 0)
         ]
+
         regions.sort(key=lambda x: x['name'])
         names = [r['name'] for r in regions]
         ids = [r['id'] for r in regions]
