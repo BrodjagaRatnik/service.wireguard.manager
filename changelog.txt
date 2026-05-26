@@ -10,6 +10,26 @@ v1.4.1 (2026-05-26).
 - Isolate configuration updates and profile resolvers into clean modules.
 - Modernize multi-line binary operator placements (W504 compliance).
 
+v1.4.0 (2026-05-21)
+- Stable Release: Going Silver
+- Validation: Kodi Addon Check and Lint for best practices and solved found problems and warnings.
+- Major Feature: Multi-Provider Architecture (NordVPN, PIA, Custom).
+- New Module: Private Internet Access (PIA) with dynamic WireGuard handshake.
+- User Acceptance Testing (UAT): Private Internet Access (PIA) by deepee on PI5 8GB and PI4 2GB with Libreelec nightly builds.
+- New Module: Custom Provider support for manual .config file imports.
+- Added: Dialogues with art, colours, text, etc.
+- Fine-tuned Raspberry Pi 5 with high-speed network timings.
+- Added hardware detection for separate Pi 4 and Pi 5 configurations.
+- Fixed VPN reconnect loops by optimizing WATCHDOG_SETTLE_DELAY.
+- Implemented "Silent Reconnect" for background VPN switching during streams.
+- Added blackout "Grace Period" to prevent false network alerts.
+- Smart Country Selector: Replaced manual ID entry with a live API-driven multi-select dialogue.
+- Core: Standardized temporary state files to /tmp for improved reliability.
+- Fix: Space-safe Service ID (SID) detection for complex VPN server names.
+- Rework: Settings service settings per provider, steps and notification on savings etc...
+- Core: Removed all unlogged try... except: pass blocks across all modules.
+- Optimization: Converted legacy debug print functions to explicit sys.stdout and sys.stderr stream writes to pass grep checks.
+
 v1.3.1 (2026-04-29)
 - Improved compatibility with Kodi addon submission guidelines
 - Fixed non-whitelisted file warnings by using .sample extensions
