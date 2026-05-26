@@ -11,26 +11,6 @@
 ---
 A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 Omega)**. This tool manages WireGuard connections natively via `connmanctl`, providing a faster and more stable experience than traditional OpenVPN-based addons.
 
-## 🚀 Features
-*   **Multi-Provider Architecture**: Native, integrated routing support across NordVPN, Private Internet Access (PIA), and Custom manual profile frameworks.
-*   **Dynamic PIA WireGuard Handshake**: Features an authenticated API endpoint handshake layer that automatically registers keys and parses split PGP signature tokens live.
-*   **Native WireGuard Integration**: Interfaces directly with LibreELEC's network stack for maximum speed and minimal routing overhead.
-*   **Raspberry Pi 5 & 4 Optimized**: Specifically tuned timing profiles and platform-specific network delay detection reduce VPN switching and recovery times for both Pi 4 and Pi 5.
-*   **Live API Country Selector**: Replaced manual configuration ID inputs with a live, provider-driven multi-select context menu interface.
-*   **Space-Safe Service Matching**: Space-to-underscore string normalization ensures 100% accurate tracking searches against complex ConnMan network names.
-*   **Automated Credential Ingest**: Separate, validated import loops read plaintext `.txt` or `.key` data files, execute instant Base64 encryption processing, and run auto-updates.
-*   **Asynchronous State Shield**: Centralized tracking flags inside `/tmp` prevent racing conditions and separate automated video plugin mapping sessions from manual menu overrides.
-*   **Smart Auto-Mappings**: Dynamically switches VPN locations based on the specific Kodi addon or folder currently being browsed.
-*   **1Hz Physical Watchdog**: A standalone `systemd` service monitors hardware carrier status every second for near-instant detection of cable pulls or link loss.
-*   **Auto-Healing Failover**: Detects physical interface changes (Ethernet ⇆ Wi-Fi) and automatically resets retry budgets to ensure seamless recovery.
-*   **Stabilized Watchdog Settle**: Fine-tuned delay metrics stop infinite connection loops during profile switches by allowing the interface routing table to normalize.
-*   **Silent Transition Engine**: Seamless background profile switching handles link changes quietly to prevent stream stuttering or player window failures.
-*   **Aggressive Stream Recovery**: Automatically kills "frozen" video players during network blackouts to prevent UI hangs and provide immediate error feedback.
-*   **Intelligent Throttling**: Implements a "Safety Fuse" logic that stands down after 10 failed reconnection attempts to preserve system resources and API provider query limits.
-*   **High-Visibility Alerts**: Enhanced Kodi notifications featuring art assets, ARGB color formatting, custom audio cues (`networkerror.wav`), and persistent on-screen menu saving reminders.
-*   **IPv6 Leak Protection**: Kernel-level hardening and dynamic DNS management prevent data leaks during VPN transitions.
-*   **Remote Optimized**: Automatically maps **F11** to trigger the VPN menu instantly from anywhere inside Kodi.
-
 ## 📖 Quick Links
 For detailed instructions for this Add-on, please visit our **[Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki)**:
 *   **[🔑 How to get your NordVPN Token](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/How-to-get-your-NordVPN-Token)**
