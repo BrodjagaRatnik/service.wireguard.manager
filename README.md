@@ -43,25 +43,6 @@ For detailed instructions for this Add-on, please visit our **[Wiki](https://git
   *   **[📘 VPN Provider Integration Policy](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/VPN-Provider-Integration-Policy)**
 *   **[📡 WireGuard Provider Architecture & Video Mapping Constraints](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/WireGuard-Provider-Architecture-%26-Video-Mapping-Constraints)**
 
-## 📂 Project Structure
-| File/Folder | Description |
-| :--- | :--- |
-| **`main.py`** | Primary entry point for executing user-triggered GUI configurations and settings hooks. |
-| **`service_startup.py`** | Background system listener initializing standard service routines. |
-| **`resources/settings.xml`** | Storage schema defining provider profiles, mapping settings, and credential parameters. |
-| **`resources/keymaps/`** | Contains custom XML structural actions mapping global remote key inputs (F11) directly to the GUI menu. |
-| **`resources/language/`** | Core internationalization module managing clean layout strings and dynamic labels (`strings.po`). |
-| **`resources/lib/list_assets.py`** | Slot manager wizard pairing active ConnMan connection handles directly to target video plugins. |
-| **`resources/lib/service_launcher.py`** | The "Brain": Manages the background monitor thread loop, auto-mapping tracking, and Home window escape focus. |
-| **`resources/lib/vpn_ops.py`** | Core engine coordinating system handshakes, active profile caching, and dynamic connection sequences. |
-| **`resources/lib/vpn_config.py`** | Centralized constants mapping provider metadata dictionaries, timeouts, delay timers, and layout constants. |
-| **`resources/lib/network_utils.py`** | Network controller toggling ConnMan kernel states to secure DNS paths and prevent IPv6 leak issues. |
-| **`resources/lib/logger.py`** | High-visibility debugging output processor using dynamic version tags and standalone system execution compatibility. |
-| **`resources/lib/providers/`** | Isolated package handling provider logic: `nordvpn.py` (Tokens), `pia.py` (Credentials/Handshakes), and `custom.py` (.config file parser). |
-| **`resources/scripts/update_vpn.py`** | Unified standalone update automation pipeline querying endpoint server lists and writing active WireGuard layouts. |
-| **`resources/data/`** | Contains static core configurations for `vpn-watchdog.service`, `connman_main.conf`, and profile setup templates. |
-| **`resources/media/`** | Repository asset bank for UI design elements, visual indicators, error warning popups, and custom warning wave sounds. |
-
 ## 📥 Fast Installation (via Doemela Repo)
 If you already know what you're doing, grab the repository installer here:  
 **[📦 Download Doemela Repo ZIP](https://github.com/BrodjagaRatnik/doemela-kodi-repo/tree/main/zips/repository.doemela)**
