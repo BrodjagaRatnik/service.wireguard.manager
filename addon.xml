@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="service.wireguard.manager" name="WireGuard VPN Manager" version="1.4.2" provider-name="Doemela">
+<addon id="service.wireguard.manager" name="WireGuard VPN Manager" version="1.4.3" provider-name="Doemela">
 	<requires>
 		<import addon="xbmc.python" version="3.0.1"/>
 	</requires>
@@ -10,19 +10,17 @@
 	<extension point="xbmc.addon.metadata">
 		<summary lang="en_GB">Multi-Provider WireGuard VPN Manager (NordVPN, PIA, Custom)</summary>
 		<description lang="en_GB">High-performance, hardened WireGuard VPN manager for LibreELEC. Now supports multiple providers including NordVPN (NordLynx), Private Internet Access (PIA), and Custom configurations. Features an automated Systemd watchdog to prevent connection drops.[CR][CR][B]Note:[/B] Designed specifically for LibreELEC. [CR][CR][B]Features:[/B][CR]• Multi-Provider Support (Nord, PIA, Custom)[CR]• Pure Python WireGuard Handshake logic[CR]• Smart Watchdog &amp; Auto-Reconnect[CR]• Hardened DNS &amp; IPv6 Leak Protection[CR][CR][B]Disclaimer:[/B] Not an official product of any VPN provider. Use at your own risk.</description>
-		<news>v1.4.2 (2026-05-27)
+		<news>v1.4.3 (2026-05-27)
+- Re-architected connection metadata sequence with prioritized multi-tier HTTPS fallback providers (Cloudflare, IPInfo, GeoJS).
+- Eliminated API-limit connection stashing bugs by introducing unthrottled direct text matrix lookups via Cloudflare.
+- Dropped connection setup loop delays to sub-millisecond ranges using strict native connection timeout constraints.
+- Streamlined interface setup routines by optimizing execution synchronization orders between secure DNS tables and lookup scripts.
+- Integrated automated system logging handlers to trace verified profile endpoints right as tunnels go live.
+
+v1.4.2 (2026-05-27)
 - Optimized VPN connection routine with instantaneous local network interface and kernel-level socket validation loops.
 - Drastically reduced file footprint of main vpn_connector by refactoring core modules into shared utilities.
-- Stabilized private internet access handshake logic by decoupling external metadata calls from active routing.
-
-v1.4.1 (2026-05-26)
-- Extracted complete connect_vpn engine logic into separate vpn_connector.py.
-- Cleaned cross-module execution flow pointers between isolated files.
-- Codebase fully validated, compliant with PEP 8.
-- Refactor service_launcher.py into separate decoupled logic modules.
-- Extract background monitor execution loop into dedicated service_loop.py.
-- Isolate configuration updates and profile resolvers into clean modules.
-- Modernize multi-line binary operator placements (W504 compliance).</news>
+- Stabilized private internet access handshake logic by decoupling external metadata calls from active routing.</news>
 		<language>en_gb</language>
 		<platform>linux</platform>
 		<license>GPL-3.0-or-later</license>

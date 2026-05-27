@@ -45,14 +45,47 @@ def verify_tunnel_routing(test_ip="1.1.1.1", timeout=1.5):
         return False
 
 
-def fetch_vpn_metadata(timeout=2.5):
+def fetch_vpn_metadata():
     try:
-        res = subprocess.check_output(["curl", "-s", "--max-time", str(timeout), "https://ipinfo.io"], text=True)
+        res = subprocess.check_output(
+            ["curl", "-s", "-k", "--connect-timeout", "1.0", "--max-time", "1.5", "https://1.1.1.1/cdn-cgi/trace"],
+            text=True
+        )
+        ip = "Unknown"
+        country = "??"
+        for line in res.splitlines():
+            if line.startswith("ip="):
+                ip = line.split("=")[1].strip()
+            if line.startswith("loc="):
+                country = line.split("=")[1].strip()
+        if ip != "Unknown":
+            return ip, country
+    except Exception:
+        pass
+
+    try:
+        res = subprocess.check_output(
+            ["curl", "-s", "--connect-timeout", "1.0", "--max-time", "5", "https://ipinfo.io"],
+            text=True
+        )
         data = json.loads(res)
-        return data.get("ip", "Unknown"), data.get("country", "??")
+        if "ip" in data:
+            return data.get("ip", "Unknown"), data.get("country", "??")
+    except Exception:
+        pass
+
+    try:
+        res = subprocess.check_output(
+            ["curl", "-s", "--connect-timeout", "1.0", "--max-time", "1.5", "https://geojs.io"],
+            text=True
+        )
+        data = json.loads(res)
+        if "ip" in data:
+            return data.get("ip", "Unknown"), data.get("country", "??")
     except Exception as e:
-        log_message(f"External metadata API lookup timed out/failed: {e}", 2)
-        return None, None
+        log_message(f"All metadata fallbacks failed: {e}", 2)
+
+    return None, None
 
 
 def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):

@@ -79,6 +79,7 @@ def connect_vpn(vpn_name, sid, instance, silent=False):
         pbg.close()
 
     if connected:
+        log_message(f"Operation: Successfully connected to {vpn_name}", 1)
         subprocess.run(["ip", "route", "flush", "cache"], check=False)
         instance.set_active_vpn(vpn_name)
         set_secure_dns(vpn_name, vpn_active=True)

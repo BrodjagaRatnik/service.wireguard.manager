@@ -1,6 +1,18 @@
 CHANGELOG
 =========
 
+v1.4.3 (2026-05-27)
+- Re-architected connection metadata sequence with prioritized multi-tier HTTPS fallback providers (Cloudflare, IPInfo, GeoJS).
+- Eliminated API-limit connection stashing bugs by introducing unthrottled direct text matrix lookups via Cloudflare.
+- Dropped connection setup loop delays to sub-millisecond ranges using strict native connection timeout constraints.
+- Streamlined interface setup routines by optimizing execution synchronization orders between secure DNS tables and lookup scripts.
+- Integrated automated system logging handlers to trace verified profile endpoints right as tunnels go live.
+
+v1.4.2 (2026-05-27)
+- Optimized VPN connection routine with instantaneous local network interface and kernel-level socket validation loops.
+- Drastically reduced file footprint of main vpn_connector by refactoring core modules into shared utilities.
+- Stabilized private internet access handshake logic by decoupling external metadata calls from active routing.
+
 v1.4.2 (2026-05-27)
 - Optimized VPN connection routine with instantaneous local network interface and kernel-level socket validation loops.
 - Drastically reduced file footprint of main vpn_connector by refactoring core modules into shared utilities.

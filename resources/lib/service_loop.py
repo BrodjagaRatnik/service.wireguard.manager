@@ -121,12 +121,11 @@ def execute_monitor_loop(instance):
                                 pass
 
                         instance.vpn_ops.disconnect_vpn(silent=True)
-                        time.sleep(1.0)
+                        time.sleep(0.5)
 
                         sid = instance.get_service_id_by_name(vpn_target)
                         if sid:
                             instance.vpn_ops.connect_vpn(str(vpn_target), str(sid))
-                            time.sleep(1.0)
                         else:
                             err_msg = (
                                 "Monitor Error: Connection tracking target ID "
@@ -167,7 +166,7 @@ def execute_monitor_loop(instance):
                     pass
 
             instance.vpn_ops.disconnect_vpn(silent=False)
-            time.sleep(1.0)
+            time.sleep(0.5)
 
     else:
         instance.cleanup_count = 0
