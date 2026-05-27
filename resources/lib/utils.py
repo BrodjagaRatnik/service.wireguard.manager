@@ -72,7 +72,6 @@ def fetch_url(url, token=None, user=None, password=None, post_data=None):
 
             if raw_body:
                 try:
-                    # FIXED: Isolates the first text line string element safely
                     if "\n" in raw_body:
                         raw_body = raw_body.splitlines()[0].strip()
 

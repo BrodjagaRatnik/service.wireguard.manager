@@ -1,16 +1,18 @@
 """ resources/lib/vpn_config.py """
-import sys
-
-if 'utils' in sys.modules and 'service.wireguard.manager' not in str(sys.modules.get('utils')):
-    del sys.modules['utils']
-
 import os
-from logger import log_message
+import sys
 
 ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
 LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
 if LIB_PATH not in sys.path:
     sys.path.insert(0, LIB_PATH)
+
+if 'utils' in sys.modules:
+    current_utils = sys.modules.get('utils')
+    if current_utils and 'service.wireguard.manager' not in getattr(current_utils, '__file__', ''):
+        del sys.modules['utils']
+
+log_message = __import__('logger').log_message
 
 
 def is_pi5():
@@ -23,7 +25,6 @@ def is_pi5():
 
 
 PI5 = is_pi5()
-
 
 """ vpn_ops.py """
 PROP_SYNC_DELAY = 100

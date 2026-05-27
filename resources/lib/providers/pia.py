@@ -7,6 +7,7 @@ SERVER_LIST_URL = "https://serverlist.piaservers.net/vpninfo/servers/v6"
 """
 import json
 import os
+import sys
 import ssl
 import subprocess
 import time
@@ -15,9 +16,30 @@ import urllib.request
 from logger import log_message
 
 try:
-    KODI_AVAILABLE = True
-except Exception:
-    KODI_AVAILABLE = False
+    import xbmc
+    import xbmcaddon
+    import xbmcgui
+    import xbmcvfs
+    HAS_KODI = True
+except ImportError:
+    xbmc = None
+    xbmcaddon = None
+    xbmcgui = None
+    xbmcvfs = None
+    HAS_KODI = False
+
+ADDON_ID = 'service.wireguard.manager'
+
+if HAS_KODI:
+    try:
+        ADDON_PATH = xbmcvfs.translatePath(xbmcaddon.Addon(ADDON_ID).getAddonInfo('path'))
+    except Exception:
+        ADDON_PATH = '/storage/.kodi/addons/service.wireguard.manager'
+else:
+    ADDON_PATH = '/storage/.kodi/addons/service.wireguard.manager'
+
+ICON_INFO = os.path.join(ADDON_PATH, 'resources', 'media', 'icon.png')
+ICON_ERROR = os.path.join(ADDON_PATH, 'resources', 'media', 'error.png')
 
 CERT_URL = "https://raw.githubusercontent.com/pia-foss/manual-connections/master/ca.rsa.4096.crt"
 TOKEN_URL = "https://www.privateinternetaccess.com/api/client/v2/token"
@@ -99,19 +121,11 @@ def get_live_config(user, password, server_ip, server_cn, region_id, region_name
         )
 
         try:
-            import os
-            import sys
-            import xbmc
-            import xbmcaddon
-            import xbmcgui
-            import xbmcvfs
-
-            xbmc.executebuiltin("ActivateWindow(home)")
-            addon_path = xbmcvfs.translatePath(xbmcaddon.Addon('service.wireguard.manager').getAddonInfo('path'))
-            icon_info = os.path.join(addon_path, 'resources', 'media', 'icon.png')
-            title = "[B][COLOR FFE6E6FA]≡ [ WG MANAGER ] ≡[/COLOR][/B]"
-            msg = f"[COLOR FFFFFF00]Node cooling down! Please wait {remaining_secs} seconds before retrying PIA.[/COLOR]"
-            xbmcgui.Dialog().notification(title, msg, icon_info, 3000)
+            if HAS_KODI and xbmc and xbmcgui:
+                xbmc.executebuiltin("ActivateWindow(home)")
+                title = "[B][COLOR FFE6E6FA]≡ [ WG MANAGER ] ≡[/COLOR][/B]"
+                msg = f"[COLOR FFFFFF00]Node cooling down! Please wait {remaining_secs} seconds before retrying PIA.[/COLOR]"
+                xbmcgui.Dialog().notification(title, msg, ICON_INFO, 3000)
         except Exception as e:
             log_message(f"PIA Throttling: Failed to broadcast UI toast notification: {e}", 0)
         return None
@@ -119,8 +133,16 @@ def get_live_config(user, password, server_ip, server_cn, region_id, region_name
     cert_path = ensure_certificate()
     token = get_cached_token(user, password)
 
-    if not token or not cert_path:
-        log_message("PIA Handshake Aborted: Missing authentic token or root certificates.", 3)
+    if not token:
+        log_message("PIA Handshake Aborted: Missing authentic token.", 3)
+        if HAS_KODI and xbmcgui:
+            title = "[B][COLOR ffff0000]▀■▄ AUTHENTICATION ERROR ▄■▀[/COLOR][/B]"
+            msg = "[B][COLOR ffffff00]PIA Handshake Aborted: Missing valid token![/COLOR][/B]"
+            xbmcgui.Dialog().notification(title, msg, ICON_ERROR, 6000)
+        return None
+
+    if not cert_path:
+        log_message("PIA Handshake Aborted: Missing root certificates.", 3)
         return None
 
     try:

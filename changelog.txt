@@ -1,7 +1,12 @@
 CHANGELOG
 =========
 
-v1.4.1 (2026-05-26).
+v1.4.2 (2026-05-27)
+- Optimized VPN connection routine with instantaneous local network interface and kernel-level socket validation loops.
+- Drastically reduced file footprint of main vpn_connector by refactoring core modules into shared utilities.
+- Stabilized private internet access handshake logic by decoupling external metadata calls from active routing.
+
+v1.4.1 (2026-05-26)
 - Extracted complete connect_vpn engine logic into separate vpn_connector.py.
 - Cleaned cross-module execution flow pointers between isolated files.
 - Codebase fully validated, compliant with PEP 8.
