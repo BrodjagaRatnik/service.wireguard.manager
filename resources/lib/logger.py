@@ -69,3 +69,21 @@ else:
         sys.stderr.write(f"service.wireguard.manager fallback: {msg}\n") if lvl >= 2
         else sys.stdout.write(f"service.wireguard.manager fallback: {msg}\n")
     )
+
+if not HAS_KODI:
+    import types
+
+    mock_xbmc = types.ModuleType('xbmc')
+
+    mock_xbmc.LOGDEBUG = 0
+    mock_xbmc.LOGINFO = 1
+    mock_xbmc.LOGWARNING = 2
+    mock_xbmc.LOGERROR = 3
+
+    mock_xbmc.log = log_message
+
+    mock_xbmc.getCondVisibility = lambda cond: False
+    mock_xbmc.executebuiltin = lambda cmd: sys.stderr.write(f"EXEC: {cmd}\n") or sys.stderr.flush()
+    mock_xbmc.getInfoLabel = lambda infotag: ""
+
+    sys.modules['xbmc'] = mock_xbmc

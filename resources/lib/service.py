@@ -30,22 +30,6 @@ try:
 except ImportError:
     HAS_XBMC = False
 
-    class MockXBMC:
-        LOGDEBUG, LOGINFO, LOGWARNING, LOGERROR = 0, 1, 2, 3
-
-        def log(self, msg, level):
-            sys.stderr.write(f"LOG [{level}]: {msg}\n")
-            sys.stderr.flush()
-
-        def getCondVisibility(self, cond):
-            return False
-
-        def executebuiltin(self, cmd):
-            sys.stderr.write(f"EXEC: {cmd}\n")
-            sys.stderr.flush()
-
-    xbmc = MockXBMC()
-
     class MockGUI:
 
         def Dialog(self):
@@ -73,10 +57,24 @@ def get_active_interface():
             text=True,
             stderr=subprocess.DEVNULL
         )
-        if "dev" in out:
-            return out.split()[out.split().index("dev") + 1]
+        interfaces = []
+        for line in out.splitlines():
+            parts = line.split()
+            if "dev" in parts:
+                dev_idx = parts.index("dev") + 1
+                if dev_idx < len(parts):
+                    interfaces.append(parts[dev_idx])
+
+        for iface in interfaces:
+            if "wg" in iface.lower() or "vpn" in iface.lower():
+                return iface
+
+        if interfaces:
+            return interfaces[0]
+
+        return None
     except Exception as e:
-        log_message(f"Interface lookup error: {e}", 0)
+        log_message(f"Interface lookup error: {e}", 3)
         return None
 
 
@@ -104,7 +102,6 @@ def trigger_blackout_ui():
     msg = "[COLOR fffffff00]Check Wifi|Wire|Modem|Telecom provider.[/COLOR]"
 
     try:
-        import xbmc
         xbmc.executebuiltin('PlayerControl(Stop)')
         xbmc.executebuiltin('Action(Stop)')
         xbmc.executebuiltin('Dialog.Close(all,true)')
@@ -185,20 +182,21 @@ def watchdog_logic():
 
         BLACKOUT_ALERTED = False
 
-    if subprocess.run(['ip', 'link', 'show', 'wg0'], capture_output=True).returncode == 0:
-        LAST_INTERFACE = "wg0"
-        return
-
-    should_be_active = os.path.exists(STATE_FILE) and not os.path.exists(INTENTIONAL_FILE)
-
-    if should_be_active:
-        log_message("Service: Internet detected but Tunnel missing. Triggering Helper...", 1)
-        subprocess.run(["ip", "route", "flush", "cache"], check=False)
-        subprocess.Popen([sys.executable, HELPER_SCRIPT])
-        time.sleep(WATCHDOG_SETTLE_DELAY / 1000.0)
-        return
-
     current_iface = get_active_interface()
+    wg0_active = current_iface and ("vpn" in current_iface.lower() or "wg" in current_iface.lower())
+
+    if wg0_active:
+        LAST_INTERFACE = current_iface
+    else:
+        should_be_active = os.path.exists(STATE_FILE) and not os.path.exists(INTENTIONAL_FILE)
+
+        if should_be_active:
+            log_message("Service: Internet detected but Tunnel missing. Triggering Helper...", 1)
+            subprocess.run(["ip", "route", "flush", "cache"], check=False)
+            subprocess.Popen([sys.executable, HELPER_SCRIPT])
+            time.sleep(WATCHDOG_SETTLE_DELAY / 1000.0)
+            return
+
     eth_online, wifi_online = check_interface_status()
 
     if eth_online and current_iface == "wlan0":
@@ -224,7 +222,7 @@ def watchdog_logic():
                     os.remove(RETRY_FILE)
                 except Exception as e:
                     log_message(f"Interface change cleanup error: {e}", 3)
-                    LAST_INTERFACE = current_iface
+            LAST_INTERFACE = current_iface
 
 
 if __name__ == "__main__":
@@ -250,11 +248,11 @@ if __name__ == "__main__":
     while True:
         if os.path.exists("/tmp/vpn_manual_active.txt") or os.path.exists("/tmp/vpn_intentional_disconnect.txt"):
             if not shield_logged:
-                log_message("Service: SHIELD ACTIVE - SESSION FOUND. Pausing watchdog.", 1)
+                log_message("Service: SHIELD ACTIVE - SESSION FOUND. Pausing watchdog.", 0)
                 shield_logged = True
         else:
             if shield_logged:
-                log_message("Service: Shield cleared. Resuming watchdog operation.", 1)
+                log_message("Service: Shield cleared. Resuming watchdog operation.", 0)
             shield_logged = False
             watchdog_logic()
 

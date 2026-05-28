@@ -106,7 +106,6 @@ def run_reconnect():
 
             log_message(f"Helper: Reconnecting to {vpn_name} (Attempt {count + 1}/{MAX_RETRIES})...", 1)
             disconnect_vpn(silent=True)
-            time.sleep(0.6)
 
             try:
                 search_term = vpn_name.replace(' ', '_')
@@ -124,7 +123,7 @@ def run_reconnect():
                 sid = None
 
             if sid and connect_vpn(vpn_name, sid, silent=True):
-                log_message("Helper: Connection verified... Task complete.", 0)
+                log_message("Helper: Connection verified... Task complete.", 1)
                 if os.path.exists(RETRY_FILE):
                     os.remove(RETRY_FILE)
                 break
@@ -133,7 +132,7 @@ def run_reconnect():
                 increment_retry()
 
     finally:
-        log_message("Helper: Task finished.", 1)
+        log_message("Helper: Task finished.", 0)
 
 
 if __name__ == "__main__":

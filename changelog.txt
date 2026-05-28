@@ -1,6 +1,18 @@
 CHANGELOG
 =========
 
+v1.4.4 (2026-05-28)
+- Added adjustable VPN server update intervals (0.5 to 7 days) via settings slider.
+- Added dynamic, context-aware update tracking based on the active provider mapping rules.
+- Fixed unnecessary background file-checks and notifications for providers with live-data setups (e.g., PIA).
+
+v1.4.3 (2026-05-27)
+- Re-architected connection metadata sequence with prioritized multi-tier HTTPS fallback providers (Cloudflare, IPInfo, GeoJS).
+- Eliminated API-limit connection stashing bugs by introducing unthrottled direct text matrix lookups via Cloudflare.
+- Dropped connection setup loop delays to sub-millisecond ranges using strict native connection timeout constraints.
+- Streamlined interface setup routines by optimizing execution synchronization orders between secure DNS tables and lookup scripts.
+- Integrated automated system logging handlers to trace verified profile endpoints right as tunnels go live.
+
 v1.4.3 (2026-05-27)
 - Re-architected connection metadata sequence with prioritized multi-tier HTTPS fallback providers (Cloudflare, IPInfo, GeoJS).
 - Eliminated API-limit connection stashing bugs by introducing unthrottled direct text matrix lookups via Cloudflare.

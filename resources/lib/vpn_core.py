@@ -53,23 +53,45 @@ def install_service(source, dest, name, media_path):
 
 
 def check_for_updates(media_path):
-    """Checks if NordVPN configurations are older than 3.5 days, ignoring PIA."""
     try:
+        provider_idx = _ADDON.getSettingInt("vpn_provider")
+        p_data = PROVIDER_MAP.get(provider_idx)
+
+        if not p_data:
+            return
+
+        if not p_data.get("needs_file_check", False):
+            return
+
+        provider_name = p_data["name"]
+        file_prefix = p_data["prefix"]
+
         if os.path.exists(CONFIG_DIR):
             files = [
                 os.path.join(CONFIG_DIR, f)
                 for f in os.listdir(CONFIG_DIR)
-                if f.startswith('nord_') and f.endswith('.config')
+                if f.startswith(file_prefix) and f.endswith('.config')
             ]
 
             if not files:
                 return
 
+            try:
+                slider_val = _ADDON.getSetting('update_interval_days')
+                slider_days = int(float(slider_val)) if slider_val else 3
+            except ValueError:
+                slider_days = 3
+
+            max_age_seconds = slider_days * 86400
             latest_file = max(files, key=os.path.getmtime)
-            if (time.time() - os.path.getmtime(latest_file)) > 302400:
-                title = "[B][COLOR FFBF00FF]╠══ [ WG Manager ] ══╣[/COLOR][/B]"
-                msg = "[B][COLOR FFFFFF00]NordVPN Server list is 3.5 Days old.[/COLOR][/B]"
-                xbmcgui.Dialog().notification(title, msg, ICON_UPDATE, 5000)
+            file_age_seconds = time.time() - os.path.getmtime(latest_file)
+
+            if file_age_seconds > max_age_seconds:
+                title = f"[B][COLOR FFBF00FF]╠══ [ WG Manager: {provider_name} ] ══╣[/COLOR][/B]"
+                msg = f"[B][COLOR FFFFFF00]{provider_name} server list is {slider_days} Days old.[/COLOR][/B]"
+                xbmcgui.Dialog().notification(title, msg, ICON_UPDATE, 3000)
+
+                run_update()
 
     except Exception as e:
         log_message(f"Update VPN configurations check older than... failure: {e}", 3)

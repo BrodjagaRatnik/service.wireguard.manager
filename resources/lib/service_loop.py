@@ -4,11 +4,29 @@ import time
 import xbmc
 import xbmcaddon
 import xbmcgui
+import xbmcvfs
 from logger import log_message
 from vpn_config import WATCHDOG_HEARTBEAT
+from vpn_core import check_for_updates
 
 
 def execute_monitor_loop(instance):
+
+    current_time = time.time()
+
+    if not hasattr(instance, 'last_update_check'):
+        instance.last_update_check = 0.0
+
+    if (current_time - instance.last_update_check) > 21600:
+        instance.last_update_check = current_time
+        try:
+            log_message("Service Loop: Running automated background VPN age check...", 0)
+            addon_path = xbmcvfs.translatePath(instance._ADDON.getAddonInfo('path'))
+            media_path = os.path.join(addon_path, 'resources', 'media')
+            check_for_updates(media_path)
+        except Exception as e:
+            log_message(f"Service Loop: Background update check exception: {e}", 3)
+
     if os.path.exists('/tmp/vpn_intentional_disconnect.txt'):
         instance.cleanup_count = 0
         return
@@ -166,7 +184,6 @@ def execute_monitor_loop(instance):
                     pass
 
             instance.vpn_ops.disconnect_vpn(silent=False)
-            time.sleep(0.5)
 
     else:
         instance.cleanup_count = 0

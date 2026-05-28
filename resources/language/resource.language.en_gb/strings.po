@@ -201,20 +201,20 @@ msgid "Import Username/Password. Select a txt file containing your PIA credentia
 msgstr "Import Username/Password. Select a txt file containing your PIA credentials."
 
 msgctxt "#32049"
-msgid "File Format for Import:¦Line 1: Your Username (e.g., p1234567)¦Line 2: Your Password (e.g., MySecretPass)¦¦Make sure there are no extra spaces or empty lines in the text file."
-msgstr "File Format for Import:¦Line 1: Your Username (e.g., p1234567)¦Line 2: Your Password (e.g., MySecretPass)¦¦Make sure there are no extra spaces or empty lines in the text file."
+msgid "File Format for Import: ¦ Line 1: Your Username (e.g., p1234567). ¦ Line 2: Your Password (e.g., MySecretPass) ¦ Make sure there are no extra spaces or empty lines in the text file."
+msgstr "File Format for Import: ¦ Line 1: Your Username (e.g., p1234567). ¦ Line 2: Your Password (e.g., MySecretPass) ¦ Make sure there are no extra spaces or empty lines in the text file."
 
 msgctxt "#32050"
-msgid "File Format for Import:¦Line 1: Your TOKEN¦¦Make sure there are no extra spaces or empty lines in the text file."
-msgstr "File Format for Import:¦Line 1: Your TOKEN¦¦Make sure there are no extra spaces or empty lines in the text file."
+msgid "File Format for Import: ¦ Line 1: Your TOKEN ¦ Make sure there are no extra spaces or empty lines in the text file."
+msgstr "File Format for Import: ¦ Line 1: Your TOKEN ¦ Make sure there are no extra spaces or empty lines in the text file."
 
 msgctxt "#32051"
-msgid "Countries/Regions"
-msgstr "Countries/Regions"
+msgid "Countries / Regions"
+msgstr "Countries / Regions"
 
 msgctxt "#32052"
-msgid "Home Timeout Delay (Seconds)"
-msgstr "Home Timeout Delay (Seconds)"
+msgid "Home Timeout Delay (Seconds) Addon mapping disco"
+msgstr "Home Timeout Delay (Seconds) Addon mapping disco"
 
 msgctxt "#32053"
 msgid "Automatically disconnects the active \"VPN Mapping\" tunnel when the system remains idle on the home screen for a customizable duration, preventing unnecessary background bandwidth consumption."
@@ -229,8 +229,17 @@ msgid "Automatic addon mapping is not supported for this VPN provider; please us
 msgstr "Automatic addon mapping is not supported for this VPN provider; please use manual connection mode instead."
 
 msgctxt "#32056"
-msgid "Home Timeout Automatic Addon Mapping Settings"
-msgstr "Home Timeout Automatic Addon Mapping Settings"
+msgid "Provider-specific Settings"
+msgstr "Provider-specific Settings"
+
+msgctxt "#32057"
+msgid "VPN Update Interval (Days)"
+msgstr "VPN Update Interval (Days)"
+
+msgctxt "#32058"
+msgid "Set the interval for updating server data to ensure the fastest and most reliable VPN connections."
+msgstr "Set the interval for updating server data to ensure the fastest and most reliable VPN connections."
+
 
 
 msgctxt "#32992"

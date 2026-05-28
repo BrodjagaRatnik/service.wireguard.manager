@@ -10,6 +10,7 @@ import vpn_ops
 from service_updater import handle_settings_update
 from service_resolver import resolve_service_id
 from service_loop import execute_monitor_loop
+from vpn_core import check_for_updates
 
 try:
     from setup_helper import ensure_setup
@@ -36,6 +37,13 @@ class WGManagerService(xbmc.Monitor):
 
     def onSettingsChanged(self):
         handle_settings_update(self._ADDON)
+
+        try:
+            addon_path = xbmcvfs.translatePath(self._ADDON.getAddonInfo('path'))
+            media_path = os.path.join(addon_path, 'resources', 'media')
+            check_for_updates(media_path)
+        except Exception as e:
+            log_message(f"Settings change validation error: {e}", 3)
 
     def get_service_id_by_name(self, name):
         return resolve_service_id(self._ADDON, name)

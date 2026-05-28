@@ -120,6 +120,23 @@
 						<popup>false</popup>
 					</control>
 				</setting>
+				<setting id="update_interval_days" type="number" label="32057" help="32058">
+					<dependencies>
+						<dependency type="visible">
+							<condition setting="vpn_provider" operator="is">0</condition>
+						</dependency>
+					</dependencies>
+					<level>0</level>
+					<default>3.5</default>
+					<constraints>
+						<minimum>0.5</minimum>
+						<step>0.5</step>
+						<maximum>7.0</maximum>
+					</constraints>
+					<control type="slider" format="number">
+						<popup>false</popup>
+					</control>
+				</setting>
 			</group>
 		</category>
 		<category id="service" label="32004">

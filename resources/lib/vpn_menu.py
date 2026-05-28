@@ -55,7 +55,7 @@ def show_menu(media_path, provider_index):
                 menu_items.append(item)
                 mapping.append((name, sid))
 
-        item_update = xbmcgui.ListItem("[B]Update/Regenerate [COLOR yellow]VPN Configs[/B][/COLOR]")
+        item_update = xbmcgui.ListItem("[B]Update, Regenerate [COLOR yellow]VPN Configs[/B][/COLOR]")
         item_update.setArt({'icon': os.path.join(media_path, 'update.png')})
         menu_items.append(item_update)
         mapping.append("REGEN")

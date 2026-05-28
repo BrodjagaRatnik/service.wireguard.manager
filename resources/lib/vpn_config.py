@@ -44,14 +44,14 @@ Router to assign a local IP (DHCP) before it tries to restart the VPN.
 """
 VPN_CONNECTION_TIMEOUT = 10000 if PI5 else 20000
 """
-De maximale tijd (ms) die de progress bar wacht op een succesvolle verbinding.
-Pi 5 is razendsnel (20s is ruim), Pi 4 heeft meer tijd nodig (30s veiligheidsmarge).
+The maximum time (ms) the progress bar waits for a successful connection.
+Pi 5 is lightning fast (20s is plenty), Pi 4 needs more time (30s safety margin).
 """
 
 """ service_launcher.py & service.py """
 WATCHDOG_HEARTBEAT = 1000 if PI5 else 2500
 """ The heartbeat that checks if your internet cable is plugged in """
-WATCHDOG_SETTLE_DELAY = 11000 if PI5 else 22000
+WATCHDOG_SETTLE_DELAY = 11500 if PI5 else 22000
 """
 Stops the script from restarting the VPN too fast during a network crash.
 """
@@ -109,7 +109,8 @@ PROVIDER_MAP = {
         "setting": "vpn_token",
         "countries_setting": "selected_countries",
         "prefix": "nord_",
-        "label": "Nord Token"
+        "label": "Nord Token",
+        "needs_file_check": True
     },
     1: {
         "name": "PIA",
@@ -118,13 +119,15 @@ PROVIDER_MAP = {
         "user_setting": "pia_user",
         "countries_setting": "selected_countries_pia",
         "prefix": "pia_",
-        "label": "PIA Credentials"
+        "label": "PIA Credentials",
+        "needs_file_check": False
     },
     99: {
         "name": "Custom",
         "setting": "custom_path",
         "prefix": "custom_",
-        "label": "Config File"
+        "label": "Config File",
+        "needs_file_check": False
     }
 }
 

@@ -99,7 +99,7 @@ def connect_vpn(vpn_name, sid, instance, silent=False):
                 )
             else:
                 title = "[B][COLOR FFFFFF00]▄■ [ CONNECTED ] ■▄[/COLOR][/B]"
-                msg = f" [B]═≡═ [COLOR FF32CD32]{vpn_name}[/COLOR] ═≡═[/B]\n[B]Tunnel active (Metadata hidden)[/B]"
+                msg = f" [B]═≡═ [COLOR FF32CD32]{vpn_name}[/COLOR] ═≡═[/B]\n[B]Tunnel active[/B]"
             xbmcgui.Dialog().notification(title, msg, ICON_CON, 4500)
 
         return True
