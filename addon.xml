@@ -11,6 +11,7 @@
 		<summary lang="en_GB">Multi-Provider WireGuard VPN Manager (NordVPN, PIA, Custom)</summary>
 		<description lang="en_GB">High-performance, hardened WireGuard VPN manager for LibreELEC. Now supports multiple providers including NordVPN (NordLynx), Private Internet Access (PIA), and Custom configurations. Features an automated Systemd watchdog to prevent connection drops.[CR][CR][B]Note:[/B] Designed specifically for LibreELEC. [CR][CR][B]Features:[/B][CR]• Multi-Provider Support (Nord, PIA, Custom)[CR]• Pure Python WireGuard Handshake logic[CR]• Smart Watchdog &amp; Auto-Reconnect[CR]• Hardened DNS &amp; IPv6 Leak Protection[CR][CR][B]Disclaimer:[/B] Not an official product of any VPN provider. Use at your own risk.</description>
 		<news>v1.4.5 (2026-05-29)
+
 - Fixed infinite service restart and configuration update boot loops.
 - Implemented robust physical file age evaluation using modification timestamps.
 - Added background time throttling to prevent rapid-fire API rate limiting.
