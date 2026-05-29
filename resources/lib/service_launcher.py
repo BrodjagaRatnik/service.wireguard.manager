@@ -1,6 +1,7 @@
 ''' ./resources/lib/service_launcher.py '''
 import os
 import sys
+import time
 import xbmc
 import xbmcaddon
 import xbmcvfs
@@ -30,6 +31,7 @@ class WGManagerService(xbmc.Monitor):
         self._ADDON = addon
         self.vpn_ops = vpn_ops_mod
         self.cleanup_count = 0
+        self.last_bg_check_time = time.time()
 
         hardware = "Raspberry Pi 5" if PI5 else "Raspberry Pi 4"
         log_message(f"Hardware timings loaded for {hardware}", 1)
@@ -38,27 +40,32 @@ class WGManagerService(xbmc.Monitor):
     def onSettingsChanged(self):
         handle_settings_update(self._ADDON)
 
-        try:
-            addon_path = xbmcvfs.translatePath(self._ADDON.getAddonInfo('path'))
-            media_path = os.path.join(addon_path, 'resources', 'media')
-            check_for_updates(media_path)
-        except Exception as e:
-            log_message(f"Settings change validation error: {e}", 3)
-
     def get_service_id_by_name(self, name):
         return resolve_service_id(self._ADDON, name)
 
     def run_loop(self):
         execute_monitor_loop(self)
 
+        current_time = time.time()
+        if (current_time - self.last_bg_check_time) >= 60:
+            self.last_bg_check_time = current_time
+            try:
+                addon_path = xbmcvfs.translatePath(
+                    self._ADDON.getAddonInfo('path')
+                )
+                media_path = os.path.join(addon_path, 'resources', 'media')
+                check_for_updates(media_path)
+            except Exception as e:
+                log_message(f"Background update verification failure: {e}", 3)
+
 
 def start():
     addon = xbmcaddon.Addon('service.wireguard.manager')
     path = xbmcvfs.translatePath(addon.getAddonInfo('path'))
 
-    if not addon.getSettingBool("first_run"):
+    if addon.getSettingBool("first_run") is True:
         if ensure_setup(path, silent=True) is True:
-            addon.setSettingBool("first_run", True)
+            addon.setSettingBool("first_run", False)
             xbmc.executebuiltin('UpdateAddonByReadme()')
 
     try:

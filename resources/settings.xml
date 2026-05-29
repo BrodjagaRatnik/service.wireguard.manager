@@ -7,6 +7,10 @@
 					<level>4</level>
 					<default>false</default>
 				</setting>
+				<setting id="last_vpn_update_time" type="string" label="Last VPN config update time">
+					<level>4</level>
+					<default>0</default>
+				</setting>
 				<setting id="short_warn" type="action" label="32001" help="32002">
 					<level>0</level>
 					<control type="button" format="action">

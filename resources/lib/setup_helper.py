@@ -167,7 +167,7 @@ def ensure_setup(addon_path, silent=False):
     current_p_id = ADDON.getSettingInt("vpn_provider")
     has_creds = False
     if current_p_id == -1:
-        log_message("First-time setup: No VPN provider selected yet. Skipping credential check.", 0)
+        log_message("First-time setup: No VPN provider selected yet. Skipping credential check.", 1)
     else:
         p_data = PROVIDER_MAP.get(current_p_id, {"name": "Unknown", "prefix": "unknown_"})
         token_setting = p_data.get("setting")

@@ -28,6 +28,8 @@ if _LIB not in sys.path:
 ICON_INFO = os.path.join(ADDON_PATH, 'resources', 'media', 'icon.png')
 ICON_UPDATE = os.path.join(ADDON_PATH, 'resources', 'media', 'update.png')
 ICON_UPDATE_OK = os.path.join(ADDON_PATH, 'resources', 'media', 'update_ok.png')
+LAST_RUN_TIMESTAMP = 0
+CONFIG_DIR = '/storage/.config/wireguard'
 
 
 def install_service(source, dest, name, media_path):
@@ -53,14 +55,16 @@ def install_service(source, dest, name, media_path):
 
 
 def check_for_updates(media_path):
+    global LAST_RUN_TIMESTAMP
+
     try:
+        if time.localtime().tm_year < 2026:
+            return
+
         provider_idx = _ADDON.getSettingInt("vpn_provider")
         p_data = PROVIDER_MAP.get(provider_idx)
 
-        if not p_data:
-            return
-
-        if not p_data.get("needs_file_check", False):
+        if not p_data or not p_data.get("needs_file_check", False):
             return
 
         provider_name = p_data["name"]
@@ -68,8 +72,7 @@ def check_for_updates(media_path):
 
         if os.path.exists(CONFIG_DIR):
             files = [
-                os.path.join(CONFIG_DIR, f)
-                for f in os.listdir(CONFIG_DIR)
+                f for f in os.listdir(CONFIG_DIR)
                 if f.startswith(file_prefix) and f.endswith('.config')
             ]
 
@@ -79,19 +82,74 @@ def check_for_updates(media_path):
             try:
                 slider_val = _ADDON.getSetting('update_interval_days')
                 slider_days = int(float(slider_val)) if slider_val else 3
+                if slider_days <= 0:
+                    slider_days = 3
             except ValueError:
                 slider_days = 3
 
             max_age_seconds = slider_days * 86400
-            latest_file = max(files, key=os.path.getmtime)
-            file_age_seconds = time.time() - os.path.getmtime(latest_file)
+            current_time = int(time.time())
+
+            try:
+                last_update_val = _ADDON.getSetting('last_vpn_update_time')
+                last_update_time = int(last_update_val) if last_update_val else 0
+            except ValueError:
+                last_update_time = 0
+
+            first_file_path = os.path.join(CONFIG_DIR, files[0])
+            file_age_seconds = current_time - int(os.path.getmtime(first_file_path))
+
+            log_msg = (
+                f"Core: current_time={current_time}, "
+                f"last_update_time={last_update_time}, "
+                f"file_age={file_age_seconds}, "
+                f"max_age={max_age_seconds}"
+            )
+            log_message(log_msg, 0)
+
+            if LAST_RUN_TIMESTAMP != 0 and (current_time - LAST_RUN_TIMESTAMP) >= 60:
+                LAST_RUN_TIMESTAMP = 0
+
+            if LAST_RUN_TIMESTAMP != 0:
+                return
+
+            if current_time < last_update_time:
+                _ADDON.setSetting('last_vpn_update_time', str(current_time))
+                return
 
             if file_age_seconds > max_age_seconds:
-                title = f"[B][COLOR FFBF00FF]╠══ [ WG Manager: {provider_name} ] ══╣[/COLOR][/B]"
-                msg = f"[B][COLOR FFFFFF00]{provider_name} server list is {slider_days} Days old.[/COLOR][/B]"
-                xbmcgui.Dialog().notification(title, msg, ICON_UPDATE, 3000)
+                if (current_time - last_update_time) < 120:
+                    log_msg = "Core: Run skipped. Update recently attempted but files are unchanged."
+                    log_message(log_msg, 0)
+                    return
+
+                LAST_RUN_TIMESTAMP = current_time
+
+                title = (
+                    f"[B][COLOR FFBF00FF]╠══ [ WG Manager: "
+                    f"{provider_name} ] ══╣[/COLOR][/B]"
+                )
+                msg = (
+                    f"[B][COLOR FFFFFF00]{provider_name} server list "
+                    f"is {slider_days} Days old.[/COLOR][/B]"
+                )
+                xbmcgui.Dialog().notification(
+                    title, msg, ICON_UPDATE, 3000
+                )
 
                 run_update()
+
+                try:
+                    new_age = current_time - int(os.path.getmtime(first_file_path))
+                    if new_age < 30:
+                        _ADDON.setSetting('last_vpn_update_time', str(current_time))
+                        log_message("Core: Update successful. File timestamps updated.", 0)
+                    else:
+                        log_message("Core: Update completed but files on disk did not change.", 0)
+                except Exception:
+                    pass
+            else:
+                log_message("Core: Update skipped. Configurations are still fresh.", 0)
 
     except Exception as e:
         log_message(f"Update VPN configurations check older than... failure: {e}", 3)
@@ -157,9 +215,9 @@ def run_update(direct_token=None, force_provider=None):
                         if len(lines) >= 2:
                             user = lines[0]
                             raw_pw = lines[1]
-                            log_message(f"Direct File Import Success from {files[0]}: {user}", 0)
+                            log_message(f"Core: Direct File Import Success from {files[0]}: {user}", 0)
             except Exception as e:
-                log_message(f"File Scan/Read Error: {str(e)}", 0)
+                log_message(f"Core: File Scan/Read Error: {str(e)}", 0)
 
             if not user:
                 user = _ADDON.getSetting("pia_user").strip()
@@ -175,7 +233,7 @@ def run_update(direct_token=None, force_provider=None):
                     clean_pw += '=' * (4 - missing_padding)
                 pw = base64.b64decode(clean_pw).decode('utf-8').strip()
             except Exception as e:
-                log_message(f"Provider authentication fallback triggered due to decode failure: {e}", 3)
+                log_message(f"Core: Provider authentication fallback triggered due to decode failure: {e}", 3)
                 pw = target_pw
 
             if not user or not pw:
@@ -193,7 +251,7 @@ def run_update(direct_token=None, force_provider=None):
 
                 missing_str = " and ".join(missing_items)
 
-                log_message(f"PIA Configuration Error: Cannot proceed because {missing_str} is missing or blank.", 3)
+                log_message(f"Core: PIA Configuration Error: Cannot proceed because {missing_str} is missing or blank.", 3)
 
                 title = "[B]≡ [ CREDENTIALS MISSING ] ≡[/B]"
                 msg = (
