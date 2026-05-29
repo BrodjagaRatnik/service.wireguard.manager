@@ -15,12 +15,7 @@
 - Implemented robust physical file age evaluation using modification timestamps.
 - Added background time throttling to prevent rapid-fire API rate limiting.
 - Patched un-synchronized system time validation errors on hardware startup.
-- Normalized configuration structures to comply with strict PEP 8 layout rules.
-
-v1.4.4 (2026-05-28)
-- Added adjustable VPN server update intervals (0.5 to 7 days) via settings slider.
-- Added dynamic, context-aware update tracking based on the active provider mapping rules.
-- Fixed unnecessary background file-checks and notifications for providers with live-data setups (e.g., PIA).</news>
+- Normalized configuration structures to comply with strict PEP 8 layout rules.</news>
 		<language>en_gb</language>
 		<platform>linux</platform>
 		<license>GPL-3.0-or-later</license>
