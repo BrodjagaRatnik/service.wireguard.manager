@@ -41,3 +41,6 @@ ca.rsa.4096.txt binary
 .gitignore export-ignore
 .addonignore export-ignore
 .github/ export-ignore
+/zips/ export-ignore
+/zips/service.wireguard.manager/ export-ignore
+README.md export-ignore
