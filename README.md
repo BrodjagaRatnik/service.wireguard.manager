@@ -1,6 +1,6 @@
 ![Release](https://img.shields.io/github/v/release/BrodjagaRatnik/service.wireguard.manager)
 ![Size](https://img.shields.io/github/repo-size/BrodjagaRatnik/service.wireguard.manager)
-![Last Commit](https://img.shields.io/github/last-commit/BrodjagaRatnik/service.wireguard.manager)
+![Last Commit](https://shields.io/github/last-commit/BrodjagaRatnik/service.wireguard.manager)
 ![Build Status](https://github.com/BrodjagaRatnik/service.wireguard.manager/actions/workflows/test_addon.yml/badge.svg)
 ---
 # WireGuard VPN Manager ![LibreELEC Version](https://img.shields.io/github/v/release/LibreELEC/LibreELEC.tv?label=LibreELEC&color=blue)
