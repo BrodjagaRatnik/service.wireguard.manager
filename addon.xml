@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="service.wireguard.manager" name="WireGuard VPN Manager" version="1.4.6" provider-name="Doemela">
+<addon id="service.wireguard.manager" name="WireGuard VPN Manager" version="1.4.7" provider-name="Doemela">
 	<requires>
 		<import addon="xbmc.python" version="3.0.1"/>
 	</requires>
@@ -10,17 +10,10 @@
 	<extension point="xbmc.addon.metadata">
 		<summary lang="en_GB">Multi-Provider WireGuard VPN Manager (NordVPN, PIA, Custom)</summary>
 		<description lang="en_GB">High-performance, hardened WireGuard VPN manager for LibreELEC. Now supports multiple providers including NordVPN (NordLynx), Private Internet Access (PIA), and Custom configurations. Features an automated Systemd watchdog to prevent connection drops.[CR][CR][B]Note:[/B] Designed specifically for LibreELEC. [CR][CR][B]Features:[/B][CR]• Multi-Provider Support (Nord, PIA, Custom)[CR]• Pure Python WireGuard Handshake logic[CR]• Smart Watchdog &amp; Auto-Reconnect[CR]• Hardened DNS &amp; IPv6 Leak Protection[CR][CR][B]Disclaimer:[/B] Not an official product of any VPN provider. Use at your own risk.</description>
-		<news>v1.4.6 (2026-06-02)
-- Added visual indicators highlighting assigned configuration slots in yellow
-- Switched WireGuard endpoints to raw numeric IPs to fix LibreELEC 12 tunnels.
-- Hardcoded streaming-optimized DNS to fix geo-blocks on standard servers.
-- Added PIA API v3 Basic Auth support with automatic legacy v2 fallback.
-- Dropped unused, unpublished DNS server lookup arrays from config generator.
-- Added multi-line JSON stream parsing to prevent endpoint data format crashes.
-- Patched utf-8 codec and base64 regex credential crashes for plain-text logins.
-- Resolved ghost 'Temporary failure in name resolution' string memory errors.
-- Fixed a visual freeze bug by correcting progress dialog close animations.
-- Lowered background watchdog service CPU usage overhead and logging frequency.</news>
+		<news>v1.4.7 (2026-06-03)
+- Fixed W504 line break after binary operator lint errors in monitoring loop
+- Standardized multi-line conditional statements to match absolute PEP 8 compliance
+- Ensured long system visibility evaluation layout structures fit within line length limits</news>
 		<language>en_gb</language>
 		<platform>linux</platform>
 		<license>GPL-3.0-or-later</license>

@@ -50,10 +50,12 @@ def execute_monitor_loop(instance):
             log_message(f"Service Loop: Kernel interface scan failed: {e}", 1)
 
     is_manual = (
-        os.path.exists('/tmp/vpn_manual_active.txt') or
-        xbmcgui.Window(10000).getProperty('vpn_manual_session').lower() == 'true'
+        os.path.exists('/tmp/vpn_manual_active.txt')
+        or xbmcgui.Window(10000).getProperty('vpn_manual_session').lower() == 'true'
     )
-    is_home = xbmc.getCondVisibility("Window.IsActive(home) | Window.IsActive(10000)")
+    is_home = xbmc.getCondVisibility(
+        "Window.IsActive(home) | Window.IsActive(10000)"
+    )
     plugin = xbmc.getInfoLabel("Container.PluginName")
     folder = xbmc.getInfoLabel("Container.FolderPath")
 
@@ -64,8 +66,8 @@ def execute_monitor_loop(instance):
     match_found = False
 
     is_addon_active = (
-        plugin.startswith("plugin.video.") or
-        (folder and "plugin.video." in folder.lower())
+        plugin.startswith("plugin.video.")
+        or (folder and "plugin.video." in folder.lower())
     )
 
     if not is_home and is_addon_active:
@@ -82,8 +84,10 @@ def execute_monitor_loop(instance):
                     is_match = False
                 else:
                     is_match = (
-                        (v_clean == a_clean) or (v_clean in a_clean) or (a_clean in v_clean) or
-                        (v_clean.replace('_', '') in a_clean.replace('_', ''))
+                        (v_clean == a_clean)
+                        or (v_clean in a_clean)
+                        or (a_clean in v_clean)
+                        or (v_clean.replace('_', '') in a_clean.replace('_', ''))
                     )
 
                 if is_match:

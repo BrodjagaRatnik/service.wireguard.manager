@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+v1.4.7 (2026-06-03)
+- Fixed W504 line break after binary operator lint errors in monitoring loop
+- Standardized multi-line conditional statements to match absolute PEP 8 compliance
+- Ensured long system visibility evaluation layout structures fit within line length limits
+
 v1.4.6 (2026-06-02)
 - Added visual indicators highlighting assigned configuration slots in yellow
 - Switched WireGuard endpoints to raw numeric IPs to fix LibreELEC 12 tunnels.
