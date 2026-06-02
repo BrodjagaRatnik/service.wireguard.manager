@@ -64,5 +64,5 @@ def resolve_service_id(addon, name):
                 return line.split()[-1]
 
     except Exception as e:
-        log_message(f"Service lookup error for {name}: {e}", 3)
+        log_message(f"Service Resolver: lookup error for {name}: {e}", 3)
         return None

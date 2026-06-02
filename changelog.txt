@@ -1,24 +1,24 @@
 CHANGELOG
 =========
 
+v1.4.6 (2026-06-02)
+- Added visual indicators highlighting assigned configuration slots in yellow
+- Switched WireGuard endpoints to raw numeric IPs to fix LibreELEC 12 tunnels.
+- Hardcoded streaming-optimized DNS to fix geo-blocks on standard servers.
+- Added PIA API v3 Basic Auth support with automatic legacy v2 fallback.
+- Dropped unused, unpublished DNS server lookup arrays from config generator.
+- Added multi-line JSON stream parsing to prevent endpoint data format crashes.
+- Patched utf-8 codec and base64 regex credential crashes for plain-text logins.
+- Resolved ghost 'Temporary failure in name resolution' string memory errors.
+- Fixed a visual freeze bug by correcting progress dialog close animations.
+- Lowered background watchdog service CPU usage overhead and logging frequency.
+
 v1.4.5 (2026-05-29)
 - Fixed infinite service restart and configuration update boot loops.
 - Implemented robust physical file age evaluation using modification timestamps.
 - Added background time throttling to prevent rapid-fire API rate limiting.
 - Patched un-synchronized system time validation errors on hardware startup.
 - Normalized configuration structures to comply with strict PEP 8 layout rules.
-
-v1.4.4 (2026-05-28)
-- Added adjustable VPN server update intervals (0.5 to 7 days) via settings slider.
-- Added dynamic, context-aware update tracking based on the active provider mapping rules.
-- Fixed unnecessary background file-checks and notifications for providers with live-data setups (e.g., PIA).
-
-v1.4.3 (2026-05-27)
-- Re-architected connection metadata sequence with prioritized multi-tier HTTPS fallback providers (Cloudflare, IPInfo, GeoJS).
-- Eliminated API-limit connection stashing bugs by introducing unthrottled direct text matrix lookups via Cloudflare.
-- Dropped connection setup loop delays to sub-millisecond ranges using strict native connection timeout constraints.
-- Streamlined interface setup routines by optimizing execution synchronization orders between secure DNS tables and lookup scripts.
-- Integrated automated system logging handlers to trace verified profile endpoints right as tunnels go live.
 
 v1.4.4 (2026-05-28)
 - Added adjustable VPN server update intervals (0.5 to 7 days) via settings slider.

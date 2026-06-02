@@ -41,7 +41,7 @@ def get_wg_services():
             services.append({"name": name, "id": service_id})
     except Exception as e:
         try:
-            log_message(f"Wizard Error: {e}", 3)
+            log_message(f"List Assets: {e}", 3)
         except Exception as logger_error:
             fallback_msg = f"Wizard Error: {e} | Logger fallback failure: {logger_error}\n"
             sys.stderr.write(fallback_msg)
@@ -51,7 +51,17 @@ def get_wg_services():
 
 def run_wizard():
 
-    slots = [f"Slot {i}" for i in range(1, 9)]
+    slots = []
+    for i in range(1, 9):
+        saved_vpn = _ADDON.getSetting(f"vpn_{i}_name")
+        saved_addon = _ADDON.getSetting(f"map_{i}_addon")
+
+        if saved_vpn and saved_addon:
+            addon_clean = saved_addon.replace('plugin.video.', '')
+            slots.append(f"[COLOR FFFFFF00]Slot {i} ({saved_vpn} -> {addon_clean})[/COLOR]")
+        else:
+            slots.append(f"Slot {i}")
+
     sel_slot = xbmcgui.Dialog().select("Assign VPN to which Slot?", slots)
     if sel_slot == -1:
         return
@@ -94,7 +104,7 @@ def run_wizard():
         addons = [a['addonid'] for a in data.get('result', {}).get('addons', [])]
         addons.sort()
     except Exception as e:
-        log_message(f"Wizard: JSON-RPC Error: {e}", 3)
+        log_message(f"List Assets: JSON-RPC Error: {e}", 3)
         addons = []
 
     if not addons:

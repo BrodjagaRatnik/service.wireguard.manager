@@ -27,7 +27,7 @@ def get_default_gateway():
                     return line.split()[2]
 
     except Exception as e:
-        log_message(f"Failed to resolve default gateway: {e}", 3)
+        log_message(f"Network Utils: Failed to resolve default gateway: {e}", 3)
     return None
 
 
@@ -56,7 +56,7 @@ def get_dns_from_config(vpn_name):
                 if match:
                     dns_list = [d.strip() for d in match.group(1).split(",")]
         except Exception as e:
-            log_message(f"Error reading DNS from {target_path}: {e}", 3)
+            log_message(f"Network Utils: Error reading DNS from {target_path}: {e}", 3)
     return dns_list
 
 
@@ -88,7 +88,7 @@ def set_secure_dns(vpn_name=None, vpn_active=True):
                     f.write(f"nameserver {dns}\n")
 
     except Exception as e:
-        log_message(f"DNS setup failed: {e}", 3)
+        log_message(f"Network Utils: DNS setup failed: {e}", 3)
 
 
 def disable_connman_ipv6():
@@ -107,7 +107,7 @@ def disable_connman_ipv6():
                     check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                 )
     except Exception as e:
-        log_message(f"IPv6 disabling routine failed: {e}", 3)
+        log_message(f"Network Utils: IPv6 disabling routine failed: {e}", 3)
 
 
 def enable_connman_ipv6():
@@ -126,7 +126,7 @@ def enable_connman_ipv6():
                     check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                 )
     except Exception as e:
-        log_message(f"IPv6 enabling routine failed: {e}", 3)
+        log_message(f"Network Utils: IPv6 enabling routine failed: {e}", 3)
 
 
 def is_physically_connected(interface):
@@ -155,5 +155,5 @@ def is_physically_connected(interface):
         return False
 
     except Exception as e:
-        log_message(f"Carrier status check failed for {interface}: {e}", 3)
+        log_message(f"Network Utils: Carrier status check failed for {interface}: {e}", 3)
         return False

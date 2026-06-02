@@ -16,7 +16,7 @@ import sys
 import xbmcaddon
 import xbmcvfs
 from logger import log_message
-from utils import fetch_url
+from wm_utils import fetch_url
 
 _ADDON = xbmcaddon.Addon('service.wireguard.manager')
 _LIB = xbmcvfs.translatePath(os.path.join(_ADDON.getAddonInfo('path'), 'resources', 'lib'))

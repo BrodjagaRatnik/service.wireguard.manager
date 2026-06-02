@@ -31,7 +31,7 @@ def get_retry_count():
             with open(RETRY_FILE, "r") as f:
                 return int(f.read().strip())
         except Exception as e:
-            log_message(f"Failed to read retry count file: {e}", 3)
+            log_message(f"Reconnect Helper: Failed to read retry count file: {e}", 3)
             return 0
     return 0
 
@@ -44,7 +44,7 @@ def increment_retry():
             f.flush()
             os.fsync(f.fileno())
     except Exception as e:
-        log_message(f"Failed to write incremented retry count: {e}", 3)
+        log_message(f"Reconnect Helper: Failed to write incremented retry count: {e}", 3)
     return count
 
 
@@ -58,7 +58,7 @@ def run_reconnect():
             with open(state_path, "r") as f:
                 vpn_name = f.read().strip()
         except Exception as e:
-            log_message(f"Failed to read vpn manager active state: {e}", 3)
+            log_message(f"Reconnect Helper: Failed to read vpn manager active state: {e}", 3)
 
     if (not vpn_name or vpn_name.lower() == "true") and HAS_KODI:
         vpn_name = xbmcgui.Window(10000).getProperty('vpn_manual_session')
@@ -76,7 +76,7 @@ def run_reconnect():
         while True:
             count = get_retry_count()
             if count >= MAX_RETRIES:
-                log_message(f"Helper: Max retries ({MAX_RETRIES}) reached. Standing down.", 2)
+                log_message(f"Reconnect Helper: Max retries ({MAX_RETRIES}) reached. Standing down.", 2)
                 if os.path.exists(RETRY_FILE):
                     os.remove(RETRY_FILE)
                 break
@@ -92,7 +92,7 @@ def run_reconnect():
 
             if not gw_ready:
                 new_count = increment_retry()
-                log_message(f"Helper: No gateway. Attempt {new_count}/{MAX_RETRIES}", 0)
+                log_message(f"Reconnect Helper: No gateway. Attempt {new_count}/{MAX_RETRIES}", 2)
                 continue
 
             if provider_id == 1 and count > 0:
@@ -101,10 +101,10 @@ def run_reconnect():
                 except NameError:
                     pia_pause_sec = 4.5
 
-                log_message(f"Helper: Applying PIA recovery pause interval delay ({pia_pause_sec}s)...", 0)
+                log_message(f"Reconnect Helper: Applying PIA recovery pause interval delay ({pia_pause_sec}s)...", 1)
                 time.sleep(pia_pause_sec)
 
-            log_message(f"Helper: Reconnecting to {vpn_name} (Attempt {count + 1}/{MAX_RETRIES})...", 1)
+            log_message(f"Reconnect Helper: Reconnecting to {vpn_name} (Attempt {count + 1}/{MAX_RETRIES})...", 1)
             disconnect_vpn(silent=True)
 
             try:
@@ -119,20 +119,20 @@ def run_reconnect():
                         sid = line.split()[-1]
                         break
             except Exception as e:
-                log_message(f"Failed to find network service ID for {vpn_name}: {e}", 3)
+                log_message(f"Reconnect Helper: Failed to find network service ID for {vpn_name}: {e}", 3)
                 sid = None
 
             if sid and connect_vpn(vpn_name, sid, silent=True):
-                log_message("Helper: Connection verified... Task complete.", 1)
+                log_message("Reconnect Helper: Connection verified... Task complete.", 1)
                 if os.path.exists(RETRY_FILE):
                     os.remove(RETRY_FILE)
                 break
             else:
-                log_message("Helper: vpn_ops reported failure. Retrying...", 2)
+                log_message("Reconnect Helper: vpn_ops reported failure. Retrying...", 2)
                 increment_retry()
 
     finally:
-        log_message("Helper: Task finished.", 0)
+        log_message("Reconnect Helper: Task finished.", 0)
 
 
 if __name__ == "__main__":

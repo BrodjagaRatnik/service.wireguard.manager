@@ -10,7 +10,7 @@ import xbmcaddon
 import xbmcgui
 import xbmcvfs
 from logger import log_message
-from utils import fetch_url
+from wm_utils import fetch_url
 from vpn_config import PROVIDER_MAP
 
 _ADDON = xbmcaddon.Addon('service.wireguard.manager')
@@ -99,8 +99,8 @@ def run():
         xbmcgui.Dialog().notification(title, message, ICON_INFO, 2500)
 
         t_elapsed = (time.perf_counter() - t_start) * 1000.0
-        log_msg = f"PERF: Country selection took {t_elapsed:.2f}ms"
-        log_message(log_msg, 0)
+        log_msg = f"Country Selector: Country selection took {t_elapsed:.2f}ms"
+        log_message(log_msg, 1)
 
 
 if __name__ == '__main__':

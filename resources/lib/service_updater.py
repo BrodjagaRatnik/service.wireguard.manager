@@ -1,5 +1,4 @@
 ''' .resources/lib/service_updater.py '''
-import base64
 import os
 import sys
 from logger import log_message
@@ -28,23 +27,25 @@ def handle_settings_update(addon):
     if provider_id == 1:
         try:
             from providers import pia
+            from wm_utils import safe_decrypt_password, safe_encrypt_password
+
             user = addon.getSetting("pia_user").strip()
             raw_pw = addon.getSetting("pia_pass").strip()
             ids = addon.getSetting("selected_countries_pia").strip()
 
             if user and raw_pw and ids:
-                try:
-                    clean_pw = str(raw_pw).strip()
-                    missing_padding = len(clean_pw) % 4
-                    if missing_padding:
-                        clean_pw += '=' * (4 - missing_padding)
-                    pw = base64.b64decode(clean_pw).decode('utf-8').strip()
-                except Exception:
-                    pw = raw_pw
+                pw = safe_decrypt_password(raw_pw)
+
+                if not raw_pw.startswith('b64:'):
+                    encoded_string = safe_encrypt_password(pw)
+                    addon.setSetting("pia_pass", encoded_string)
+                    log_msg = "Service Updater: New plain text password detected. Saved cleanly to Kodi settings."
+                    log_message(log_msg, 1)
 
                 pia.update(user, pw, ids, config_dir)
+
         except Exception as e:
-            log_message(f"PIA update failed: {e}", 3)
+            log_message(f"Service Updater: PIA update failed: {e}", 3)
 
     elif provider_id == 0:
         try:
@@ -54,4 +55,4 @@ def handle_settings_update(addon):
             if token and ids:
                 nordvpn.update(token, ids, config_dir)
         except Exception as e:
-            log_message(f"Nord update failed: {e}", 3)
+            log_message(f"Service Updater: Nord update failed: {e}", 3)

@@ -21,7 +21,7 @@ except ImportError:
 ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
 LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
 if LIB_PATH not in sys.path:
-    sys.path.insert(0, LIB_PATH)
+    sys.path.append(LIB_PATH)
 
 
 class WGManagerService(xbmc.Monitor):
@@ -34,11 +34,21 @@ class WGManagerService(xbmc.Monitor):
         self.last_bg_check_time = time.time()
 
         hardware = "Raspberry Pi 5" if PI5 else "Raspberry Pi 4"
-        log_message(f"Hardware timings loaded for {hardware}", 1)
-        log_message("Monitor Service Initialized & Ready", 1)
+        log_message(f"Service Launcher: Hardware timings loaded for {hardware}", 1)
+        log_message("Service Launcher: Monitor Service Initialized & Ready", 1)
 
     def onSettingsChanged(self):
         handle_settings_update(self._ADDON)
+
+        try:
+            from vpn_utils import encrypt_setting_to_base64
+            encrypt_setting_to_base64('pia_pass')
+        except ImportError:
+            try:
+                from wm_utils import encrypt_setting_to_base64
+                encrypt_setting_to_base64('pia_pass')
+            except Exception as e:
+                log_message(f"Service Launcher: Settings encryption helper unavailable: {e}", 2)
 
     def get_service_id_by_name(self, name):
         return resolve_service_id(self._ADDON, name)
@@ -56,27 +66,27 @@ class WGManagerService(xbmc.Monitor):
                 media_path = os.path.join(addon_path, 'resources', 'media')
                 check_for_updates(media_path)
             except Exception as e:
-                log_message(f"Background update verification failure: {e}", 3)
+                log_message(f"Service Launcher: Background update verification failure: {e}", 3)
 
 
 def start():
     addon = xbmcaddon.Addon('service.wireguard.manager')
     path = xbmcvfs.translatePath(addon.getAddonInfo('path'))
 
-    if addon.getSettingBool("first_run") is True:
+    if not addon.getSettingBool("first_run"):
         if ensure_setup(path, silent=True) is True:
-            addon.setSettingBool("first_run", False)
-            xbmc.executebuiltin('UpdateAddonByReadme()')
+            addon.setSettingBool("first_run", True)
+            xbmc.executebuiltin('Container.Refresh')
 
     try:
         monitor = WGManagerService(addon, vpn_ops)
     except Exception as e:
-        log_message(f"CRITICAL: Monitor failed to start: {e}", 3)
+        log_message(f"Service Launcher: Monitor failed to start: {e}", 3)
         return
 
     try:
         is_enabled = addon.getSetting('disconnect_on_start').lower() == 'true'
-        log_msg = f"Startup Cleaner: Verified configuration [Enabled: {is_enabled}]"
+        log_msg = f"Service Launcher: Verified configuration [Enabled: {is_enabled}]"
         log_message(log_msg, 0)
 
         if is_enabled:
@@ -87,26 +97,32 @@ def start():
                     try:
                         os.remove(f)
                     except Exception as e:
-                        log_message(f"Cleanup error removing {f}: {e}", 3)
+                        log_message(f"Service Launcher: Cleanup error removing {f}: {e}", 3)
 
             with open('/tmp/vpn_intentional_disconnect.txt', 'w') as f:
                 f.write('startup_clean')
 
             if pre_active:
-                log_msg = f"Startup Cleaner: Actively disconnecting live tunnel profile: {pre_active}"
+                log_msg = (
+                    "Service Launcher: Startup Cleaner Actively disconnecting "
+                    f"live tunnel profile: {pre_active}"
+                )
                 log_message(log_msg, 1)
+                monitor.vpn_ops.disconnect_vpn(silent=True)
             else:
-                log_message("Startup Cleaner: Disconnect instruction sent (No active tunnel connection found)", 0)
-
-            monitor.vpn_ops.disconnect_vpn(silent=True)
+                log_msg = (
+                    "Service Launcher: Startup Cleaner verified system environment is "
+                    "already clean. (No active tunnel connection found)"
+                )
+                log_message(log_msg, 0)
 
     except Exception as e:
-        log_message(f"Startup Cleaner Error: {e}", 3)
+        log_message(f"Service Launcher: Startup Cleaner Error: {e}", 3)
 
     try:
         hb = WATCHDOG_HEARTBEAT / 1000.0
     except Exception as e:
-        log_message(f"Watchdog interval calculation failure: {e}", 3)
+        log_message(f"Service Launcher: Watchdog interval calculation failure: {e}", 3)
         hb = 1.0
 
     while not monitor.abortRequested():

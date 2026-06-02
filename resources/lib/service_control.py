@@ -45,7 +45,7 @@ def control_service():
 
     try:
         if action == "restart":
-            log_message("Restarting watchdog service...", 0)
+            log_message("Service Control: Restarting watchdog service...", 0)
             subprocess.run(["systemctl", "restart", service_name], check=True)
             if KODI_MODE:
                 title = "[B][COLOR FFBF00FF]≡ [ WATCHDOG ] ≡[/COLOR][/B]"
@@ -70,7 +70,7 @@ def control_service():
                 if real_status == "activating":
                     real_status = "Initializing..."
 
-            log_message(f"Status check: {real_status}", 0)
+            log_message(f"Service Control: Watchdog service {real_status}", 0)
             if KODI_MODE:
                 icon = os.path.join(ADDON_PATH, 'resources', 'media', 'icon.png')
                 title = "[B][COLOR FFBF00FF]≡ [ WATCHDOG ] ≡[/COLOR][/B]"
@@ -81,7 +81,7 @@ def control_service():
             if KODI_MODE and not xbmcgui.Dialog().yesno("Confirm Reset", "Delete all VPN configurations?"):
                 return
 
-            log_message("Clearing configs and disconnecting VPN...", 0)
+            log_message("Service Control: Clearing configs and disconnecting VPN...", 0)
 
             p_names = "|".join([p['name'] for p in PROVIDER_MAP.values()])
 
@@ -104,7 +104,7 @@ def control_service():
                     try:
                         os.remove(f)
                     except Exception as e:
-                        log_message(f"Service control cleanup failure for {f}: {e}", 3)
+                        log_message(f"Service Control: Cleanup failure for {f}: {e}", 3)
 
             subprocess.run(["systemctl", "restart", "connman-vpn"])
 
@@ -115,7 +115,7 @@ def control_service():
                 xbmc.executebuiltin('Container.Refresh')
 
     except Exception as e:
-        log_message(f"Control Error ({action}): {e}", 3)
+        log_message(f"Service Control: ({action}): {e}", 3)
         if KODI_MODE:
             title = "[B][COLOR FFBF00FF]≡ ERROR ≡[/COLOR][/B]"
             message = f"[COLOR FFFFFF00]{action.capitalize()} failed[/COLOR]"

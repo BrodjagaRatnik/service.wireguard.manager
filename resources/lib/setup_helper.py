@@ -16,6 +16,7 @@ except ImportError:
 
 
 def _setup_paths():
+    """Injects the local library directory into the system search path."""
     try:
         addon_handle = xbmcaddon.Addon('service.wireguard.manager')
         addon_path = xbmcvfs.translatePath(addon_handle.getAddonInfo('path'))
@@ -24,12 +25,8 @@ def _setup_paths():
         if local_lib not in sys.path:
             sys.path.insert(0, local_lib)
 
-        if 'utils' in sys.modules:
-            m = sys.modules['utils']
-            if hasattr(m, '__file__') and 'service.wireguard.manager' not in m.__file__:
-                del sys.modules['utils']
     except Exception as e:
-        log_message(f"Path setup critical failure: {e}", 3)
+        sys.stderr.write(f"Setup Helper: Path setup critical failure: {e}\n")
 
 
 _setup_paths()
@@ -41,7 +38,7 @@ def perform_cleanup(silent=False):
     wg_config_path = '/storage/.config/wireguard/'
 
     try:
-        log_message("Cleanup: Starting factory reset...", 1)
+        log_message("Setup Helper: Cleanup Starting factory reset...", 1)
 
         service_file = '/storage/.config/system.d/vpn-watchdog.service'
         if os.path.exists(service_file):
@@ -54,7 +51,7 @@ def perform_cleanup(silent=False):
 
             cmd = "rm -f /storage/.config/wireguard/*_*.config"
             subprocess.run(cmd, shell=True, check=False)
-            log_message("Cleanup: WireGuard configs wiped via shell.", 1)
+            log_message("Setup Helper: Cleanup WireGuard configs wiped via shell.", 1)
 
         ADDON.setSetting('selected_countries', '')
         ADDON.setSetting('selected_countries_pia', '')
@@ -81,16 +78,16 @@ def perform_cleanup(silent=False):
                 try:
                     os.remove(tf)
                 except Exception as e:
-                    log_message(f"Reset error removing {tf}: {e}", 3)
+                    log_message(f"Setup Helper: Reset error removing {tf}: {e}", 3)
 
-        log_message("Cleanup: Reset complete.", 1)
+        log_message("Setup Helper: Cleanup Reset complete.", 1)
         if not silent:
             title = "[B]≡ [ CLEANUP COMPLETE ] ≡[/B]"
             msg = "[COLOR FFFFFF00]Cleanup successful. All files removed.[/COLOR]"
             xbmcgui.Dialog().ok(title, msg)
 
     except Exception as e:
-        log_message(f"Cleanup Error: {e}", 3)
+        log_message(f"Setup Helper: Cleanup Error: {e}", 3)
 
 
 def ensure_setup(addon_path, silent=False):
@@ -117,21 +114,21 @@ def ensure_setup(addon_path, silent=False):
         try:
             os.makedirs(os.path.dirname(keymap_dest), exist_ok=True)
             shutil.copy2(keymap_source, keymap_dest)
-            log_message("Setup: Keymap installed.", 1)
+            log_message("Setup Helper: Keymap installed.", 1)
             xbmc.executebuiltin('Action(ReloadKeymaps)')
-            log_message("Setup: Keymaps reloaded in Kodi.", 1)
+            log_message("Setup Helper: Keymaps reloaded in Kodi.", 1)
         except Exception as e:
-            log_message(f"Setup Error (Keymap): {e}", 3)
+            log_message(f"Setup Helper: Setup Error (Keymap): {e}", 3)
 
     progress.update(20, "Checking network configuration...")
     if not os.path.exists(connman_dest):
         try:
             shutil.copy2(connman_source, connman_dest)
             subprocess.run(["systemctl", "restart", "connman"], check=False)
-            log_message("Setup: Connman config installed.", 1)
+            log_message("Setup Helper: Connman config installed.", 1)
             setup_updated = True
         except Exception as e:
-            log_message(f"Setup Error (Connman): {e}", 3)
+            log_message(f"Setup Helper: Setup Error (Connman): {e}", 3)
 
     progress.update(30, "Installing VPN Watchdog...")
     if not os.path.exists(service_dest):
@@ -141,10 +138,10 @@ def ensure_setup(addon_path, silent=False):
             subprocess.run(["systemctl", "daemon-reload"], check=False)
             subprocess.run(["systemctl", "enable", "vpn-watchdog.service"], check=False)
             subprocess.run(["systemctl", "start", "vpn-watchdog.service"], check=False)
-            log_message("Setup: Watchdog service installed.", 1)
+            log_message("Setup Helper: Watchdog service installed.", 1)
             setup_updated = True
         except Exception as e:
-            log_message(f"Setup Error (Service): {e}", 3)
+            log_message(f"Setup Helper: Setup Error (Service): {e}", 3)
 
     progress.update(40, "Checking WireGuard templates...")
     if not os.path.exists(template_dest):
@@ -152,22 +149,22 @@ def ensure_setup(addon_path, silent=False):
             os.makedirs(wg_config_path, exist_ok=True)
             shutil.copy2(template_source, template_dest)
         except Exception as e:
-            log_message(f"Template deployment failure: {e}", 3)
+            log_message(f"Setup Helper: Template deployment failure: {e}", 3)
 
     progress.update(60, "Deploying provider certificates...")
     if not os.path.exists(cert_dest):
         try:
             os.makedirs(os.path.dirname(cert_dest), exist_ok=True)
             shutil.copy2(cert_source, cert_dest)
-            log_message("Setup: Secure verification certificate deployed.", 1)
+            log_message("Setup Helper: Secure verification certificate deployed.", 1)
         except Exception as e:
-            log_message(f"Setup Error (Certificate Copy): {e}", 3)
+            log_message(f"Setup Helper: Setup Error (Certificate Copy): {e}", 3)
 
     progress.update(80, "Verifying VPN credentials...")
     current_p_id = ADDON.getSettingInt("vpn_provider")
     has_creds = False
     if current_p_id == -1:
-        log_message("First-time setup: No VPN provider selected yet. Skipping credential check.", 1)
+        log_message("Setup Helper: No VPN provider selected yet. Skipping credential check.", 1)
     else:
         p_data = PROVIDER_MAP.get(current_p_id, {"name": "Unknown", "prefix": "unknown_"})
         token_setting = p_data.get("setting")
@@ -181,7 +178,7 @@ def ensure_setup(addon_path, silent=False):
 
     progress.update(100, "Setup Complete.")
     if setup_updated:
-        log_message("Setup: All system checks completed successfully.", 0)
+        log_message("Setup Helper: All system checks completed successfully.", 0)
     progress.close()
 
     wg_config_path = '/storage/.config/wireguard/'
@@ -190,7 +187,7 @@ def ensure_setup(addon_path, silent=False):
         has_configs = any(f.endswith(('.config', '.conf')) for f in os.listdir(wg_config_path))
 
     if setup_updated and has_configs:
-        log_message("Setup: Success! System services and configurations installed. WireGuard manager active.", 1)
+        log_message("Setup Helper: Success! System services and configurations installed. WireGuard manager active.", 1)
 
         addon_handle = xbmcaddon.Addon('service.wireguard.manager')
         path_fixed = xbmcvfs.translatePath(addon_handle.getAddonInfo('path'))

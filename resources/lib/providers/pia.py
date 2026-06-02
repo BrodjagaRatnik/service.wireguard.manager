@@ -3,6 +3,8 @@ https://github.com/pia-foss/manual-connections/
 GLOBAL ENDPOINT CONSTANTS
 CERT_URL = "https://raw.githubusercontent.com/pia-foss/manual-connections/master/ca.rsa.4096.crt"
 TOKEN_URL = "https://www.privateinternetaccess.com/api/client/v2/token"
+V3_URL = "https://www.privateinternetaccess.com/api/client/v3/token"
+V2_URL = "https://www.privateinternetaccess.com/api/client/v2/token"
 SERVER_LIST_URL = "https://serverlist.piaservers.net/vpninfo/servers/v6"
 """
 import json
@@ -13,6 +15,7 @@ import subprocess
 import time
 import urllib.parse
 import urllib.request
+import base64
 from logger import log_message
 
 try:
@@ -43,6 +46,8 @@ ICON_ERROR = os.path.join(ADDON_PATH, 'resources', 'media', 'error.png')
 
 CERT_URL = "https://raw.githubusercontent.com/pia-foss/manual-connections/master/ca.rsa.4096.crt"
 TOKEN_URL = "https://www.privateinternetaccess.com/api/client/v2/token"
+V3_URL = "https://www.privateinternetaccess.com/api/client/v3/token"
+V2_URL = "https://www.privateinternetaccess.com/api/client/v2/token"
 SERVER_LIST_URL = "https://serverlist.piaservers.net/vpninfo/servers/v6"
 
 LAST_HANDSHAKE_TRACKER = {}
@@ -69,9 +74,6 @@ def ensure_certificate():
 def get_cached_token(user, password):
     cache_path = '/tmp/pia_token_cache.json'
 
-    from utils import encrypt_setting_to_base64
-    password = encrypt_setting_to_base64("pia_pass")
-
     if os.path.exists(cache_path):
         try:
             with open(cache_path, 'r') as f:
@@ -82,52 +84,87 @@ def get_cached_token(user, password):
         except Exception as cache_err:
             log_message(f"PIA: Token cache unreadable: {cache_err}", 3)
 
-    try:
-        log_message("PIA: Cache expired or missing. Handshaking...", 1)
-        headers = {'User-Agent': 'PIA-VPN/3.5.0 (Linux)'}
+    log_message("PIA: Cache expired or missing. Handshaking...", 1)
 
-        import base64
+    decoded_password = str(password).strip()
+
+    headers = {'User-Agent': 'PIA-VPN/3.5.0 (Linux)'}
+    token = None
+
+    for attempt in range(2):
         try:
-            decoded_password = base64.b64decode(password, validate=True).decode('utf-8')
-        except Exception:
-            decoded_password = password
+            log_message(f"PIA: Attempting v2 authentication (Try {attempt + 1})...", 1)
+            creds = urllib.parse.urlencode({'username': user, 'password': decoded_password}).encode()
 
-        creds = urllib.parse.urlencode({'username': user, 'password': decoded_password}).encode()
+            req_v2 = urllib.request.Request(V2_URL, data=creds, headers=headers)
+            with urllib.request.urlopen(req_v2, timeout=10) as resp:
+                token = json.loads(resp.read().decode())['token']
+                log_message("PIA: Successfully authenticated via v2.", 1)
+                break
+        except urllib.error.HTTPError as http_err:
+            if http_err.code == 401 and attempt == 0:
+                log_message("PIA: Got 401 Unauthorized. Settiing background pause before retry...", 2)
+                time.sleep(1.0)
+                continue
 
-        req_token = urllib.request.Request(TOKEN_URL, data=creds, headers=headers)
-        with urllib.request.urlopen(req_token, timeout=10) as resp:
-            token = json.loads(resp.read().decode())['token']
+            log_message(f"PIA: API v2 failed ({http_err}). Trying v3 fallback...", 2)
+            break
+        except Exception as v2_err:
+            log_message(f"PIA: API v2 failed ({v2_err}). Trying v3 fallback...", 2)
+            break
 
-        with open(cache_path, 'w') as f:
-            json.dump({'token': token, 'timestamp': time.time()}, f)
+    if not token:
+        try:
+            log_message("PIA: Attempting v3 authentication fallback...", 1)
+            raw_auth_str = f"{user}:{decoded_password}"
+            encoded_auth_bytes = base64.b64encode(raw_auth_str.encode('utf-8'))
+            v3_headers = headers.copy()
+            v3_headers['Authorization'] = f"Basic {encoded_auth_bytes.decode('utf-8')}"
+
+            req_v3 = urllib.request.Request(V3_URL, data=b'', headers=v3_headers, method='POST')
+            with urllib.request.urlopen(req_v3, timeout=10) as resp:
+                token = json.loads(resp.read().decode())['token']
+                log_message("PIA: Successfully authenticated via v3 fallback.", 1)
+        except Exception as v3_err:
+            log_message(f"PIA API Critical Error: Both v2 and v3 failed. Details: {v3_err}", 3)
+            return None
+
+    if token:
+        try:
+            with open(cache_path, 'w') as f:
+                json.dump({'token': token, 'timestamp': time.time()}, f)
+        except Exception as write_err:
+            log_message(f"PIA: Could not write token to temporary cache: {write_err}", 2)
         return token
-    except Exception as token_err:
-        log_message(f"PIA API Error: {token_err}", 3)
-        return None
+
+    return None
 
 
 def get_live_config(user, password, server_ip, server_cn, region_id, region_name=None):
-
     current_time = time.time()
     last_ip_handshake = LAST_HANDSHAKE_TRACKER.get(server_ip, 0)
     time_since_last = current_time - last_ip_handshake
 
     if time_since_last < 60:
         remaining_secs = int(60 - time_since_last)
-        log_message(
+        msg_log = (
             f"PIA Throttling: Handshake blocked for target IP {server_ip} "
             f"({region_id}). {remaining_secs}s remaining until safe "
-            "retry to this specific node.", 2
+            "retry to this specific node."
         )
+        log_message(msg_log, 2)
 
         try:
             if HAS_KODI and xbmc and xbmcgui:
                 xbmc.executebuiltin("ActivateWindow(home)")
                 title = "[B][COLOR FFE6E6FA]≡ [ WG MANAGER ] ≡[/COLOR][/B]"
-                msg = f"[COLOR FFFFFF00]Node cooling down! Please wait {remaining_secs} seconds before retrying PIA.[/COLOR]"
-                xbmcgui.Dialog().notification(title, msg, ICON_INFO, 3000)
+                msg_ui = (
+                    f"[COLOR FFFFFF00]Node cooling down! Please wait "
+                    f"{remaining_secs} seconds before retrying PIA.[/COLOR]"
+                )
+                xbmcgui.Dialog().notification(title, msg_ui, ICON_INFO, 3000)
         except Exception as e:
-            log_message(f"PIA Throttling: Failed to broadcast UI toast notification: {e}", 0)
+            log_message(f"PIA Throttling: Failed to broadcast UI toast notification: {e}", 2)
         return None
 
     cert_path = ensure_certificate()
@@ -137,8 +174,8 @@ def get_live_config(user, password, server_ip, server_cn, region_id, region_name
         log_message("PIA Handshake Aborted: Missing authentic token.", 3)
         if HAS_KODI and xbmcgui:
             title = "[B][COLOR ffff0000]▀■▄ AUTHENTICATION ERROR ▄■▀[/COLOR][/B]"
-            msg = "[B][COLOR ffffff00]PIA Handshake Aborted: Missing valid token![/COLOR][/B]"
-            xbmcgui.Dialog().notification(title, msg, ICON_ERROR, 6000)
+            msg_err = "[B][COLOR ffffff00]PIA Handshake Aborted: Missing valid token![/COLOR][/B]"
+            xbmcgui.Dialog().notification(title, msg_err, ICON_ERROR, 6000)
         return None
 
     if not cert_path:
@@ -166,13 +203,9 @@ def get_live_config(user, password, server_ip, server_cn, region_id, region_name
             ctx = ssl.create_default_context(cafile=cert_path)
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_REQUIRED
-
-            try:
-                ctx.verify_flags = ssl.VERIFY_DEFAULT
-            except AttributeError:
-                pass
+            ctx.verify_flags = getattr(ssl, 'VERIFY_DEFAULT', 0)
         except Exception as ssl_init_err:
-            log_message(f"PIA Compiler: Strict SSL initialization bypassed: {ssl_init_err}", 0)
+            log_message(f"PIA Compiler: Strict SSL initialization bypassed: {ssl_init_err}", 1)
             ctx = None
 
         if ctx is None:
@@ -182,18 +215,20 @@ def get_live_config(user, password, server_ip, server_cn, region_id, region_name
 
         try:
             with urllib.request.urlopen(req_hs, timeout=10, context=ctx) as resp:
-                wg_data = json.loads(resp.read().decode())
+                wg_data = json.loads(resp.read().decode('utf-8'))
         except urllib.error.URLError as url_err:
-
             if "CERTIFICATE_VERIFY_FAILED" in str(url_err) and ctx.verify_mode != ssl.CERT_NONE:
-
                 py_ver = sys.version.split()[0]
                 ssl_ver = getattr(ssl, 'OPENSSL_VERSION', 'Unknown')
-                log_message(f"PIA Handshake Warning: Nightly SSL rules tripped. System Info: Python {py_ver} | {ssl_ver}", 1)
+                log_msg = (
+                    f"PIA Handshake Warning: Nightly SSL rules tripped. "
+                    f"System Info: Python {py_ver} | {ssl_ver}"
+                )
+                log_message(log_msg, 1)
 
                 fallback_ctx = ssl._create_unverified_context()
                 with urllib.request.urlopen(req_hs, timeout=10, context=fallback_ctx) as resp:
-                    wg_data = json.loads(resp.read().decode())
+                    wg_data = json.loads(resp.read().decode('utf-8'))
             else:
                 raise url_err
 
@@ -207,7 +242,6 @@ def get_live_config(user, password, server_ip, server_cn, region_id, region_name
             log_message(f"PIA API Error: Aggressive 429 Rate Limiting triggered on node {server_ip}.", 3)
         else:
             log_message(f"PIA API HTTP Error: {http_err.code} - {http_err.reason}", 3)
-
     except Exception as e:
         log_message(f"PIA Handshake Exception: {str(e)}", 3)
     return None
@@ -224,7 +258,7 @@ def update(user, password, country_ids, config_dir):
                     try:
                         os.remove(os.path.join(config_dir, filename))
                     except Exception as r_err:
-                        log_message(f"PIA: Server array tracking error skipped: {r_err}", 0)
+                        log_message(f"PIA: Server array tracking error skipped: {r_err}", 3)
 
     try:
         ctx = ssl._create_unverified_context()
@@ -248,34 +282,12 @@ def update(user, password, country_ids, config_dir):
                     servers_dict = r.get('servers', {})
                     if isinstance(servers_dict, dict):
                         wg_servers = servers_dict.get('wg', [])
-                        ikev2_ips = [s.get('ip') for s in servers_dict.get('ikev2', []) if isinstance(s, dict)]
-                        ovpn_ips = [
-                            s.get('ip') for s in (
-                                servers_dict.get('ovpnudp', [])
-                                + servers_dict.get('ovpntcp', [])
-                            ) if isinstance(s, dict)
-                        ]
 
                         if wg_servers and isinstance(wg_servers, list):
                             for srv in wg_servers:
                                 if isinstance(srv, dict) and srv.get('ip') and srv.get('cn'):
-                                    current_ip = srv.get('ip')
-                                    if current_ip in ikev2_ips or current_ip in ovpn_ips:
-                                        log_message(
-                                            "PIA Compiler: Filtering out "
-                                            f"shared-protocol node {current_ip} "
-                                            f"for {rid}.", 0
-                                        )
-                                        continue
-
-                                    server_ips.append(current_ip)
+                                    server_ips.append(srv.get('ip'))
                                     server_cns.append(srv.get('cn'))
-
-                        if not server_ips and len(wg_servers) > 0:
-                            first_wg = wg_servers[0]
-                            if isinstance(first_wg, dict):
-                                server_ips.append(first_wg.get('ip', ''))
-                                server_cns.append(first_wg.get('cn', ''))
 
                     region_name = r.get('name', rid)
                     break
@@ -297,7 +309,7 @@ def update(user, password, country_ids, config_dir):
                     f.write("WireGuard.MTU = 1420\n")
                     f.write("WireGuard.PublicKey = placeholder\n")
                     f.write("WireGuard.Address = 10.0.0.1/32\n")
-                log_message(f"PIA Configuration Compiled with {len(server_ips)} Clean Pool Nodes: {file_path}", 0)
+                log_message(f"PIA: Configuration Compiled with {len(server_ips)} Clean Pool Nodes: {file_path}", 1)
 
         try:
             with open('/tmp/pia_name_map.json', 'w') as mf:
@@ -308,31 +320,30 @@ def update(user, password, country_ids, config_dir):
         return True
 
     except Exception as e:
-        log_message(f"PIA Update Error: {e}", 3)
+        log_message(f"PIA: Update Error: {e}", 3)
         return False
 
 
 def build_final_config(wg_data, pk, server_ip, region_id, region_name=None):
-    dns_list = wg_data.get('dns_servers', [])
-    if dns_list:
-        dns_str = ", ".join(dns_list)
-    else:
-        dns_str = "202.21.128.85, 10.0.0.242"
+    dns_str = "10.0.0.243, 10.0.0.241"
 
     if not region_name:
         region_name = region_id
 
     safe_name = region_name.replace(' ', '_')
+    port_str = str(wg_data.get('server_port', '1337'))
 
     return (
-        "[provider_wireguard]\nType = WireGuard\n"
-        f"Name = PIA_{safe_name}\nHost = {server_ip}\n"
+        "[provider_wireguard]\n"
+        "Type = WireGuard\n"
+        f"Name = PIA_{safe_name}\n"
+        f"Host = {server_ip}\n"
         "WireGuard.MTU = 1420\n"
         f"WireGuard.Address = {wg_data['peer_ip']}/32\n"
         f"WireGuard.PrivateKey = {pk}\n"
         f"WireGuard.PublicKey = {wg_data['server_key']}\n"
         f"WireGuard.DNS = {dns_str}\n"
-        f"WireGuard.EndpointPort = {wg_data['server_port']}\n"
+        f"WireGuard.EndpointPort = {port_str}\n"
         "WireGuard.AllowedIPs = 0.0.0.0/0\n"
         "WireGuard.PersistentKeepalive = 25\n"
     )

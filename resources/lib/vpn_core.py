@@ -11,7 +11,6 @@ import subprocess
 import shutil
 import xbmcgui
 import time
-import base64
 from logger import log_message
 from vpn_config import PROVIDER_MAP
 
@@ -123,21 +122,37 @@ def check_for_updates(media_path):
                     log_message(log_msg, 0)
                     return
 
-                LAST_RUN_TIMESTAMP = current_time
+                update_successful = run_update()
 
-                title = (
-                    f"[B][COLOR FFBF00FF]╠══ [ WG Manager: "
-                    f"{provider_name} ] ══╣[/COLOR][/B]"
-                )
-                msg = (
-                    f"[B][COLOR FFFFFF00]{provider_name} server list "
-                    f"is {slider_days} Days old.[/COLOR][/B]"
-                )
-                xbmcgui.Dialog().notification(
-                    title, msg, ICON_UPDATE, 3000
-                )
+                if update_successful:
 
-                run_update()
+                    LAST_RUN_TIMESTAMP = current_time
+
+                    title = (
+                        f"[B][COLOR FFBF00FF]╠══ [ WG Manager: "
+                        f"{provider_name} ] ══╣[/COLOR][/B]"
+                    )
+                    msg = (
+                        f"[B][COLOR FFFFFF00]{provider_name} server list "
+                        f"has been successfully updated![/COLOR][/B]"
+                    )
+                    xbmcgui.Dialog().notification(
+                        title, msg, ICON_UPDATE_OK, 3000
+                    )
+
+                else:
+
+                    title = (
+                        f"[B][COLOR FFFF3333]╠══ [ WG Manager: "
+                        f"{provider_name} ] ══╣[/COLOR][/B]"
+                    )
+                    msg = (
+                        f"[B][COLOR FFFFFFFF]Update failed. Using existing "
+                        f"server list ({slider_days} Days old).[/COLOR][/B]"
+                    )
+                    xbmcgui.Dialog().notification(
+                        title, msg, ICON_UPDATE, 4500
+                    )
 
                 try:
                     new_age = current_time - int(os.path.getmtime(first_file_path))
@@ -199,8 +214,10 @@ def run_update(direct_token=None, force_provider=None):
                 xbmcgui.Dialog().ok(title, msg)
                 return False
 
-            progress.update(40, f"Fetching {provider_name} servers...")
+            progress.update(30, f"Fetching {provider_name} servers...")
             success = provider_module.update(token, countries, CONFIG_DIR)
+            if success:
+                progress.update(100, "Update complete!")
 
         elif provider_idx == 1:
             user = ""
@@ -217,31 +234,23 @@ def run_update(direct_token=None, force_provider=None):
                             raw_pw = lines[1]
                             log_message(f"Core: Direct File Import Success from {files[0]}: {user}", 0)
             except Exception as e:
-                log_message(f"Core: File Scan/Read Error: {str(e)}", 0)
+                log_message(f"Core: File Scan/Read Error: {str(e)}", 3)
 
             if not user:
                 user = _ADDON.getSetting("pia_user").strip()
+
             if not raw_pw:
-                raw_pw = _ADDON.getSetting("pia_pass").strip()
+                from wm_utils import safe_decrypt_password
+                pw = safe_decrypt_password(_ADDON.getSetting("pia_pass"))
+            else:
+                from wm_utils import safe_decrypt_password
+                pw = safe_decrypt_password(raw_pw)
 
-            target_pw = direct_token if direct_token else raw_pw
-
-            try:
-                clean_pw = str(target_pw).strip()
-                missing_padding = len(clean_pw) % 4
-                if missing_padding:
-                    clean_pw += '=' * (4 - missing_padding)
-                pw = base64.b64decode(clean_pw).decode('utf-8').strip()
-            except Exception as e:
-                log_message(f"Core: Provider authentication fallback triggered due to decode failure: {e}", 3)
-                pw = target_pw
+            if direct_token:
+                pw = str(direct_token).strip()
 
             if not user or not pw:
-                if 'progress' in locals() and progress is not None:
-                    try:
-                        progress.close()
-                    except Exception:
-                        pass
+                progress.close()
 
                 missing_items = []
                 if not user:
@@ -250,8 +259,7 @@ def run_update(direct_token=None, force_provider=None):
                     missing_items.append("PIA Password")
 
                 missing_str = " and ".join(missing_items)
-
-                log_message(f"Core: PIA Configuration Error: Cannot proceed because {missing_str} is missing or blank.", 3)
+                log_message(f"Core: PIA Configuration Error: Missing {missing_str}.", 3)
 
                 title = "[B]≡ [ CREDENTIALS MISSING ] ≡[/B]"
                 msg = (
@@ -262,10 +270,10 @@ def run_update(direct_token=None, force_provider=None):
                 xbmcgui.Dialog().ok(title, msg)
                 return False
 
-            progress.update(40, f"Registering {provider_name} keys...")
-
-            from providers import pia
+            progress.update(60, f"Registering {provider_name} keys...")
             success = pia.update(user, pw, countries, CONFIG_DIR)
+            if success:
+                progress.update(100, "Update complete!")
 
         elif provider_idx == 99:
             path = _ADDON.getSetting("custom_path")
@@ -276,8 +284,10 @@ def run_update(direct_token=None, force_provider=None):
                 xbmcgui.Dialog().ok(title, msg)
                 return False
 
-            progress.update(50, "Importing Custom Config...")
+            progress.update(90, "Importing Custom Config...")
             success = provider_module.update(path, CONFIG_DIR)
+            if success:
+                progress.update(100, "Import complete!")
 
         progress.close()
 
@@ -287,12 +297,11 @@ def run_update(direct_token=None, force_provider=None):
             return True
 
         title = "[B]≡ [ WireGuard Manager ] ≡[/B]"
-        msg = "[COLOR FFFFFF00]Error. Failed to update {provider_name}.[/COLOR]"
+        msg = f"[COLOR FFFFFF00]Error. Failed to update {provider_name}.[/COLOR]"
         xbmcgui.Dialog().ok(title, msg)
         return False
 
     except Exception as e:
         log_message(f"Core: Update exception: {e}", 3)
-        if progress:
-            progress.close()
+        progress.close()
         return False

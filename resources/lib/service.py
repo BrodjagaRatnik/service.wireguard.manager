@@ -1,9 +1,5 @@
 ''' ./resources/lib/service.py '''
 import sys
-
-if 'utils' in sys.modules and 'service.wireguard.manager' not in str(sys.modules.get('utils')):
-    del sys.modules['utils']
-
 import os
 import subprocess
 import threading
@@ -74,7 +70,7 @@ def get_active_interface():
 
         return None
     except Exception as e:
-        log_message(f"Interface lookup error: {e}", 3)
+        log_message(f"Service: Interface lookup error: {e}", 3)
         return None
 
 
@@ -85,7 +81,7 @@ def check_interface_status():
         wifi = any(line.startswith("*") and "wifi" in line for line in out.splitlines())
         return eth, wifi
     except Exception as e:
-        log_message(f"Interface status validation check failure: {e}", 3)
+        log_message(f"Service: Interface status validation check failure: {e}", 3)
         return False, False
 
 
@@ -178,7 +174,7 @@ def watchdog_logic():
             try:
                 os.remove('/tmp/vpn_blackout_active.lock')
             except Exception as e:
-                log_message(f"Error removing blackout lock file: {e}", 3)
+                log_message(f"Service: Error removing blackout lock file: {e}", 3)
 
         BLACKOUT_ALERTED = False
 
@@ -221,7 +217,7 @@ def watchdog_logic():
                 try:
                     os.remove(RETRY_FILE)
                 except Exception as e:
-                    log_message(f"Interface change cleanup error: {e}", 3)
+                    log_message(f"Service: Interface change cleanup error: {e}", 3)
             LAST_INTERFACE = current_iface
 
 

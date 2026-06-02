@@ -81,7 +81,7 @@ def run(argv):
                     try:
                         time.sleep(0.1)
                     except Exception as e:
-                        log_message(f"Token import pause failure: {e}", 3)
+                        log_message(f"Main Launcher: Token import pause failure: {e}", 3)
                     ICON_INFO = os.path.join(
                         ADDON_PATH, 'resources', 'media', 'icon.png'
                     )
@@ -126,7 +126,7 @@ def run(argv):
                             title, message, ICON_INFO, 1500
                         )
                 else:
-                    log_message("Token import cancelled by user", 0)
+                    log_message("Main Launcher: Token import cancelled by user", 0)
 
             elif "import_creds" in args_str:
                 p_user_setting = "pia_user"
@@ -193,7 +193,7 @@ def run(argv):
                         )
                         xbmcgui.Dialog().ok(title, msg)
                 else:
-                    log_message("Import cancelled by user", 0)
+                    log_message("Main Launcher: Import cancelled by user", 0)
 
             elif "import_custom_browser" in args_str:
                 source_path = xbmcgui.Dialog().browse(
@@ -231,14 +231,14 @@ def run(argv):
                         )
 
         except Exception as e:
-            log_message(f"Main Launcher Error: {str(e)}", 3)
+            log_message(f"Main Launcher: {str(e)}", 3)
         return
 
     try:
         PROVIDER = ADDON.getSettingInt("vpn_provider")
 
     except Exception as e:
-        log_message(f"Failed to read vpn_provider setting: {e}", 3)
+        log_message(f"Main Launcher: Failed to read vpn_provider setting: {e}", 3)
         PROVIDER = 0
 
     import vpn_menu

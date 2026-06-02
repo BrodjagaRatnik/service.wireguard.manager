@@ -4,8 +4,6 @@ import json
 import socket
 import ssl
 import subprocess
-import base64
-import re
 from logger import log_message
 from providers import pia
 
@@ -83,58 +81,59 @@ def fetch_vpn_metadata():
         if "ip" in data:
             return data.get("ip", "Unknown"), data.get("country", "??")
     except Exception as e:
-        log_message(f"All metadata fallbacks failed: {e}", 2)
+        log_message(f"VPN_Utils: All metadata fallbacks failed: {e}", 2)
 
     return None, None
 
 
 def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
-
     try:
-        user = addon_obj.getSetting("pia_user")
+        import re
+        from wm_utils import safe_decrypt_password
+
+        user = str(addon_obj.getSetting("pia_user")).strip().lower()
         raw_pw = addon_obj.getSetting("pia_pass")
-
-        try:
-            clean_pw = str(raw_pw).strip()
-            missing_padding = len(clean_pw) % 4
-            if missing_padding:
-                clean_pw += '=' * (4 - missing_padding)
-            pw = base64.b64decode(clean_pw).decode('utf-8')
-        except Exception as e:
-            log_message(f"Password decoding failed, using raw password: {e}", 3)
-            pw = raw_pw
-
-        target_ip = sid.replace('vpn_', '').replace('_', '.')
+        pw = safe_decrypt_password(raw_pw)
         config_path = None
         region_id = None
         conf_dir = '/storage/.config/wireguard/'
+        target_suffix = sid.replace('vpn_provider_wireguard_pia_', '').replace('vpn_pia_', '')
 
         for filename in os.listdir(conf_dir):
             if filename.startswith("pia_") and filename.endswith(".config"):
-                full_path = os.path.join(conf_dir, filename)
-                with open(full_path, 'r') as f:
-                    if target_ip in f.read():
-                        config_path = full_path
-                        region_id = filename.replace('pia_', '').replace('.config', '')
-                        break
+                file_id = filename.replace('pia_', '').replace('.config', '')
+                if file_id.lower() == target_suffix.lower():
+                    config_path = os.path.join(conf_dir, filename)
+                    region_id = file_id
+                    break
 
         if not config_path:
             return True
 
-        server_cn = ""
+        target_ip = ""
+        pool_cns = []
         original_name = None
 
         with open(config_path, 'r') as f:
             content = f.read()
+            host_match = re.search(r'^\s*Host\s*=\s*(.*)', content, re.MULTILINE)
+            if host_match:
+                target_ip = host_match.group(1).strip()
+
             name_match = re.search(r'^\s*Name\s*=\s*(.*)', content, re.MULTILINE)
             if name_match:
                 original_name = name_match.group(1).strip().replace("PIA_", "")
-            cn_match = re.search(r'#\s*CN\s*=\s*(.*)', content)
-            if cn_match:
-                server_cn = cn_match.group(1).strip()
 
-        if not server_cn:
-            log_message(f"PIA: CN missing in file, fetching from API for {region_id}", 0)
+            cn_pool_match = re.search(r'^\s*WireGuard\.CN_Pool\s*=\s*(.*)', content, re.MULTILINE)
+            if cn_pool_match:
+                pool_cns = [c.strip() for c in cn_pool_match.group(1).split(',') if c.strip()]
+
+        if not target_ip:
+            log_message("PIA VPN_Utils: Critical Error - Could not extract Host IP from file.", 3)
+            return False
+
+        if not pool_cns:
+            log_message(f"PIA VPN_Utils: CN pool missing in file, fetching from API for {region_id}", 1)
             try:
                 import urllib.request
                 url = provider_data.get('api_url')
@@ -151,35 +150,55 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
                                 wg_servers = r.get('servers', {}).get('wg', [])
                                 if wg_servers:
                                     if isinstance(wg_servers, list) and len(wg_servers) > 0:
+                                        pool_cns = []
                                         for srv in wg_servers:
                                             if isinstance(srv, dict) and srv.get('ip') == target_ip:
-                                                server_cn = srv.get('cn', '')
-                                                break
-                                        if not server_cn:
-                                            first_srv = wg_servers[0]
-                                            if isinstance(first_srv, dict):
-                                                server_cn = first_srv.get('cn', '')
+                                                if srv.get('cn'):
+                                                    pool_cns.append(srv.get('cn'))
+                                        if not pool_cns:
+                                            pool_cns = [wg_servers[0].get('cn', '')]
                                     elif isinstance(wg_servers, dict):
-                                        server_cn = wg_servers.get('cn', '')
+                                        pool_cns = [wg_servers.get('cn', '')]
                                 break
             except Exception as e:
-                log_message(f"PIA: API fetch error for region {region_id}: {e}", 3)
+                log_message(f"PIA VPN_Utils: API fetch error for region {region_id}: {e}", 3)
 
-        log_message(f"PIA: Handshake for {region_id} using CN {server_cn}", 0)
+        if not pool_cns:
+            log_message("PIA VPN_Utils: Error - No CN nodes available for handshake.", 3)
+            return False
 
-        live_cfg = pia.get_live_config(user, pw, target_ip, server_cn, region_id, region_name=original_name)
+        live_cfg = None
+
+        for current_cn in pool_cns:
+            if current_cn.lower().startswith('server-'):
+                clean_cn = current_cn.strip().replace('server-', 'Server-')
+            else:
+                clean_cn = current_cn.strip()
+
+            log_message(f"PIA VPN_Utils: Handshake attempt for {region_id} using CN {clean_cn}", 1)
+            live_cfg = pia.get_live_config(user, pw, target_ip, clean_cn, region_id, region_name=original_name)
+
+            if live_cfg and "[provider_wireguard]" in live_cfg:
+                break
+
         if live_cfg and "[provider_wireguard]" in live_cfg:
+            log_message(f"PIA VPN_Utils: Handshake for {region_id} completed using IP {target_ip}", 1)
             with open(config_path, 'w') as f:
                 f.write(live_cfg)
                 if has_kodi:
                     xbmc.sleep(1500)
             return True
         else:
+            log_message(f"PIA VPN_Utils: Handshake declined by server. Raw response: {live_cfg}", 2)
             return False
+
+    except Exception as general_err:
+        log_message(f"PIA VPN_Utils: Critical runtime error: {general_err}", 3)
+        return False
 
     except Exception as e:
         err_str = str(e)
-        log_message(f"PIA Error: {err_str}", 3)
+        log_message(f"PIA VPN_Utils: {err_str}", 3)
 
         if "429" in err_str or "Too Many Requests" in err_str:
             title = "[B]≡ [ API RATE LIMIT ] ≡[/B]"
@@ -191,9 +210,9 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
             if has_kodi:
                 xbmc.executebuiltin("ActivateWindow(home)")
                 xbmcgui.Dialog().ok(title, msg)
-                log_message("PIA API Blockade Connection Request start", 1)
+                log_message("VPN_Utils: PIA API Blockade Connection Request start", 2)
                 xbmc.Monitor().waitForAbort(15)
-                log_message("PIA API Blockade Connection Request over.", 1)
+                log_message("VPN_Utils: PIA API Blockade Connection Request over.", 2)
                 title = "[B][COLOR FFE6E6FA]≡ [ WG MANAGER ] ≡[/COLOR][/B]"
                 msg = "[COLOR FFFFFF00]PIA API Blockade over you can connect to PIA again.[/COLOR]"
                 xbmcgui.Dialog().notification(title, msg, ICON_INFO, 5000)
@@ -207,9 +226,9 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
             if has_kodi:
                 xbmc.executebuiltin("ActivateWindow(home)")
                 xbmcgui.Dialog().ok(title, msg)
-                log_message("PIA Connection Cool Down start", 1)
+                log_message("VPN_Utils: PIA Connection Cool Down start", 2)
                 xbmc.Monitor().waitForAbort(10)
-                log_message("PIA Connection Cool Down over.", 1)
+                log_message("VPN_Utils: PIA Connection Cool Down over.", 2)
                 title = "[B][COLOR FFE6E6FA]≡ [ WG MANAGER ] ≡[/COLOR][/B]"
                 msg = "[COLOR FFFFFF00]Network cool down over. Ready to retry connection.[/COLOR]"
                 xbmcgui.Dialog().notification(title, msg, ICON_INFO, 5000)

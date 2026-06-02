@@ -48,7 +48,7 @@ def get_active_vpn():
             with open(STATE_FILE, "r") as f:
                 return f.read().strip() or None
         except Exception as e:
-            log_message(f"Active VPN state read error: {e}", 3)
+            log_message(f"VPN Ops: Active VPN state read error: {e}", 3)
             return None
     return None
 
@@ -61,7 +61,7 @@ def set_active_vpn(name):
         elif os.path.exists(STATE_FILE):
             os.remove(STATE_FILE)
     except Exception as e:
-        log_message(f"Operation: State Error {e}", 3)
+        log_message(f"VPN Ops: State Error {e}", 3)
 
 
 def disconnect_vpn(silent=False):
@@ -73,12 +73,12 @@ def disconnect_vpn(silent=False):
             try:
                 os.remove(path)
             except Exception as e:
-                log_message(f"Disconnect error removing {path}: {e}", 3)
+                log_message(f"VPN Ops: Disconnect error removing {path}: {e}", 3)
 
     try:
         open(INTENTIONAL_DISCONNECT_FILE, 'w').close()
     except Exception as e:
-        log_message(f"Disconnect error creating intentional flag file: {e}", 3)
+        log_message(f"VPN Ops: Disconnect error creating intentional flag file: {e}", 3)
 
     if HAS_KODI:
         xbmcgui.Window(10000).setProperty('vpn_intentional_disconnect', 'true')
@@ -102,7 +102,7 @@ def disconnect_vpn(silent=False):
                 )
 
     except Exception as e:
-        log_message(f"Operation: Disconnect Error {e}", 3)
+        log_message(f"VPN Ops: Disconnect Error {e}", 3)
 
     enable_connman_ipv6()
     set_secure_dns(vpn_active=False)
@@ -120,7 +120,7 @@ def disconnect_vpn(silent=False):
 
     gw = get_default_gateway()
     if not gw:
-        log_message("Operation: Default route lost. Attempting restoration...", 0)
+        log_message("VPN Ops: Default route lost. Attempting restoration...", 0)
         try:
             out = subprocess.check_output(["connmanctl", "services"], text=True)
             phys_service = next(
@@ -140,7 +140,7 @@ def disconnect_vpn(silent=False):
                     time.sleep(DHCP_RECOVERY_DELAY / 1000.0)
                 gw = get_default_gateway()
         except Exception as e:
-            log_message(f"Route restoration failure: {e}", 3)
+            log_message(f"VPN Ops: Route restoration failure: {e}", 3)
 
     if gw:
         try:
@@ -150,9 +150,9 @@ def disconnect_vpn(silent=False):
             target_dev = "eth0" if "ethernet" in serv else "wlan0"
             subprocess.run(["ip", "route", "replace", "default", "via", gw, "dev", target_dev], check=False)
             if route_is_missing:
-                log_message(f"Operation: Route restored via {gw} on {target_dev}", 0)
+                log_message(f"VPN Ops: Route restored via {gw} on {target_dev}", 0)
         except Exception as e:
-            log_message(f"Operation: Route Restore Error {e}", 3)
+            log_message(f"VPN Ops: Route Restore Error {e}", 3)
 
     if HAS_KODI:
         xbmcgui.Window(10000).setProperty('vpn_intentional_disconnect', '')
@@ -161,7 +161,7 @@ def disconnect_vpn(silent=False):
         try:
             os.remove(INTENTIONAL_DISCONNECT_FILE)
         except Exception as e:
-            log_message(f"Error removing intentional disconnect file: {e}", 1)
+            log_message(f"VPN Ops: Error removing intentional disconnect file: {e}", 1)
 
 
 def connect_vpn(vpn_name, sid, silent=False):
