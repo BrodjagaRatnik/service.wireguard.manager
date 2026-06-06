@@ -54,6 +54,19 @@ body:
         - label: "My request is NOT for a new VPN provider (Skip this checklist)."
           required: false
 
+  - type: checkboxes
+    id: vpn_funding_policy
+    attributes:
+      label: 🔒 VPN Provider Integration Policy Agreement
+      description: |
+        Developing and testing integrations requires active service access. I will not self-fund subscriptions for requested providers.
+        Read the full policy here: [VPN Provider Integration Policy](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/VPN-Provider-Integration-Policy)
+      options:
+        - label: "I agree to provide a working test account OR fund at least 1 month of subscription for development."
+          required: false
+        - label: "My request is NOT for a new VPN provider (Skip this agreement)."
+          required: false
+
   - type: textarea
     id: alternatives
     attributes:
@@ -67,7 +80,7 @@ body:
     id: context
     attributes:
       label: 📌 Additional Context or Screenshots
-      description: Add any other context, mockup design layouts, or sample public API documentation links. Must provide public developer API links if requesting a new VPN provider.
+      description: Add any other context, mock-up design layouts, or sample public API documentation links. Must provide public developer API links if requesting a new VPN provider.
       placeholder: "Links to official flat JSON endpoints, public API connection documentation, or code snippets go here..."
     validations:
       required: false
