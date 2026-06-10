@@ -1,6 +1,18 @@
 CHANGELOG
 =========
 
+v1.4.8 (2026-06-10)
+- Added new WireGuard AllowedIPs Mode setting to prevent ConnMan gateway routing locks
+- Implemented dynamic 8-CIDR block matrix to bypass local network footprints on trouble regions
+- Implemented real-time Path MTU Discovery to dynamically eliminate packet fragmentation loops on restrictive networks.
+- Resolved timing lock loops on Raspberry Pi 5 by managing asynchronous ConnMan routing engine states.
+- Re-architected connection handlers to enforce secure thread isolation via dynamic file locking boundaries.
+- Optimized network recovery tracking to resolve runtime device configurations over native kernel structures.
+- Streamlined fallback lookup sequences to handle connection states over synchronized platform profiles.
+- Added safety check to prevent stripping DNS settings from users with static IP configurations.
+- Patched factory reset routines to explicitly cancel active settings windows before reloading to prevent un-saved configuration overwrites.
+- Optimized profile string matching loops to utilize a zero-overhead local JSON dictionary mapping database instead of complex string parsing.
+
 v1.4.7 (2026-06-03)
 - Fixed W504 line break after binary operator lint errors in monitoring loop
 - Standardized multi-line conditional statements to match absolute PEP 8 compliance

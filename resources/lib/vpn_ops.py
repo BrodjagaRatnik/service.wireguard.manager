@@ -12,8 +12,9 @@ from vpn_config import (
 from network_utils import (
     set_secure_dns,
     enable_connman_ipv6,
-    get_default_gateway
+    get_default_gateway,
 )
+from vpn_utils import flush_connman_dns_cache
 
 try:
     import xbmc
@@ -64,7 +65,7 @@ def set_active_vpn(name):
         log_message(f"VPN Ops: State Error {e}", 3)
 
 
-def disconnect_vpn(silent=False):
+def disconnect_vpn(silent=False, flush_dns=True):
     if not silent and HAS_KODI:
         xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
 
@@ -103,6 +104,9 @@ def disconnect_vpn(silent=False):
 
     except Exception as e:
         log_message(f"VPN Ops: Disconnect Error {e}", 3)
+
+    if flush_dns:
+        flush_connman_dns_cache()
 
     enable_connman_ipv6()
     set_secure_dns(vpn_active=False)
@@ -161,10 +165,23 @@ def disconnect_vpn(silent=False):
         try:
             os.remove(INTENTIONAL_DISCONNECT_FILE)
         except Exception as e:
-            log_message(f"VPN Ops: Error removing intentional disconnect file: {e}", 1)
+            log_message(f"VPN Ops: Error removing intentional disconnect file: {e}", 3)
 
 
 def connect_vpn(vpn_name, sid, silent=False):
+    if not HAS_KODI:
+        try:
+            log_message(f"VPN Ops: Daemon-driven shell link connect sequence initiated for {vpn_name}", 1)
+            res = subprocess.run(["connmanctl", "connect", str(sid)], check=False, capture_output=True, text=True)
+            if res.returncode == 0 or "Already connected" in res.stderr or "Already connected" in res.stdout:
+                set_active_vpn(vpn_name)
+                return True
+            log_message(f"VPN Ops: Shell connection failure stdout: {res.stdout} stderr: {res.stderr}", 3)
+            return False
+        except Exception as shell_err:
+            log_message(f"VPN Ops: Daemon fallback connector critical exception: {shell_err}", 3)
+            return False
+
     import vpn_connector
     import sys
     instance = sys.modules[__name__]

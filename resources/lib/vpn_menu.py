@@ -68,7 +68,7 @@ def show_menu(media_path, provider_index):
             action = mapping[choice]
 
             if action == "DISCONNECT":
-                vpn_ops.disconnect_vpn()
+                vpn_ops.disconnect_vpn(silent=False, flush_dns=True)
 
             elif action == "REGEN":
                 from vpn_core import run_update

@@ -1,4 +1,5 @@
-''' ./resources/lib/logger.py '''
+""" ./resources/lib/logger.py """
+
 import builtins
 import os
 import sys
@@ -11,11 +12,11 @@ try:
     ADDON_ID = _ADDON.getAddonInfo('id')
     ADDON_VER = _ADDON.getAddonInfo('version')
     HAS_KODI = True
-except Exception:
+except (Exception, RuntimeError, SystemError):
     HAS_KODI = False
-
+    _SCRIPT_PATH = os.path.dirname(__file__)
+    _addon_xml_path = os.path.normpath(os.path.join(_SCRIPT_PATH, '..', '..', 'addon.xml'))
     try:
-        _addon_xml_path = '/storage/.kodi/addons/service.wireguard.manager/addon.xml'
         _tree = ET.parse(_addon_xml_path)
         _root = _tree.getroot()
         ADDON_ID = _root.get('id')
@@ -31,13 +32,14 @@ def log_message(msg, level=1):
 
     formatted_msg = f"{ADDON_ID} v{ADDON_VER}: {msg}"
 
-    if HAS_KODI:
+    if HAS_KODI is True:
         xbmc.log(formatted_msg, level)
     else:
         _is_debug_active = False
+        _SCRIPT_PATH = os.path.dirname(__file__)
+        _gui_xml = os.path.normpath(os.path.join(_SCRIPT_PATH, '..', '..', '..', '..', 'userdata', 'guisettings.xml'))
         try:
-            _gui_xml = '/storage/.kodi/userdata/guisettings.xml'
-            if os.path.exists(_gui_xml):
+            if os.path.exists(_gui_xml) is True:
                 _tree = ET.parse(_gui_xml)
                 _setting = _tree.find(".//setting[@id='core.logging.enabledebug']")
                 if _setting is not None and _setting.text:
@@ -45,7 +47,7 @@ def log_message(msg, level=1):
         except Exception:
             pass
 
-        if level == 0 and not _is_debug_active:
+        if level == 0 and _is_debug_active is False:
             return
 
         lvl_name = {0: "Debug", 1: "Info", 2: "Warning", 3: "Error"}.get(level, "Info")
@@ -59,7 +61,7 @@ def log_message(msg, level=1):
             sys.stdout.flush()
 
 
-if HAS_KODI:
+if HAS_KODI is True:
     builtins.log_event = lambda msg, lvl=0: xbmc.log(
         f"service.wireguard.manager fallback: {msg}",
         level=xbmc.LOGERROR if lvl >= 2 else xbmc.LOGINFO
@@ -70,7 +72,7 @@ else:
         else sys.stdout.write(f"service.wireguard.manager fallback: {msg}\n")
     )
 
-if not HAS_KODI:
+if HAS_KODI is False:
     import types
 
     mock_xbmc = types.ModuleType('xbmc')

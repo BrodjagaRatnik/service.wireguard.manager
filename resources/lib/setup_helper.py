@@ -48,7 +48,6 @@ def perform_cleanup(silent=False):
             subprocess.run(["systemctl", "daemon-reload"], check=False)
 
         if os.path.exists(wg_config_path):
-
             cmd = "rm -f /storage/.config/wireguard/*_*.config"
             subprocess.run(cmd, shell=True, check=False)
             log_message("Setup Helper: Cleanup WireGuard configs wiped via shell.", 1)
@@ -63,7 +62,6 @@ def perform_cleanup(silent=False):
             ),
             '/storage/.config/connman_main.conf'
         ]:
-
             if os.path.exists(f):
                 os.remove(f)
 
@@ -73,7 +71,6 @@ def perform_cleanup(silent=False):
             "/tmp/vpn_reconnect_count.txt",
             "/tmp/vpn_intentional_disconnect.txt"
         ]:
-
             if os.path.exists(tf):
                 try:
                     os.remove(tf)
@@ -83,7 +80,13 @@ def perform_cleanup(silent=False):
         log_message("Setup Helper: Cleanup Reset complete.", 1)
         if not silent:
             title = "[B]≡ [ CLEANUP COMPLETE ] ≡[/B]"
-            msg = "[COLOR FFFFFF00]Cleanup successful. All files removed.[/COLOR]"
+            msg = (
+               "[COLOR FFFFFF00]Cleanup successful.[/COLOR]\n"
+               "All WireGuard configs, vpn-watchdog.service, ... "
+               "are removed from your device. You can now uninstall WireGuard VPN Manager."
+               )
+            xbmc.executebuiltin("Dialog.Close(all, true)")
+            xbmc.sleep(200)
             xbmcgui.Dialog().ok(title, msg)
 
     except Exception as e:

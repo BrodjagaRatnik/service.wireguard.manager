@@ -108,7 +108,7 @@ def start():
                     f"live tunnel profile: {pre_active}"
                 )
                 log_message(log_msg, 1)
-                monitor.vpn_ops.disconnect_vpn(silent=True)
+                monitor.vpn_ops.disconnect_vpn(silent=True, flush_dns=True)
             else:
                 log_msg = (
                     "Service Launcher: Startup Cleaner verified system environment is "

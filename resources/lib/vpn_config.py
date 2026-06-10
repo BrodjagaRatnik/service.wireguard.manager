@@ -6,6 +6,9 @@ from logger import log_message
 ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
 LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
 
+if ADDON_DIR not in sys.path:
+    sys.path.insert(0, ADDON_DIR)
+
 if LIB_PATH not in sys.path:
     sys.path.insert(0, LIB_PATH)
 
@@ -46,7 +49,7 @@ Pi 5 is lightning fast (20s is plenty), Pi 4 needs more time (30s safety margin)
 """ service_launcher.py & service.py """
 WATCHDOG_HEARTBEAT = 1000 if PI5 else 2500
 """ The heartbeat that checks if your internet cable is plugged in """
-WATCHDOG_SETTLE_DELAY = 11500 if PI5 else 22000
+WATCHDOG_SETTLE_DELAY = 5000 if PI5 else 10000
 """
 Stops the script from restarting the VPN too fast during a network crash.
 """
@@ -58,11 +61,6 @@ WATCHDOG_RECOVERY_DELAY = 2000 if PI5 else 2500
 """ reconnect_helper.py """
 HELPER_MAX_WAIT = 4000 if PI5 else 6000
 """ Max seconds to wait for wg0 before giving up on an attempt """
-HELPER_PIA_RECOVERY_DELAY = 2500 if PI5 else 3500
-"""
-FIX: Safety time delay (ms) applied strictly to PIA server clusters
-to let routing gateways stabilize before running handshake handshakes.
-"""
 
 """ service.py """
 SHIELD_SLEEP_DELAY = 5000 if PI5 else 5000

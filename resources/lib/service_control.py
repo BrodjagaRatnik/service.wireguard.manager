@@ -1,17 +1,14 @@
-''' ./resources/lib/service_control.py '''
+""" ./resources/lib/service_control.py """
 import os
-import sys
 import subprocess
+import sys
 from logger import log_message
-from vpn_config import (
-    PROVIDER_MAP,
-    SYSTEMD_POLL_DELAY,
-)
+from vpn_config import PROVIDER_MAP, SYSTEMD_POLL_DELAY
 
 try:
     import xbmc
-    import xbmcgui
     import xbmcaddon
+    import xbmcgui
     KODI_MODE = True
 except ImportError as e:
     KODI_MODE = False
@@ -23,6 +20,10 @@ LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
 
 if LIB_PATH not in sys.path:
     sys.path.append(LIB_PATH)
+
+ADDON_PATH = ""
+ICON_OK = ""
+ICON_ERR = ""
 
 if KODI_MODE:
     _ADDON = xbmcaddon.Addon('service.wireguard.manager')
@@ -55,8 +56,8 @@ def control_service():
         elif action == "status":
             if not os.path.exists(f'/storage/.config/system.d/{service_name}'):
                 real_status = "Not Installed"
-                icon = ICON_ERR if KODI_MODE else None
             else:
+                real_status = "unknown"
                 for i in range(1, 6):
                     result = subprocess.run(["systemctl", "is-active", service_name], capture_output=True, text=True)
                     real_status = result.stdout.strip()
@@ -65,17 +66,15 @@ def control_service():
                     if KODI_MODE:
                         xbmc.sleep(SYSTEMD_POLL_DELAY)
 
-                if KODI_MODE:
-                    icon = ICON_OK if real_status == "active" else ICON_ERR
                 if real_status == "activating":
                     real_status = "Initializing..."
 
             log_message(f"Service Control: Watchdog service {real_status}", 0)
             if KODI_MODE:
-                icon = os.path.join(ADDON_PATH, 'resources', 'media', 'icon.png')
+                icon_path = os.path.join(ADDON_PATH, 'resources', 'media', 'icon.png')
                 title = "[B][COLOR FFBF00FF]≡ [ WATCHDOG ] ≡[/COLOR][/B]"
                 msg = f"[COLOR FFFFFF00]Status: [/COLOR][COLOR FFE6E6FA]{real_status}[/COLOR]"
-                xbmcgui.Dialog().notification(title, msg, icon, 3000)
+                xbmcgui.Dialog().notification(title, msg, icon_path, 3000)
 
         elif action == "clear":
             if KODI_MODE and not xbmcgui.Dialog().yesno("Confirm Reset", "Delete all VPN configurations?"):

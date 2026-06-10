@@ -25,28 +25,28 @@ msgid "◄ VPN Service ►"
 msgstr "◄ VPN Service ►"
 
 msgctxt "#32005"
-msgid "Restart WireGuard Watchdog Service."
-msgstr "Restart WireGuard Watchdog Service."
+msgid "►Restart WireGuard Watchdog Service.◄"
+msgstr "►Restart WireGuard Watchdog Service.◄"
 
 msgctxt "#32006"
-msgid "Check Service Status."
-msgstr "Check Service Status."
+msgid "►Check Service Status.◄"
+msgstr "►Check Service Status.◄"
 
 msgctxt "#32007"
 msgid "Country IDs (comma-separated, e.g. 21,81)¦"
 msgstr "Country IDs (comma-separated, e.g. 21,81)¦"
 
 msgctxt "#32008"
-msgid "View Country Codes: Europe."
-msgstr "View Country Codes: Europe."
+msgid "►View Country Codes: Europe.◄"
+msgstr "►View Country Codes: Europe.◄"
 
 msgctxt "#32009"
-msgid "View Country Codes: Americas and Asia."
-msgstr "View Country Codes: Americas and Asia."
+msgid "►View Country Codes: Americas and Asia.◄"
+msgstr "►View Country Codes: Americas and Asia.◄"
 
 msgctxt "#32010"
-msgid "View Country Codes: Middle East and Africa."
-msgstr "View Country Codes: Middle East and Africa."
+msgid "►View Country Codes: Middle East and Africa.◄"
+msgstr "►View Country Codes: Middle East and Africa.◄"
 
 msgctxt "#32011"
 msgid "╠═ Update ═╬═ Regenerate ═╬═ VPN Configs ═╣"
@@ -61,28 +61,28 @@ msgid "VPN Management"
 msgstr "VPN Management"
 
 msgctxt "#32014"
-msgid "Force Reinstall systemd watchdog service."
-msgstr "Force Reinstall systemd watchdog service."
+msgid "►Force Reinstall systemd watchdog service.◄"
+msgstr "►Force Reinstall systemd watchdog service.◄"
 
 msgctxt "#32015"
-msgid "Factory Reset System Files!"
-msgstr "Factory Reset System Files!"
+msgid "►Factory Reset System Files◄"
+msgstr "►Factory Reset System Files◄"
 
 msgctxt "#32016"
-msgid "Import Token from File¦ Select a txt file containing your NordVPN token."
-msgstr "Import Token from File¦ Select a txt file containing your NordVPN token."
+msgid "►Import Token from File¦ Select a txt file containing your NordVPN token.◄"
+msgstr "►Import Token from File¦ Select a txt file containing your NordVPN token.◄"
 
 msgctxt "#32017"
-msgid "Clear All WireGuard VPN Configs."
-msgstr "Clear All WireGuard VPN Configs."
+msgid "►Clear All WireGuard VPN Configs.◄"
+msgstr "►Clear All WireGuard VPN Configs.◄"
 
 msgctxt "#32018"
 msgid "◄ VPN Mapping ►"
 msgstr "◄ VPN Mapping ►"
 
 msgctxt "#32019"
-msgid "Assign VPN Profiles to TV add-on."
-msgstr "Assign VPN Profiles to TV add-on."
+msgid "►Assign VPN Profiles to TV add-on.◄"
+msgstr "►Assign VPN Profiles to TV add-on.◄"
 
 msgctxt "#32020"
 msgid "Selected VPN Profile"
@@ -157,8 +157,8 @@ msgid "VPN Provider Selection"
 msgstr "VPN Provider Selection"
 
 msgctxt "#32038"
-msgid "Active Provider"
-msgstr "Active Provider"
+msgid "►Active Provider◄"
+msgstr "►Active Provider◄"
 
 msgctxt "#32039"
 msgid "NordVPN Account Credentials"
@@ -173,12 +173,12 @@ msgid "PIA Password / Token"
 msgstr "PIA Password / Token"
 
 msgctxt "#32042"
-msgid "Select .config file and Import Config"
-msgstr "Select .config file and Import Config"
+msgid "►Select .config file and Import Config◄"
+msgstr ►Select .config file and Import Config◄"
 
 msgctxt "#32043"
-msgid "Select VPN Countries / Regions"
-msgstr "Select VPN Countries / Regions"
+msgid "►Select VPN Countries / Regions◄"
+msgstr "►Select VPN Countries / Regions◄"
 
 msgctxt "#32044"
 msgid "Choice your VPN provider. Then save settings! After that you can with NordVPN import token, for other VPN providers fill in user/passwrd. Or select Custom (Import .config file)."
@@ -240,6 +240,13 @@ msgctxt "#32058"
 msgid "Set the interval for updating server data to ensure the fastest and most reliable VPN connections."
 msgstr "Set the interval for updating server data to ensure the fastest and most reliable VPN connections."
 
+msgctxt "#32059"
+msgid "►WireGuard AllowedIPs◄"
+msgstr "►WireGuard AllowedIPs◄"
+
+msgctxt "#32060"
+msgid "Toggles custom subnet routing matrices to bypass local network footprints and prevent ConnMan gateway routing locks. Fixes connection lockups and freezing issues on certain VPN server locations."
+msgstr "Toggles custom subnet routing matrices to bypass local network footprints and prevent ConnMan gateway routing locks. Fixes connection lockups and freezing issues on certain VPN server locations."
 
 
 msgctxt "#32992"
@@ -247,8 +254,8 @@ msgid "Independent project, not affiliated with NordVPN. Use at your own risk, r
 msgstr "Independent project, not affiliated with NordVPN. Use at your own risk, read Terms of Service!"
 
 msgctxt "#32993"
-msgid "Read Terms of Service!"
-msgstr "Read Terms of Service!"
+msgid "►Read Terms of Service◄"
+msgstr "►Read Terms of Service◄"
 
 msgctxt "#32994"
 msgid "◄ Maintenance ►"
@@ -271,5 +278,5 @@ msgid "◄ Legal ►"
 msgstr "◄ Legal ►"
 
 msgctxt "#32999"
-msgid "Read Full Disclaimer!"
-msgstr "Read Full Disclaimer!"
+msgid "►Read Full Disclaimer◄"
+msgstr "►Read Full Disclaimer◄"

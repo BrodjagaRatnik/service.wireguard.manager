@@ -1,6 +1,6 @@
 ''' .resources/lib/providers/nordvpn.py
 
-    user_data = fetch_url("https://api.nordvpn.com/v1/users/services/credentials", token)
+    user_data = fetch_nord_url("https://api.nordvpn.com/v1/users/services/credentials", token=token)
 
         url = (
             "https://api.nordvpn.com/v1/servers/recommendations"
@@ -13,15 +13,15 @@ import os
 import socket
 import subprocess
 import sys
+import time
 import xbmcaddon
 import xbmcvfs
 from logger import log_message
-from wm_utils import fetch_url
+from resources.lib.providers.nord_utils import fetch_nord_url
 
 _ADDON = xbmcaddon.Addon('service.wireguard.manager')
 _LIB = xbmcvfs.translatePath(os.path.join(_ADDON.getAddonInfo('path'), 'resources', 'lib'))
 
-sys.path = [p for p in sys.path if 'script.module.srgssr' not in p]
 if _LIB not in sys.path:
     sys.path.insert(0, _LIB)
 
@@ -31,10 +31,13 @@ NORD_DNS = "103.86.96.100, 103.86.99.100"
 def update(token, country_ids, config_dir):
     log_message("NordVPN: Starting update process.", 0)
 
-    user_data = fetch_url("https://api.nordvpn.com/v1/users/services/credentials", token)
+    t_start_auth = time.perf_counter()
+    user_data = fetch_nord_url("https://api.nordvpn.com/v1/users/services/credentials", token=token)
+    t_elapsed_auth = (time.perf_counter() - t_start_auth) * 1000.0
+    log_message(f"NordVPN: Credentials endpoint took {t_elapsed_auth:.2f}ms", 0)
 
     if not user_data or 'nordlynx_private_key' not in user_data:
-        log_message(f"NordVPN: Private Key fetch failed. Response: {user_data}", 3)
+        log_message(f"NordVPN: Private Key fetch failed. Response {user_data}", 3)
         return False
 
     priv_key = user_data['nordlynx_private_key']
@@ -44,14 +47,17 @@ def update(token, country_ids, config_dir):
     success_count = 0
 
     for c_id in ids:
-        log_message(f"NordVPN: Fetching recommendation for Country ID: {c_id}", 0)
+        log_message(f"NordVPN: Fetching recommendation for Country ID {c_id}", 0)
         url = (
             "https://api.nordvpn.com/v1/servers/recommendations"
             f"?filters[servers_technologies][identifier]=wireguard_udp"
             f"&filters[country_id]={c_id.strip()}&limit=1"
         )
 
-        servers = fetch_url(url)
+        t_start_srv = time.perf_counter()
+        servers = fetch_nord_url(url)
+        t_elapsed_srv = (time.perf_counter() - t_start_srv) * 1000.0
+        log_message(f"NordVPN: Recommendation query for ID {c_id} took {t_elapsed_srv:.2f}ms", 0)
 
         if not servers or not isinstance(servers, list) or len(servers) == 0:
             log_message(f"NordVPN: No servers found for Country ID {c_id}", 2)
@@ -60,13 +66,16 @@ def update(token, country_ids, config_dir):
         data = servers[0]
         try:
             hostname = data.get('hostname')
-            log_message(f"NordVPN: Processing server: {hostname}", 0)
+            log_message(f"NordVPN: Processing server {hostname}", 0)
 
             try:
                 ip = socket.gethostbyname(hostname)
-            except Exception as dns_err:
-                log_message(f"NordVPN: DNS failed for {hostname}: {dns_err}", 3)
-                continue
+            except Exception:
+                try:
+                    ip = socket.getaddrinfo(hostname, None, socket.AF_INET)[0][4][0]
+                except Exception as dns_err:
+                    log_message(f"NordVPN: DNS failed for {hostname} {dns_err}", 3)
+                    continue
 
             country_name = data['locations'][0]['country']['name'].replace(' ', '_')
 
@@ -108,11 +117,11 @@ def update(token, country_ids, config_dir):
             with open(file_path, 'w') as f:
                 f.write(config)
 
-            log_message(f"NordVPN: Successfully saved config: {file_path}", 0)
+            log_message(f"NordVPN: Successfully saved config {file_path}", 0)
             success_count += 1
 
         except Exception as e:
-            log_message(f"NordVPN: Critical error processing server ID {c_id}: {e}", 3)
+            log_message(f"NordVPN: Critical error processing server ID {c_id} {e}", 3)
             continue
 
     if success_count > 0:
@@ -120,7 +129,7 @@ def update(token, country_ids, config_dir):
         finalize_configs(config_dir)
         return True
 
-    log_message("NordVPN: Finished loop with 0 successes.", 0)
+    log_message(f"NordVPN: Update failed for IDs {country_ids}", 3)
     return False
 
 
