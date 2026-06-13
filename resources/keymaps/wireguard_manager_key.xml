@@ -1,7 +1,0 @@
-<keymap>
-  <global>
-    <keyboard>
-      <f11>RunScript(service.wireguard.manager,manual)</f11>
-    </keyboard>
-  </global>
-</keymap>
