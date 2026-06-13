@@ -1,45 +1,44 @@
-[![CodeQL Advanced](https://github.com/BrodjagaRatnik/service.wireguard.manager/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/BrodjagaRatnik/service.wireguard.manager/actions/workflows/codeql.yml)
 ![Last Commit](https://shields.io/github/last-commit/BrodjagaRatnik/service.wireguard.manager)
-![Build Status](https://github.com/BrodjagaRatnik/service.wireguard.manager/actions/workflows/test_addon.yml/badge.svg)
----
-# WireGuard VPN Manager
-![LibreELEC Version](https://img.shields.io/github/v/release/LibreELEC/LibreELEC.tv?label=LibreELEC&color=blue)
-![Release](https://img.shields.io/github/v/release/BrodjagaRatnik/service.wireguard.manager)
-![Size](https://img.shields.io/github/repo-size/BrodjagaRatnik/service.wireguard.manager)
 ![License](https://img.shields.io/github/license/BrodjagaRatnik/service.wireguard.manager)
----
-A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 Omega)**. This tool manages WireGuard connections natively via `connmanctl`, providing a faster and more stable experience than traditional OpenVPN-based addons.
-
-> [!NOTE]
-> ### 📢 Important Developer Update: LibreELEC 12 vs. LibreELEC 13 (LE13)
-> The current release of the WireGuard VPN Manager Add-on is fully optimized for **LibreELEC 12** and is working perfectly. 
-> 
-> Behind the scenes, I am already preparing the backend code for [**LibreELEC 13**...](https://github.com/BrodjagaRatnik/service.wireguard.manager/issues/1)
-
-## 📖 Quick Links
-For detailed instructions for this Add-on, please visit our **[Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki)**:
-*   **[🚀 Features](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Features)**
-*   **[🔑 How to get your NordVPN Token](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/How-to-get-your-NordVPN-Token)**
-*   **[🛠️ How‐To Importing Custom WireGuard Configurations](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/How%E2%80%90To-Importing-Custom-WireGuard-Configurations)**
-*   **[🇨🇭 Importing ProtonVPN via Custom Mode](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Importing-ProtonVPN-via-Custom-Mode)**
-*   **[🛠 Installation & Setup](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Installation-&-Setup)**
-*   **[📟 Live-Terminal-Diagnostics](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Live-Terminal-Diagnostics)**
-*   **[💻 Manual Commands, Cleanup](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Manual-Commands%2C-Cleanup)**
-*   **[📂 Project Structure](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Project-Structure)**
-*   **[⚙️ Settings-Explained](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Settings-Explained)**
-*   **[⌨️ Shortcuts & Logs](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Shortcuts-&-Logs)**
-*   **[🆘 Troubleshooting & Manual Cleanup](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Troubleshooting-&-Manual-Cleanup)**
-*   **[📘 VPN Provider Integration Policy](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/VPN-Provider-Integration-Policy)**
-*   **[🔀 WireGuard Dual Bucket Routing Optimization](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/WireGuard-Dual-Bucket-Routing-Optimization)**
-*   **[📡 WireGuard Provider Architecture & Video Mapping Constraints](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/WireGuard-Provider-Architecture-&-Constraints)**
-
-## 📥 Fast Installation (via Doemela Repo)
-If you already know what you're doing, grab the repository installer here:  
-**[📦 Download Doemela Repo ZIP](https://github.com/BrodjagaRatnik/doemela-kodi-repo/tree/main/zips/repository.doemela)**
-
-> **Tip:** Installing via the Repository is the recommended method. It ensures you receive **automatic updates** for bug fixes and new Raspberry Pi 5 performance optimizations as soon as they are released.
-
-<img src="resources/media/screenshot00002.jpg" alt="Alt text" width="800">
+# WireGuard VPN Manager [LE13-DEV]
+## ⚡ LibreELEC 13 Development Staging
+LibreELEC 13 drops the old `ConnMan` D-Bus layers and migrates the base system infrastructure over to `NetworkManager` (`nmcli`). This architecture shift directly impacts our virtual interface allocation, routing tables, and hooks. To prevent breaking functional production deployments on LE12, all development builds tracking these core system mutations are isolated here.
+```text
+📁 service.wireguard.manager (Branch: LE13)
+├── 📂 alpha/         <-- Raw system engine tracking. Highly volatile. Expect tracebacks.
+├── 📂 beta/          <-- Feature-complete binaries targeting native NetworkManager implementations.
+└── 📂 going_silver/  <-- Polished release candidates before mainline master deployment.
+```
+### 📟 Real-Time Diagnostics & Shell Verification
+If you are deploying standalone builds from this branch onto a live LE13 runtime environment, do not submit surface-level bug reports. Inspect the interface behavior via the terminal and isolate the routing faults before logging an issue:
+```bash
+# Monitor the system network engine logging live
+journalctl -u NetworkManager -f
+```
+```bash
+# Verify active topology and interface mapping
+nmcli connection show --active
+```
+```bash
+# Inspect interface state if a DHCP lease or key rotation drops the tunnel
+nmcli device status
+```
+```bash
+# Stream watchdog service mutations live from point-of-execution
+journalctl -u vpn-watchdog.service -f -n 0
+```
+```bash
+# Intercept and isolate active addon logs inside the Kodi runtime environment
+tail -f /storage/.kodi/temp/kodi.log | grep -iE "service.wireguard.manager"
+```
+### 📟 Diagnostics & Log Submission
+If you are deploying standalone builds from this branch onto a live LE13 runtime environment, do not submit surface-level bug reports. Inspect the interface behavior via the terminal and isolate the routing faults. Use these target command to trace execution or pipe output directly to the tracker:
+```bash
+# Compile system + application logs sequentially and generate a paste link
+(journalctl -u vpn-watchdog.service -n 50; journalctl -u NetworkManager -n 50; nmcli connection show --active; grep -i "service.wireguard.manager" /storage/.kodi/temp/kodi.log) | pastebinit
+```
+#### How to submit logs:
+When logging a routing collision or unhandled exception, do not paste raw terminal walls. Execute **Diagnostics & Log Submission** to dump your combined watchdog journal and Kodi runtime logs straight to `pastebinit`. Drop the resulting URL directly into the issue tracker, in private [Doemela](https://forum.libreelec.tv/core/user/33834-doemela/) or on our [forum](https://forum.libreelec.tv/thread/30422-wireguard-vpn-manager/).
 
 ---
 *Created by Doemela*
