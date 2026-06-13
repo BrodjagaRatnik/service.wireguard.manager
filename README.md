@@ -9,7 +9,7 @@ LibreELEC 13 drops the old `ConnMan` D-Bus layers and migrates the base system i
 ├── 📂 beta/          <-- Feature-complete binaries targeting native NetworkManager implementations.
 └── 📂 going_silver/  <-- Polished release candidates before mainline master deployment.
 ```
-### 📟 Real-Time Diagnostics & Shell Verification
+### 📟 Real-Time Diagnostics, Log Submission & Shell Verification
 If you are deploying standalone builds from this branch onto a live LE13 runtime environment, do not submit surface-level bug reports. Inspect the interface behavior via the terminal and isolate the routing faults before logging an issue:
 ```bash
 # Monitor the system network engine logging live
@@ -31,13 +31,11 @@ journalctl -u vpn-watchdog.service -f -n 0
 # Intercept and isolate active addon logs inside the Kodi runtime environment
 tail -f /storage/.kodi/temp/kodi.log | grep -iE "service.wireguard.manager"
 ```
-### 📟 Diagnostics & Log Submission
-If you are deploying standalone builds from this branch onto a live LE13 runtime environment, do not submit surface-level bug reports. Inspect the interface behavior via the terminal and isolate the routing faults. Use these target command to trace execution or pipe output directly to the tracker:
+#### How to submit logs:
 ```bash
 # Compile system + application logs sequentially and generate a paste link
 (journalctl -u vpn-watchdog.service -n 50; journalctl -u NetworkManager -n 50; nmcli connection show --active; grep -i "service.wireguard.manager" /storage/.kodi/temp/kodi.log) | pastebinit
 ```
-#### How to submit logs:
 When logging a routing collision or unhandled exception, do not paste raw terminal walls. Execute **Diagnostics & Log Submission** to dump your combined watchdog journal and Kodi runtime logs straight to `pastebinit`. Drop the resulting URL directly into the issue tracker, in private [Doemela](https://forum.libreelec.tv/core/user/33834-doemela/) or on our [forum](https://forum.libreelec.tv/thread/30422-wireguard-vpn-manager/).
 
 ---
