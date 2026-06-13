@@ -10,6 +10,12 @@
 ---
 A lightweight, high-performance Kodi service addon for **LibreELEC 12+ (Kodi 21 Omega)**. This tool manages WireGuard connections natively via `connmanctl`, providing a faster and more stable experience than traditional OpenVPN-based addons.
 
+> [!NOTE]
+> ### 📢 Important Developer Update: LibreELEC 12 vs. LibreELEC 13 (LE13)
+> The current release of the WireGuard VPN Manager Add-on is fully optimized for **LibreELEC 12** and is working perfectly. 
+> 
+> Behind the scenes, I am already preparing the backend code for [**LibreELEC 13**...](https://github.com/BrodjagaRatnik/service.wireguard.manager/issues/1)
+
 ## 📖 Quick Links
 For detailed instructions for this Add-on, please visit our **[Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki)**:
 *   **[🚀 Features](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Features)**
