@@ -1,28 +1,21 @@
 ![Last Commit](https://shields.io/github/last-commit/BrodjagaRatnik/service.wireguard.manager)
 ![License](https://img.shields.io/github/license/BrodjagaRatnik/service.wireguard.manager)
-# WireGuard VPN Manager [LE13-DEV]
-## ⚡ LibreELEC 13 Development Staging
-LibreELEC 13 drops the old `ConnMan` D-Bus layers and migrates the base system infrastructure over to `NetworkManager` (`nmcli`). This architecture shift directly impacts our virtual interface allocation, routing tables, and hooks. To prevent breaking functional production deployments on LE12, all development builds tracking these core system mutations are isolated here.
+## ⚡ WireGuard VPN Manager Development Testing Staging
+### 🧪 Staging Area & Test Deployments
+Welcome to the development and staging repository for the **Kodi WireGuard VPN Manager**. This staging area handles active routing optimizations, core network stability patches, and dynamic IPv6 DNS leak protections specifically tailored for LibreELEC 12/13 environments on Raspberry Pi 4 and Raspberry Pi 5 hardware.
+
+---
+### 📥 Download Testing Folders
+To test the upcoming development changes, download or sync the respective testing directory based on your current validation environment:
 ```text
-📁 service.wireguard.manager (Branch: LE13)
+📁 service.wireguard.manager
 ├── 📂 alpha/         <-- Raw system engine tracking. Highly volatile. Expect tracebacks.
 ├── 📂 beta/          <-- Feature-complete binaries targeting native NetworkManager implementations.
 └── 📂 going_silver/  <-- Polished release candidates before mainline master deployment.
 ```
+---
 ### 📟 Real-Time Diagnostics, Log Submission & Shell Verification
-If you are deploying standalone builds from this branch onto a live LE13 runtime environment, do not submit surface-level bug reports. Inspect the interface behavior via the terminal and isolate the routing faults before logging an issue:
-```bash
-# Monitor the system network engine logging live
-journalctl -u NetworkManager -f
-```
-```bash
-# Verify active topology and interface mapping
-nmcli connection show --active
-```
-```bash
-# Inspect interface state if a DHCP lease or key rotation drops the tunnel
-nmcli device status
-```
+If you are deploying standalone builds from this branch onto a live runtime environment, do not submit surface-level bug reports. Inspect the interface behavior via the terminal and isolate the routing faults before logging an issue:
 ```bash
 # Stream watchdog service mutations live from point-of-execution
 journalctl -u vpn-watchdog.service -f -n 0
