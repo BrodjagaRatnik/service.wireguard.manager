@@ -27,7 +27,7 @@ tail -f /storage/.kodi/temp/kodi.log | grep -iE "service.wireguard.manager"
 #### How to submit logs:
 ```bash
 # Compile system + application logs sequentially and generate a paste link
-(journalctl -u vpn-watchdog.service -n 50; journalctl -u NetworkManager -n 50; nmcli connection show --active; grep -i "service.wireguard.manager" /storage/.kodi/temp/kodi.log) | pastebinit
+(journalctl -u vpn-watchdog.service -n 50; grep -i "service.wireguard.manager" /storage/.kodi/temp/kodi.log) | pastebinit
 ```
 When logging a routing collision or unhandled exception, do not paste raw terminal walls. Execute **Diagnostics & Log Submission** to dump your combined watchdog journal and Kodi runtime logs straight to `pastebinit`. Drop the resulting URL directly into the issue tracker, in private [Doemela](https://forum.libreelec.tv/core/user/33834-doemela/) or on our [forum](https://forum.libreelec.tv/thread/30422-wireguard-vpn-manager/).
 
