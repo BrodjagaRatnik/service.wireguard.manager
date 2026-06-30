@@ -3,98 +3,10 @@ import os
 import sys
 import xbmc
 import xbmcgui
-import json
 from logger import log_message
-from vpn_config import WATCHDOG_HEARTBEAT
-
-
-def is_nord_match(vpn_target, active_now):
-    if vpn_target is None:
-        return False
-    if not vpn_target:
-        return False
-    if active_now is None:
-        return False
-    if not active_now:
-        return False
-
-    v_clean = str(vpn_target).strip().lower()
-    a_raw = str(active_now).strip()
-
-    parts = a_raw.split()
-    if not parts:
-        return False
-
-    service_id = parts[-1]
-    a_display = a_raw.replace(service_id, "").strip("* ARd ").strip()
-    a_clean = a_display.lower()
-
-    if v_clean == a_clean:
-        return True
-    if v_clean in a_clean:
-        return True
-    if a_clean in v_clean:
-        return True
-
-    v_strip = v_clean.replace("_", "").replace("-", "").replace(" ", "")
-    a_strip = a_clean.replace("_", "").replace("-", "").replace(" ", "")
-
-    if v_strip == a_strip:
-        return True
-    if v_strip in a_strip:
-        return True
-    if a_strip in v_strip:
-        return True
-
-    return False
-
-
-def is_pia_match(vpn_target, active_now):
-    if vpn_target is None:
-        return False
-    if not vpn_target:
-        return False
-    if active_now is None:
-        return False
-    if not active_now:
-        return False
-
-    v_clean = str(vpn_target).strip().lower()
-    a_clean = str(active_now).strip().lower()
-
-    if v_clean == a_clean:
-        return True
-    if v_clean in a_clean:
-        return True
-    if a_clean in v_clean:
-        return True
-
-    map_path = "/tmp/pia_name_map.json"
-    if os.path.exists(map_path) is True:
-        try:
-            with open(map_path, "r") as f:
-                name_map = json.load(f)
-
-            mapped_value = name_map.get(v_clean)
-            if mapped_value is not None:
-                m_clean = str(mapped_value).strip().lower()
-                if m_clean == a_clean:
-                    return True
-                if m_clean in a_clean:
-                    return True
-                if a_clean in m_clean:
-                    return True
-
-            for key, val in name_map.items():
-                k_clean = str(key).strip().lower()
-                v_clean_val = str(val).strip().lower()
-                if k_clean in v_clean or v_clean in k_clean:
-                    if v_clean_val in a_clean or a_clean in v_clean_val:
-                        return True
-        except Exception:
-            pass
-
-    return False
+from vpn_config import WATCHDOG_HEARTBEAT, PROVIDER_MAP
+from state_manager import get_file_path
+from service_matcher import is_nord_match, is_pia_match, is_custom_match
 
 
 def execute_monitor_loop(instance):
@@ -102,7 +14,8 @@ def execute_monitor_loop(instance):
         instance.cleanup_count = 0
         return
 
-    active_now = instance.vpn_ops.get_active_vpn()
+    from state_manager import get_active_vpn
+    active_now = get_active_vpn()
 
     if not active_now:
         try:
@@ -134,12 +47,13 @@ def execute_monitor_loop(instance):
                                     break
 
                         if not active_now:
-                            active_now = str(active_ifs[0])
+                            active_now = str(active_ifs)
         except Exception as e:
             log_message(f"Service Loop: Kernel interface scan failed: {e}", 1)
 
+    manual_path = get_file_path('manual')
     is_manual = (
-        os.path.exists('/tmp/vpn_manual_active.txt')
+        (manual_path is not None and os.path.exists(manual_path) is True)
         or xbmcgui.Window(10000).getProperty('vpn_manual_session').lower() == 'true'
     )
     is_home = xbmc.getCondVisibility("Window.IsActive(home) | Window.IsActive(10000)")
@@ -162,40 +76,62 @@ def execute_monitor_loop(instance):
                 if not vpn_target or not active_now:
                     is_match = False
                 else:
-                    if "pia" in str(vpn_target).lower() or "pia" in str(active_now).lower():
-                        is_match = is_pia_match(vpn_target, active_now)
-                    else:
-                        is_match = is_nord_match(vpn_target, active_now)
+                    v_low = str(vpn_target).lower()
+                    is_match = False
 
-                if is_match:
+                    try:
+                        p_id = int(instance._ADDON.getSettingInt("vpn_provider") or 0)
+                    except Exception:
+                        p_id = 0
+
+                    p_name = "Unknown"
+                    if p_id in PROVIDER_MAP:
+                        p_name = PROVIDER_MAP[p_id]["name"]
+
+                    if p_name == "NordVPN":
+                        is_match = is_nord_match(vpn_target, active_now)
+                    elif p_name == "PIA":
+                        is_match = is_pia_match(vpn_target, active_now)
+                    elif p_name == "Custom":
+                        is_match = is_custom_match(vpn_target, active_now)
+                    else:
+                        if "nord" in v_low:
+                            is_match = is_nord_match(vpn_target, active_now)
+                        elif "pia" in v_low:
+                            is_match = is_pia_match(vpn_target, active_now)
+                        else:
+                            is_match = is_custom_match(vpn_target, active_now)
+
+                if is_match is True:
+                    match_found = True
+                    break
+
+                log_message(f"Service Loop: Switching location map path to target: {vpn_target}.", 1)
+
+                xbmcgui.Window(10000).setProperty('vpn_manual_session', 'false')
+                if manual_path is not None and os.path.exists(manual_path) is True:
+                    try:
+                        os.remove(manual_path)
+                    except Exception:
+                        pass
+
+                instance.vpn_ops.disconnect_vpn(silent=True, flush_dns=False)
+
+                if "resources.lib.providers.pia_utils" in sys.modules:
+                    try:
+                        pia_mod = sys.modules["resources.lib.providers.pia_utils"]
+                        if hasattr(pia_mod, "pia_token_cache"):
+                            pia_mod.pia_token_cache = {}
+                    except Exception:
+                        pass
+
+                sid = instance.get_service_id_by_name(vpn_target)
+                if sid:
+                    instance.vpn_ops.connect_vpn(str(vpn_target), str(sid))
                     match_found = True
                 else:
-                    match_found = False
-                    log_message(f"Service Loop: Switching location map path to target: {vpn_target}.", 1)
-
-                    xbmcgui.Window(10000).setProperty('vpn_manual_session', 'false')
-                    if os.path.exists('/tmp/vpn_manual_active.txt'):
-                        try:
-                            os.remove('/tmp/vpn_manual_active.txt')
-                        except Exception:
-                            pass
-
-                    instance.vpn_ops.disconnect_vpn(silent=True, flush_dns=False)
-
-                    if "resources.lib.providers.pia_utils" in sys.modules:
-                        try:
-                            pia_mod = sys.modules["resources.lib.providers.pia_utils"]
-                            if hasattr(pia_mod, "pia_token_cache"):
-                                pia_mod.pia_token_cache = {}
-                        except Exception:
-                            pass
-
-                    sid = instance.get_service_id_by_name(vpn_target)
-                    if sid:
-                        instance.vpn_ops.connect_vpn(str(vpn_target), str(sid))
-                    else:
-                        err_msg = f"Service Loop: Target ID for profile {vpn_target} not found."
-                        log_message(err_msg, 3)
+                    err_msg = f"Service Loop: Target ID for profile {vpn_target} not found."
+                    log_message(err_msg, 3)
                 break
 
     if not match_found and active_now and not is_manual:
@@ -214,12 +150,14 @@ def execute_monitor_loop(instance):
             log_message(log_msg, 1)
 
             xbmcgui.Window(10000).setProperty('vpn_manual_session', 'false')
-            if os.path.exists('/tmp/vpn_manual_active.txt'):
+            if manual_path is not None and os.path.exists(manual_path) is True:
                 try:
-                    os.remove('/tmp/vpn_manual_active.txt')
+                    os.remove(manual_path)
                 except Exception:
                     pass
 
+            from state_manager import set_active_vpn
+            set_active_vpn(None)
             instance.vpn_ops.disconnect_vpn(silent=False, flush_dns=True)
     else:
         instance.cleanup_count = 0

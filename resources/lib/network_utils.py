@@ -1,7 +1,9 @@
 """ ./resources/lib/network_utils.py """
+
 import os
 import re
 import subprocess
+import time
 from logger import log_message
 from vpn_config import PROVIDER_MAP
 
@@ -28,27 +30,41 @@ def get_default_gateway():
     return None
 
 
+def resolve_server_ip(sid):
+    try:
+        if "vpn_" in sid:
+            parts = sid.split('_')
+            if len(parts) >= 5 and all(p.isdigit() for p in parts[1:5]):
+                return f"{parts[1]}.{parts[2]}.{parts[3]}.{parts[4]}"
+    except Exception:
+        pass
+    return None
+
+
 def get_dns_from_config(vpn_name):
     dns_list = []
     if not vpn_name:
         return dns_list
-    clean_name = vpn_name.lower().replace(' ', '_')
+    base_target = vpn_name.lower().replace(' ', '_')
     for p in PROVIDER_MAP.values():
-        prov_name = p.get('name', '').lower()
-        if prov_name in clean_name:
-            clean_name = clean_name.replace(prov_name, '')
-        prefix = p.get('prefix', '').lower()
-        if prefix in clean_name:
-            clean_name = clean_name.replace(prefix, '')
-    clean_name = clean_name.strip('_')
+        p_name = p.get('name', '').lower()
+        if p_name in base_target:
+            base_target = base_target.replace(p_name, '')
+    base_target = base_target.strip('_')
     target_path = None
-    for p in PROVIDER_MAP.values():
-        prefix = p.get('prefix', '').lower()
-        filename = f"{prefix}{clean_name}.config"
-        path = os.path.join(CONFIG_DIR, filename)
-        if os.path.exists(path):
-            target_path = path
-            break
+    if os.path.exists(CONFIG_DIR):
+        best_match_count = 0
+        search_words = [w for w in base_target.split('_') if len(w) > 1]
+        for f_name in os.listdir(CONFIG_DIR):
+            f_lower = f_name.lower()
+            if f_lower.endswith(('.config', '.conf')):
+                if base_target in f_lower:
+                    target_path = os.path.join(CONFIG_DIR, f_name)
+                    break
+                match_count = sum(1 for w in search_words if w in f_lower)
+                if match_count > best_match_count:
+                    best_match_count = match_count
+                    target_path = os.path.join(CONFIG_DIR, f_name)
     if target_path:
         try:
             with open(target_path, 'r') as f:
@@ -64,62 +80,108 @@ def get_dns_from_config(vpn_name):
 def set_secure_dns(vpn_name=None, vpn_active=True):
     dns_servers = get_dns_from_config(vpn_name) if vpn_active else []
     try:
-        ipv6_val = "1" if vpn_active else "0"
-        sysctl_cmd = ["sysctl", "-w", f"net.ipv6.conf.all.disable_ipv6={ipv6_val}"]
-        subprocess.run(
-            sysctl_cmd, check=False,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
+        if vpn_active:
+            disable_connman_ipv6()
         result = subprocess.check_output(["connmanctl", "services"], text=True)
         for line in result.splitlines():
-            if "ethernet_" in line or "wifi_" in line:
-                sid = line.strip().split()[-1]
-                if vpn_active and dns_servers:
-                    subprocess.run(["connmanctl", "config", sid, "--nameservers"] + dns_servers, check=False)
-                    subprocess.run(["connmanctl", "config", sid, "--domains", "."], check=False)
-                else:
-                    subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
-                    subprocess.run(["connmanctl", "config", sid, "--domains"], check=False)
+            if "*" in line and any(x in line for x in ("ethernet_", "wifi_", "vpn_")):
+                parts = line.strip().split()
+                if parts:
+                    sid = parts[-1]
+                    if vpn_active and dns_servers:
+                        if "vpn_" in sid:
+                            subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
+                            subprocess.run(["connmanctl", "config", sid, "--nameservers"] + dns_servers, check=False)
+                            subprocess.run(["connmanctl", "config", sid, "--domains", "."], check=False)
+                        else:
+                            subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
+                            subprocess.run(["connmanctl", "config", sid, "--domains"], check=False)
+                        time.sleep(0.05)
+                    else:
+                        subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
+                        subprocess.run(["connmanctl", "config", sid, "--domains"], check=False)
+                        time.sleep(0.05)
     except Exception as e:
-        log_message(f"Network Utils: DNS setup failed: {e}", 3)
+        log_message(f"Network Utils: DNS Secure setup failed: {e}", 3)
+
+
+def toggle_sysctl_ipv6(disable=True):
+    val_disable = "1" if disable else "0"
+    val_ra_auto = "0" if disable else "1"
+    targets = ["all", "default"]
+    proc_path = "/proc/sys/net/ipv6/conf/"
+    if os.path.exists(proc_path):
+        try:
+            active_adapters = [d for d in os.listdir(proc_path) if d not in ["lo", "wg0", "wireguard"]]
+            targets.extend(active_adapters)
+        except Exception:
+            pass
+    for interface in targets:
+        try:
+            subprocess.run(
+                ["sysctl", "-w", f"net.ipv6.conf.{interface}.disable_ipv6={val_disable}"],
+                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            subprocess.run(
+                ["sysctl", "-w", f"net.ipv6.conf.{interface}.accept_ra={val_ra_auto}"],
+                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            subprocess.run(
+                ["sysctl", "-w", f"net.ipv6.conf.{interface}.autoconf={val_ra_auto}"],
+                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+        except Exception:
+            continue
+
+
+def manage_connman_services(ipv6_mode="off"):
+    try:
+        result = subprocess.check_output(["connmanctl", "services"], text=True)
+        for line in result.splitlines():
+            if "_" in line:
+                parts = line.strip().split()
+                if parts:
+                    sid = parts[-1]
+                    subprocess.run(
+                        ["connmanctl", "config", sid, "--ipv6", ipv6_mode],
+                        check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                    )
+    except Exception:
+        pass
 
 
 def disable_connman_ipv6():
     try:
-        sysctl_cmd = ["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=1"]
-        subprocess.run(
-            sysctl_cmd, check=False,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        result = subprocess.check_output(["connmanctl", "services"], text=True)
-        for line in result.splitlines():
-            if "ethernet_" in line or "wifi_" in line:
-                sid = line.strip().split()[-1]
-                subprocess.run(
-                    ["connmanctl", "config", sid, "--ipv6", "off"],
-                    check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                )
-    except Exception as e:
-        log_message(f"Network Utils: IPv6 disabling routine failed: {e}", 3)
+        toggle_sysctl_ipv6(disable=True)
+        manage_connman_services(ipv6_mode="off")
+        gw_out = subprocess.check_output(["ip", "route", "show", "default"], text=True)
+        local_dev = None
+        for line in gw_out.splitlines():
+            if "dev" in line and "wg0" not in line:
+                tokens = line.split("dev")[-1].strip().split()
+                if tokens:
+                    local_dev = tokens[0]
+                    break
+        if local_dev:
+            subprocess.run(
+                ["sysctl", "-w", f"net.ipv6.conf.{local_dev}.disable_ipv6=1"],
+                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            subprocess.run(
+                ["sysctl", "-w", f"net.ipv6.conf.{local_dev}.accept_ra=0"],
+                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            subprocess.run(
+                ["ip", "-6", "addr", "flush", "dev", local_dev],
+                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+    except Exception:
+        pass
 
 
 def enable_connman_ipv6():
-    try:
-        sysctl_cmd = ["sysctl", "-w", "net.ipv6.conf.all.disable_ipv6=0"]
-        subprocess.run(
-            sysctl_cmd, check=False,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-        )
-        result = subprocess.check_output(["connmanctl", "services"], text=True)
-        for line in result.splitlines():
-            if "ethernet_" in line or "wifi_" in line:
-                sid = line.strip().split()[-1]
-                subprocess.run(
-                    ["connmanctl", "config", sid, "--ipv6", "auto"],
-                    check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                )
-    except Exception as e:
-        log_message(f"Network Utils: IPv6 enabling routine failed: {e}", 3)
+    toggle_sysctl_ipv6(disable=False)
+    manage_connman_services(ipv6_mode="auto")
 
 
 def is_physically_connected(interface):
@@ -144,3 +206,16 @@ def is_physically_connected(interface):
     except Exception as e:
         log_message(f"Network Utils: Carrier status check failed for {interface}: {e}", 3)
         return False
+
+
+def get_profile_allowed_ips(sid):
+    try:
+        config_path = f"/storage/.config/wireguard/{sid}.config"
+        if os.path.exists(config_path):
+            with open(config_path, "r") as f:
+                for line in f:
+                    if "allowedips" in line.lower() and "=" in line:
+                        return line.split("=")[-1].strip()
+    except Exception:
+        pass
+    return ""

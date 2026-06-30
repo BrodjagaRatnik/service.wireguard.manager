@@ -1,4 +1,5 @@
-''' ./resources/lib/vpn_ops.py '''
+""" ./resources/lib/vpn_ops.py """
+import kodi_env
 import os
 import subprocess
 import time
@@ -15,85 +16,56 @@ from network_utils import (
     get_default_gateway,
 )
 from vpn_utils import flush_connman_dns_cache
+from state_manager import get_file_path, set_active_vpn
 
 try:
     import xbmc
-    import xbmcaddon
     import xbmcgui
     HAS_KODI = True
 except ImportError:
     HAS_KODI = False
 
-ADDON_ID = 'service.wireguard.manager'
 
-if HAS_KODI:
-    _ADDON = xbmcaddon.Addon(ADDON_ID)
-    ADDON_PATH = _ADDON.getAddonInfo('path')
-else:
-    _ADDON = None
-    ADDON_PATH = '/storage/.kodi/addons/service.wireguard.manager'
-
-STATE_FILE = "/tmp/vpn_manager_active.txt"
-INTENTIONAL_DISCONNECT_FILE = "/tmp/vpn_intentional_disconnect.txt"
-ICON_CON = os.path.join(ADDON_PATH, 'resources', 'media', 'vpn_connected.png')
-ICON_DIS = os.path.join(ADDON_PATH, 'resources', 'media', 'vpn_disconnected.png')
-ICON_ERROR = os.path.join(ADDON_PATH, 'resources', 'media', 'error.png')
-ICON_ERROR_NETWORK = os.path.join(ADDON_PATH, 'resources', 'media', 'router-network-error-alert.png')
-ICON_INFO = os.path.join(ADDON_PATH, 'resources', 'media', 'icon.png')
-SOUND = os.path.join(ADDON_PATH, 'resources', 'media', 'error.wav')
-
-
-def get_active_vpn():
-    if os.path.exists(STATE_FILE):
-        try:
-            with open(STATE_FILE, "r") as f:
-                return f.read().strip() or None
-        except Exception as e:
-            log_message(f"VPN Ops: Active VPN state read error: {e}", 3)
-            return None
-    return None
-
-
-def set_active_vpn(name):
-    try:
-        if name:
-            with open(STATE_FILE, "w") as f:
-                f.write(name.strip())
-        elif os.path.exists(STATE_FILE):
-            os.remove(STATE_FILE)
-    except Exception as e:
-        log_message(f"VPN Ops: State Error {e}", 3)
+def get_addon_path():
+    return kodi_env.ADDON_DIR
 
 
 def disconnect_vpn(silent=False, flush_dns=True):
-    if not silent and HAS_KODI:
-        xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
+    if silent is False and HAS_KODI is True:
+        xbmcgui.Window(10000).setProperty("vpn_manual_session", "")
 
-    for path in ['/tmp/vpn_manual_active.txt', '/storage/.kodi/temp/vpn_manual_active.txt']:
-        if os.path.exists(path):
+    paths_to_clean = []
+    manual_path = get_file_path("manual")
+    if manual_path is not None:
+        paths_to_clean.append(manual_path)
+
+    for path in paths_to_clean:
+        if os.path.exists(path) is True:
             try:
                 os.remove(path)
             except Exception as e:
                 log_message(f"VPN Ops: Disconnect error removing {path}: {e}", 3)
 
-    try:
-        open(INTENTIONAL_DISCONNECT_FILE, 'w').close()
-    except Exception as e:
-        log_message(f"VPN Ops: Disconnect error creating intentional flag file: {e}", 3)
+    intentional_path = get_file_path("disconnect")
+    if intentional_path is not None:
+        try:
+            open(intentional_path, "w").close()
+        except Exception as e:
+            log_message(f"VPN Ops: Disconnect error creating intentional flag file: {e}", 3)
 
-    if HAS_KODI:
-        xbmcgui.Window(10000).setProperty('vpn_intentional_disconnect', 'true')
-        xbmcgui.Window(10000).setProperty('vpn_manual_session', '')
+    if HAS_KODI is True:
+        xbmcgui.Window(10000).setProperty("vpn_intentional_disconnect", "true")
+        xbmcgui.Window(10000).setProperty("vpn_manual_session", "")
         xbmc.sleep(PROP_SYNC_DELAY)
     else:
         time.sleep(PROP_SYNC_DELAY / 1000.0)
 
     try:
         out = subprocess.check_output(["connmanctl", "services"], text=True)
-        p_names = "|".join([p['name'] for p in PROVIDER_MAP.values()])
+        p_names = "|".join([p["name"] for p in PROVIDER_MAP.values()])
 
         for line in out.splitlines():
-            if (("vpn_" in line or any(p in line for p in p_names.split('|')))
+            if (("vpn_" in line or any(p in line for p in p_names.split("|")))
                     and ("* " in line or "R " in line)):
                 subprocess.run(
                     ["connmanctl", "disconnect", line.split()[-1]],
@@ -105,22 +77,51 @@ def disconnect_vpn(silent=False, flush_dns=True):
     except Exception as e:
         log_message(f"VPN Ops: Disconnect Error {e}", 3)
 
-    if flush_dns:
+    try:
+        local_gw = get_default_gateway()
+        gw_out = subprocess.check_output(["ip", "route", "show", "default"], text=True)
+        local_dev = None
+        for line in gw_out.splitlines():
+            if "dev" in line and "wg0" not in line:
+                local_dev = line.split("dev")[1].strip().split()[0]
+                break
+
+        if local_gw is not None and local_dev is not None:
+            current_routes = subprocess.check_output(["ip", "route", "show"], text=True)
+            for line in current_routes.splitlines():
+                if f"via {local_gw}" in line and f"dev {local_dev}" in line:
+                    parts = line.split()
+                    if parts and parts[0] != "default":
+                        subprocess.run(
+                            ["ip", "route", "del", parts[0], "via", local_gw, "dev", local_dev],
+                            check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                        )
+    except Exception:
+        pass
+
+    if flush_dns is True:
         flush_connman_dns_cache()
 
-    enable_connman_ipv6()
     set_secure_dns(vpn_active=False)
     set_active_vpn(None)
 
-    if not silent and HAS_KODI:
-        title = "[B][COLOR FFDF00FF]▄■ [ VPN Network ] ■▄[/COLOR][/B]"
-        msg = "[B]╠══ [COLOR FFDF00FF][ DISCONNECTED ][/COLOR] ══╣[/B]"
-        xbmcgui.Dialog().notification(title, msg, ICON_DIS, 4500)
-
-    if HAS_KODI:
+    if HAS_KODI is True:
         xbmc.sleep(OS_RELEASE_DELAY)
     else:
         time.sleep(OS_RELEASE_DELAY / 1000.0)
+
+    try:
+        enable_connman_ipv6()
+        flush_connman_dns_cache()
+    except Exception as e:
+        log_message(f"VPN Ops: Post-disconnect IPv6 restoration failed: {e}", 3)
+
+    if silent is False and HAS_KODI is True:
+        addon_path = get_addon_path()
+        icon_dis = os.path.join(addon_path, "resources", "media", "vpn_disconnected.png")
+        title = "[B][COLOR FFDF00FF]▄■ [ VPN Network ] ■▄[/COLOR][/B]"
+        msg = "[B]╠══ [COLOR FFDF00FF][ DISCONNECTED ][/COLOR] ══╣[/B]"
+        xbmcgui.Dialog().notification(title, msg, icon_dis, 4500)
 
     gw = get_default_gateway()
     if not gw:
@@ -130,7 +131,7 @@ def disconnect_vpn(silent=False, flush_dns=True):
             phys_service = next(
                 (
                     line.split()[-1] for line in out.splitlines()
-                    if line.startswith(('*', 'R')) and "vpn_" not in line
+                    if line.startswith(("*", "R")) and "vpn_" not in line
                 ),
                 None
             )
@@ -138,7 +139,7 @@ def disconnect_vpn(silent=False, flush_dns=True):
             if phys_service:
                 subprocess.run(["connmanctl", "config", phys_service, "--ipv4", "dhcp"], check=False)
                 log_message(f"Operation: DHCP Recovery ({DHCP_RECOVERY_DELAY}ms)", 0)
-                if HAS_KODI:
+                if HAS_KODI is True:
                     xbmc.sleep(DHCP_RECOVERY_DELAY)
                 else:
                     time.sleep(DHCP_RECOVERY_DELAY / 1000.0)
@@ -153,19 +154,21 @@ def disconnect_vpn(silent=False, flush_dns=True):
             serv = subprocess.check_output(["connmanctl", "services"], text=True)
             target_dev = "eth0" if "ethernet" in serv else "wlan0"
             subprocess.run(["ip", "route", "replace", "default", "via", gw, "dev", target_dev], check=False)
-            if route_is_missing:
+            if route_is_missing is True:
                 log_message(f"VPN Ops: Route restored via {gw} on {target_dev}", 0)
         except Exception as e:
             log_message(f"VPN Ops: Route Restore Error {e}", 3)
 
-    if HAS_KODI:
-        xbmcgui.Window(10000).setProperty('vpn_intentional_disconnect', '')
+    if HAS_KODI is True:
+        xbmcgui.Window(10000).setProperty("vpn_intentional_disconnect", "")
 
-    if os.path.exists(INTENTIONAL_DISCONNECT_FILE):
+    if intentional_path is not None and os.path.exists(intentional_path) is True:
         try:
-            os.remove(INTENTIONAL_DISCONNECT_FILE)
+            os.remove(intentional_path)
         except Exception as e:
             log_message(f"VPN Ops: Error removing intentional disconnect file: {e}", 3)
+
+    kodi_env.clear_script_globals()
 
 
 def connect_vpn(vpn_name, sid, silent=False):
@@ -181,8 +184,13 @@ def connect_vpn(vpn_name, sid, silent=False):
         except Exception as shell_err:
             log_message(f"VPN Ops: Daemon fallback connector critical exception: {shell_err}", 3)
             return False
+        finally:
+            kodi_env.clear_script_globals()
 
     import vpn_connector
     import sys
     instance = sys.modules[__name__]
-    return vpn_connector.connect_vpn(vpn_name, sid, instance, silent=silent)
+    try:
+        return vpn_connector.connect_vpn(vpn_name, sid, instance, silent=silent)
+    finally:
+        kodi_env.clear_script_globals()

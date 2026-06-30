@@ -1,35 +1,45 @@
 """ ./resources/lib/wm_utils.py """
+import kodi_env
 import base64
 import html
 import os
 import re
 import socket
 import subprocess
+import time
 
 try:
     import xbmc
-    import xbmcaddon
     HAS_KODI = True
 except ImportError:
     HAS_KODI = False
 
 from logger import log_message
+from state_manager import get_file_path
 
 BASE64_PREFIX = "b64:"
 B64_REGEX = re.compile(r"^b64:([A-Za-z0-9+/=]+)$")
-ADDON_DIR = "/storage/.kodi/addons/service.wireguard.manager"
+
+
+def get_addon_dir():
+    return kodi_env.ADDON_DIR
+
+
+ADDON_DIR = get_addon_dir()
 
 
 def trigger_blackout_ui():
-    if os.path.exists("/tmp/vpn_blackout_active.lock"):
+    lock_path = get_file_path("blackout")
+    if lock_path is None or (os.path.exists(lock_path) is True):
         return
     try:
-        with open("/tmp/vpn_blackout_active.lock", "w") as f:
+        with open(lock_path, "w") as f:
             f.write("active")
     except Exception:
         pass
-    icon = os.path.join(ADDON_DIR, "resources", "media", "router-network-error-alert.png")
-    sound = os.path.join(ADDON_DIR, "resources", "media", "networkerror.wav")
+    addon_dir = get_addon_dir()
+    icon = os.path.join(addon_dir, "resources", "media", "router-network-error-alert.png")
+    sound = os.path.join(addon_dir, "resources", "media", "networkerror.wav")
     title = "[B][COLOR ffff0000]▀■▄ NO NETWORK DETECTED! ▄■▀[/COLOR][/B]"
     msg = "[COLOR fffffff00]Check Wifi|Wire|Modem|Telecom provider.[/COLOR]"
     try:
@@ -37,7 +47,7 @@ def trigger_blackout_ui():
         xbmc.executebuiltin("Action(Stop)")
         xbmc.executebuiltin("Dialog.Close(all,true)")
         xbmc.executebuiltin(f'Notification("{title}", "{msg}", 14000, "{icon}")')
-        if os.path.exists(sound):
+        if os.path.exists(sound) is True:
             subprocess.run(
                 ["kodi-send", f'--action=PlayMedia("{sound}", 1)'],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -54,7 +64,7 @@ def trigger_blackout_ui():
                 ["kodi-send", f'--action=Notification("{title}", "{msg}", 14000, "{icon}")'],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
-            if os.path.exists(sound):
+            if os.path.exists(sound) is True:
                 subprocess.run(
                     ["kodi-send", f'--action=PlayMedia("{sound}", 1)'],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
@@ -82,9 +92,9 @@ def safe_encrypt_password(raw_password: str) -> str:
 
 
 def encrypt_setting_to_base64(setting_id: str) -> str:
-    if not HAS_KODI:
+    addon = kodi_env.get_addon_instance()
+    if not addon:
         return ""
-    addon = xbmcaddon.Addon('service.wireguard.manager')
     raw_value = addon.getSetting(setting_id).strip()
     if not raw_value or raw_value.startswith(BASE64_PREFIX):
         return raw_value
@@ -115,3 +125,54 @@ def safe_decrypt_password(stored_password: str) -> str:
         return html.unescape(raw_string)
     except Exception:
         return html.unescape(stored_password)
+
+
+def check_system_interval(media_path):
+    try:
+        if time.localtime().tm_year < 2026:
+            return
+
+        if HAS_KODI and xbmc.Player().isPlaying():
+            playing_file = xbmc.Player().getPlayingFile()
+            stream_protocols = ["http://", "https://", "rtmp://", "pvr://"]
+            if any(playing_file.startswith(proto) for proto in stream_protocols):
+                log_message("Wm Utils: Active stream detected. Postponing network health check.", 0)
+                return
+
+        DAEMON_LIMITS = {
+            "connman-vpnd": 512,
+            "connmand": 512
+        }
+
+        try:
+            import subprocess
+
+            for daemon, limit in DAEMON_LIMITS.items():
+                try:
+                    pid_out = subprocess.check_output(["pidof", daemon], text=True).strip()
+                    if pid_out:
+                        target_pid = pid_out.split()[0]
+
+                        fd_out = subprocess.check_output(["ls", f"/proc/{target_pid}/fd"], text=True)
+                        fd_count = len(fd_out.splitlines())
+
+                        if fd_count > limit:
+                            msg = (
+                                f"Wm Utils: Background active tunnel socket buildup "
+                                f"detected in {daemon} ({fd_count}/{limit} fds). Clearing memory."
+                            )
+                            log_message(msg, 1)
+                            service_to_restart = "connman" if daemon == "connmand" else "connman-vpn"
+                            subprocess.run(["systemctl", "restart", service_to_restart], check=False)
+                except subprocess.CalledProcessError:
+                    continue
+        except Exception:
+            pass
+
+        log_message("Wm Utils: Network health check complete.", 0)
+        return
+
+    except Exception as e:
+        log_message(f"Wm Utils: System interval monitoring tracking error: {e}", 3)
+    finally:
+        kodi_env.clear_script_globals()

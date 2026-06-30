@@ -1,25 +1,27 @@
-''' ./resources/lib/vpn_core.py '''
+""" ./resources/lib/vpn_core.py """
+import kodi_env
 import os
-import xbmcaddon
-import xbmcvfs
-import subprocess
 import shutil
-import xbmcgui
+import subprocess
 import time
 from logger import log_message
+from vpn_core_upd import run_update as execute_vpn_update
 from vpn_config import PROVIDER_MAP
-from resources.lib.vpn_core_upd import run_update as execute_vpn_update
+from vpn_utils import is_interface_active
 
-_ADDON = xbmcaddon.Addon('service.wireguard.manager')
-ADDON_PATH = xbmcvfs.translatePath(_ADDON.getAddonInfo('path'))
-LIB_PATH = os.path.join(ADDON_PATH, 'resources', 'lib')
-CONFIG_DIR = '/storage/.config/wireguard/'
-_LIB = xbmcvfs.translatePath(os.path.join(_ADDON.getAddonInfo('path'), 'resources', 'lib'))
-ICON_INFO = os.path.join(ADDON_PATH, 'resources', 'media', 'icon.png')
-ICON_UPDATE = os.path.join(ADDON_PATH, 'resources', 'media', 'update.png')
-ICON_UPDATE_OK = os.path.join(ADDON_PATH, 'resources', 'media', 'update_ok.png')
+try:
+    import xbmc
+    import xbmcgui
+    HAS_KODI = True
+except ImportError:
+    HAS_KODI = False
+
+CONFIG_DIR = "/storage/.config/wireguard/"
 LAST_RUN_TIMESTAMP = 0
-CONFIG_DIR = '/storage/.config/wireguard'
+
+
+def get_addon_path():
+    return kodi_env.ADDON_DIR
 
 
 def install_service(source, dest, name, media_path):
@@ -33,15 +35,20 @@ def install_service(source, dest, name, media_path):
         subprocess.run(["systemctl", "enable", name], check=False)
         subprocess.run(["systemctl", "restart", name], check=False)
 
-        title = "[B][COLOR FFBF00FF]╠══ [ WG Manager ] ══╣[/COLOR][/B]"
-        msg = "[B][COLOR FFFFFF00]Watchdog Installed.[/COLOR][/B]"
-        xbmcgui.Dialog().notification(title, msg, ICON_UPDATE_OK, 4000)
+        if kodi_env.HAS_KODI_IMPORTS and HAS_KODI:
+            addon_path = get_addon_path()
+            icon_update_ok = os.path.join(addon_path, "resources", "media", "update_ok.png")
+            title = "[B][COLOR FFBF00FF]╠══ [ WG Manager ] ══╣[/COLOR][/B]"
+            msg = "[B][COLOR FFFFFF00]Watchdog Installed.[/COLOR][/B]"
+            xbmcgui.Dialog().notification(title, msg, icon_update_ok, 4000)
 
         return True
 
     except Exception as e:
         log_message(f"Core: Service Installation failed: {e}", 3)
         return False
+    finally:
+        kodi_env.clear_script_globals()
 
 
 def check_for_updates(media_path):
@@ -51,40 +58,62 @@ def check_for_updates(media_path):
         if time.localtime().tm_year < 2026:
             return
 
-        provider_idx = _ADDON.getSettingInt("vpn_provider")
+        is_playing_stream = False
+        if HAS_KODI and xbmc.Player().isPlaying():
+            playing_file = xbmc.Player().getPlayingFile()
+            stream_protocols = ["http://", "https://", "rtmp://", "pvr://"]
+            is_playing_stream = any(playing_file.startswith(p) for p in stream_protocols)
+
+        if is_interface_active("wg0") or is_playing_stream:
+            reason = "WireGuard VPN active" if is_interface_active("wg0") else "Active stream detected"
+            log_message(f"Core: {reason}. Postponing configuration update.", 0)
+            return
+
+        addon_obj = kodi_env.get_addon_instance()
+        if not addon_obj:
+            kodi_env.clear_script_globals()
+            return
+
+        provider_idx = addon_obj.getSettingInt("vpn_provider")
         p_data = PROVIDER_MAP.get(provider_idx)
 
         if not p_data or not p_data.get("needs_file_check", False):
+            kodi_env.clear_script_globals()
             return
 
-        provider_name = p_data["name"]
         file_prefix = p_data["prefix"]
 
         if os.path.exists(CONFIG_DIR):
             files = [
                 f for f in os.listdir(CONFIG_DIR)
-                if f.startswith(file_prefix) and f.endswith('.config')
+                if f.startswith(file_prefix) and f.endswith(".config")
             ]
 
             if not files:
+                kodi_env.clear_script_globals()
                 return
 
             try:
-                slider_val = _ADDON.getSetting('update_interval_days')
-                slider_days = int(float(slider_val)) if slider_val else 3
-                if slider_days <= 0:
-                    slider_days = 3
+                slider_val = addon_obj.getSetting("update_interval_hours")
+                slider_hours = int(float(slider_val)) if slider_val else 24
+                if slider_hours <= 0:
+                    slider_hours = 24
             except ValueError:
-                slider_days = 3
+                slider_hours = 24
 
-            max_age_seconds = slider_days * 86400
+            max_age_seconds = slider_hours * 3600
             current_time = int(time.time())
 
             try:
-                last_update_val = _ADDON.getSetting('last_vpn_update_time')
+                last_update_val = addon_obj.getSetting("last_vpn_update_time")
                 last_update_time = int(last_update_val) if last_update_val else 0
             except ValueError:
                 last_update_time = 0
+
+            if current_time < last_update_time:
+                addon_obj.setSetting("last_vpn_update_time", str(current_time))
+                kodi_env.clear_script_globals()
+                return
 
             first_file_path = os.path.join(CONFIG_DIR, files[0])
             file_age_seconds = current_time - int(os.path.getmtime(first_file_path))
@@ -97,69 +126,32 @@ def check_for_updates(media_path):
             )
             log_message(log_msg, 0)
 
-            if LAST_RUN_TIMESTAMP != 0 and (current_time - LAST_RUN_TIMESTAMP) >= 60:
-                LAST_RUN_TIMESTAMP = 0
-
-            if LAST_RUN_TIMESTAMP != 0:
+            if file_age_seconds <= max_age_seconds:
+                log_message("Core: Update skipped. Configurations on disk are still fresh.", 0)
+                kodi_env.clear_script_globals()
                 return
 
-            if current_time < last_update_time:
-                _ADDON.setSetting('last_vpn_update_time', str(current_time))
-                return
+            update_successful = run_update(silent=True)
+            addon_obj.setSetting("last_vpn_update_time", str(current_time))
 
-            if file_age_seconds > max_age_seconds:
-                if (current_time - last_update_time) < 120:
-                    log_msg = "Core: Run skipped. Update recently attempted but files are unchanged."
-                    log_message(log_msg, 0)
-                    return
-
-                update_successful = run_update()
-
-                if update_successful:
-
-                    LAST_RUN_TIMESTAMP = current_time
-
-                    title = (
-                        f"[B][COLOR FFBF00FF]╠══ [ WG Manager: "
-                        f"{provider_name} ] ══╣[/COLOR][/B]"
-                    )
-                    msg = (
-                        f"[B][COLOR FFFFFF00]{provider_name} server list "
-                        f"has been successfully updated![/COLOR][/B]"
-                    )
-                    xbmcgui.Dialog().notification(
-                        title, msg, ICON_UPDATE_OK, 3000
-                    )
-
-                else:
-
-                    title = (
-                        f"[B][COLOR FFFF3333]╠══ [ WG Manager: "
-                        f"{provider_name} ] ══╣[/COLOR][/B]"
-                    )
-                    msg = (
-                        f"[B][COLOR FFFFFFFF]Update failed. Using existing "
-                        f"server list ({slider_days} Days old).[/COLOR][/B]"
-                    )
-                    xbmcgui.Dialog().notification(
-                        title, msg, ICON_UPDATE, 4500
-                    )
-
+            if update_successful:
+                LAST_RUN_TIMESTAMP = current_time
                 try:
                     new_age = current_time - int(os.path.getmtime(first_file_path))
                     if new_age < 30:
-                        _ADDON.setSetting('last_vpn_update_time', str(current_time))
                         log_message("Core: Update successful. File timestamps updated.", 0)
                     else:
-                        log_message("Core: Update completed but files on disk did not change.", 0)
+                        log_message("Core: Update completed. Server files identical.", 0)
                 except Exception:
                     pass
             else:
-                log_message("Core: Update skipped. Configurations are still fresh.", 0)
+                log_message("Core: Remote configuration update failed.", 2)
 
     except Exception as e:
-        log_message(f"Update VPN configurations check older than... failure: {e}", 3)
+        log_message(f"Core: Update VPN configurations check failure: {e}", 3)
+    finally:
+        kodi_env.clear_script_globals()
 
 
-def run_update(direct_token=None, force_provider=None):
-    return execute_vpn_update(direct_token=direct_token, force_provider=force_provider)
+def run_update(direct_token=None, force_provider=None, silent=False):
+    return execute_vpn_update(direct_token=direct_token, force_provider=force_provider, silent=silent)

@@ -1,27 +1,35 @@
-''' .resources/lib/service_updater.py '''
+""" ./resources/lib/service_updater.py """
+import kodi_env
 import os
 import sys
 from logger import log_message
+from state_manager import get_file_path
 
-ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
-LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
-if LIB_PATH not in sys.path:
-    sys.path.insert(0, LIB_PATH)
+
+def inject_lib_path():
+    addon_dir = kodi_env.ADDON_DIR
+    lib_path = os.path.join(addon_dir, "resources", "lib")
+    if lib_path not in sys.path:
+        sys.path.insert(0, lib_path)
 
 
 def handle_settings_update(addon):
-    if os.path.exists('/tmp/vpn_notif_sent.lock'):
+    inject_lib_path()
+    notif_lock = get_file_path("notif_lock")
+    if notif_lock is not None and os.path.exists(notif_lock) is True:
         try:
-            os.remove('/tmp/vpn_notif_sent.lock')
+            os.remove(notif_lock)
         except Exception:
             pass
 
-    if not addon.getSettingBool("first_run"):
+    if addon.getSettingBool("first_run") is False:
+        kodi_env.clear_script_globals()
         return
 
     provider_id = addon.getSettingInt("vpn_provider")
     config_dir = "/storage/.config/wireguard/"
     if provider_id < 0:
+        kodi_env.clear_script_globals()
         return
 
     if provider_id == 1:
@@ -36,10 +44,10 @@ def handle_settings_update(addon):
             if user and raw_pw and ids:
                 pw = safe_decrypt_password(raw_pw)
 
-                if not raw_pw.startswith('b64:'):
+                if not raw_pw.startswith("b64:"):
                     encoded_string = safe_encrypt_password(pw)
                     addon.setSetting("pia_pass", encoded_string)
-                    log_msg = "Service Updater: New plain text password detected. Saved cleanly to Kodi settings."
+                    log_msg = "Service Updater: Plain text password detected. Saved cleanly to Kodi settings."
                     log_message(log_msg, 1)
 
                 pia.update(user, pw, ids, config_dir)
@@ -56,3 +64,5 @@ def handle_settings_update(addon):
                 nordvpn.update(token, ids, config_dir)
         except Exception as e:
             log_message(f"Service Updater: Nord update failed: {e}", 3)
+
+    kodi_env.clear_script_globals()

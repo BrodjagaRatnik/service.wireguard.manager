@@ -1,9 +1,7 @@
-''' ./resources/lib/vpn_menu.py '''
+""" ./resources/lib/vpn_menu.py """
+import kodi_env
 import os
 import sys
-import xbmc
-import xbmcgui
-import xbmcaddon
 import subprocess
 from vpn_config import (
     PROVIDER_MAP,
@@ -11,54 +9,76 @@ from vpn_config import (
 )
 from logger import log_message
 import vpn_ops
+from state_manager import get_file_path, get_active_vpn
 
-_ADDON = xbmcaddon.Addon('service.wireguard.manager')
-ADDON_PATH = _ADDON.getAddonInfo('path')
-_LIB_PATH = os.path.join(ADDON_PATH, 'resources', 'lib')
+try:
+    import xbmc
+    import xbmcgui
+    HAS_KODI_UI = True
+except ImportError:
+    HAS_KODI_UI = False
 
-if _LIB_PATH not in sys.path:
-    sys.path.append(_LIB_PATH)
+
+def inject_lib_path():
+    addon_path = kodi_env.ADDON_DIR
+    lib_path = os.path.join(addon_path, "resources", "lib")
+    if lib_path not in sys.path:
+        sys.path.append(lib_path)
 
 
 def show_menu(media_path, provider_index):
+    inject_lib_path()
+
+    if not kodi_env.get_addon_instance() or not HAS_KODI_UI:
+        log_message("Menu Launcher: Environment missing Kodi UI abstractions. Execution stopped.", 2)
+        kodi_env.clear_script_globals()
+        return
+
     try:
-        raw_state = vpn_ops.get_active_vpn()
-        active_name = raw_state.replace('_', ' ').strip() if raw_state else None
+        raw_state = get_active_vpn()
+        active_name = raw_state.replace("_", " ").strip() if raw_state else None
         output = subprocess.check_output(["connmanctl", "services"], text=True)
         lines = output.splitlines()
         menu_items = []
         mapping = []
 
         if active_name:
-            item_reset = xbmcgui.ListItem(f"[B][COLOR white]DISCONNECT[/COLOR] [COLOR yellow]({active_name})[/COLOR][/B]")
-            item_reset.setArt({'icon': os.path.join(media_path, 'reset.png')})
+            label_dis = f"[B][COLOR white]DISCONNECT[/COLOR] [COLOR yellow]({active_name})[/COLOR][/B]"
+            item_reset = xbmcgui.ListItem(label_dis)
+            item_reset.setArt({"icon": os.path.join(media_path, "reset.png")})
             menu_items.append(item_reset)
             mapping.append("DISCONNECT")
 
-        valid_prefixes = [p['name'] for p in PROVIDER_MAP.values()] + ["Manual", "custom"]
+        valid_prefixes = [p["name"] for p in PROVIDER_MAP.values()] + ["Manual", "custom"]
 
         for s in lines:
             if any(p in s for p in valid_prefixes):
                 sid = s.split()[-1]
-                name = s.replace(sid, "").strip("* Rd").strip().replace('_', ' ')
+                name = s.replace(sid, "").strip("* Rd").strip().replace("_", " ")
                 is_active = (name == active_name)
 
-                if is_active:
-                    label = f"[B][COLOR ff00ff7f][CONNECTED][/COLOR] {name}[/B]"
-                    icon_file = 'vpn_on.png'
+                if is_active is True:
+                    if active_name:
+                        label = f"[B][COLOR ff00ff7f][CONNECTED][/COLOR] {name}[/B]"
+                        icon_file = "vpn_on.png"
+                        item = xbmcgui.ListItem(label)
+                        item.setArt({"icon": os.path.join(media_path, icon_file)})
+                        menu_items.append(item)
+                        mapping.append((name, sid))
                 else:
-                    label = f"[B][COLOR white]{name}[/COLOR][/B]"
-                    icon_file = 'vpn_off.png'
+                    if not active_name:
+                        label = f"[B][COLOR white]{name}[/COLOR][/B]"
+                        icon_file = "vpn_off.png"
+                        item = xbmcgui.ListItem(label)
+                        item.setArt({"icon": os.path.join(media_path, icon_file)})
+                        menu_items.append(item)
+                        mapping.append((name, sid))
 
-                item = xbmcgui.ListItem(label)
-                item.setArt({'icon': os.path.join(media_path, icon_file)})
-                menu_items.append(item)
-                mapping.append((name, sid))
-
-        item_update = xbmcgui.ListItem("[B]Update, Regenerate [COLOR yellow]VPN Configs[/B][/COLOR]")
-        item_update.setArt({'icon': os.path.join(media_path, 'update.png')})
-        menu_items.append(item_update)
-        mapping.append("REGEN")
+        if not active_name:
+            item_update = xbmcgui.ListItem("[B]Update, Regenerate [COLOR yellow]VPN Configs[/B][/COLOR]")
+            item_update.setArt({"icon": os.path.join(media_path, "update.png")})
+            menu_items.append(item_update)
+            mapping.append("REGEN")
 
         p_data = PROVIDER_MAP.get(int(provider_index))
         title = f"{p_data['name']} Manager" if p_data else "VPN Manager"
@@ -69,24 +89,28 @@ def show_menu(media_path, provider_index):
 
             if action == "DISCONNECT":
                 vpn_ops.disconnect_vpn(silent=False, flush_dns=True)
+                xbmc.sleep(UI_BUFFER_DELAY_MENU)
+                show_menu(media_path, provider_index)
 
             elif action == "REGEN":
                 from vpn_core import run_update
-                if run_update():
+                if run_update() is True:
                     show_menu(media_path, provider_index)
 
             else:
                 target_name, target_sid = action
-                if active_name == target_name.replace('_', ' ').strip():
+                if active_name == target_name.replace("_", " ").strip():
                     return
 
-                xbmcgui.Window(10000).setProperty('vpn_manual_session', 'true')
+                xbmcgui.Window(10000).setProperty("vpn_manual_session", "true")
 
-                try:
-                    with open('/tmp/vpn_manual_active.txt', 'w') as f:
-                        f.write(target_name)
-                except Exception as e:
-                    log_message(f"Menu: Could not write manual flag: {e}", 2)
+                manual_path = get_file_path("manual")
+                if manual_path is not None:
+                    try:
+                        with open(manual_path, "w") as f:
+                            f.write(target_name)
+                    except Exception as e:
+                        log_message(f"Menu: Could not write manual flag: {e}", 2)
 
                 xbmc.sleep(UI_BUFFER_DELAY_MENU)
 
@@ -95,3 +119,5 @@ def show_menu(media_path, provider_index):
 
     except Exception as e:
         log_message(f"Menu Error: {e}", 3)
+    finally:
+        kodi_env.clear_script_globals()

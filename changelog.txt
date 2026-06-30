@@ -1,6 +1,28 @@
 CHANGELOG
 =========
 
+v1.4.9 (2026-06-30)
+- Added automated tunnel health and routing verification checks
+- Fixed memory leaks by replacing global assignments with lazy-loaded references
+- 100% LibreELEC 13 compatible with verified cross-platform support for x86 systems
+- Added network diagnostic test to verify tunnel encryption and stop IPv6 leaks
+- Converted dynamic config checks from daily intervals to precision hourly parameters
+- Hardened ConnMan loop engine to isolate custom nameservers onto active interfaces
+- Fixed cold boot and restart detection inside Service Launcher
+- Relocated state variables from /tmp/ storage to profile paths
+- Fixed dual-default gateway collision using dual-bucket /1 split routing for PIA
+- Added ProtonVPN via Custom Mode support
+- Initial preparation for Mullvad VPN support (in development)
+- Fixed 55-minute handshake cache lockout bug for instant connection retries
+- Added dynamic multi-tiered latency fallback engine for robust region updates
+- Implemented persistent 10-min anti-abuse tracking with 15-min cooldown locks
+- Added forced virtual interface data-ping to block ghost handshakes of PIA
+- Added split-title error handling to display clear server and credential alerts
+- Hardened connection teardown with route cache flushing and daemon restarts
+- Optimized hardware timing for Raspberry Pi 4, Pi 5 and Generic Device
+- Added manual trigger compatibility directly via HDMI-CEC keymaps
+- Dynamic MTU scaling maximizes packet throughput over standard links
+
 v1.4.8 (2026-06-10)
 - Added new WireGuard AllowedIPs Mode setting to prevent ConnMan gateway routing locks
 - Implemented dynamic 8-CIDR block matrix to bypass local network footprints on trouble regions

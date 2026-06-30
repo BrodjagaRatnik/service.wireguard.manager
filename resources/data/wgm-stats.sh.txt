@@ -1,9 +1,9 @@
 #!/bin/bash
 <<'COMMENT'
 
- mkdir /storage/.config/scripts
- cp /storage/.kodi/addons/service.wireguard.manager/resources/data/wgm-stats.sh.txt /storage/.config/scripts/wgm-stats.sh
- chmod +x /storage/.config/scripts/wgm-stats.sh
+mkdir /storage/.config/scripts
+cp /storage/.kodi/addons/service.wireguard.manager/resources/data/wgm-stats.sh.txt /storage/.config/scripts/wgm-stats.sh
+chmod +x /storage/.config/scripts/wgm-stats.sh
 
  Start it with:
  bash /storage/.config/scripts/wgm-stats.sh
@@ -29,15 +29,27 @@ is_recent() {
 }
 
 get_vpn_geo() {
-    local info=$(curl -s --connect-timeout 2 http://ip-api.com)
-    local cn=$(echo "$info" | sed -n 's/.*"country":"\([^"]*\)".*/\1/p')
-    local isp=$(echo "$info" | sed -n 's/.*"isp":"\([^"]*\)".*/\1/p')
-    local srv=$(wg show all endpoints 2>/dev/null | awk '{print $3}' | cut -d: -f1 | head -n1)
-    VPN_GEO_STR="VPN Geo:        ${B_CYAN}${cn:-Unknown}${NC} ${B_WHITE}→${NC} ${B_YELLOW}${isp:-N/A}${NC} ${B_WHITE}→${NC} ${B_PURPLE}${srv:-Searching...}${NC}"
+    local trace_data
+    trace_data=$(curl -s --connect-timeout 2 https://1.1.1.1/cdn-cgi/trace)
+
+    local cn
+    cn=$(echo "$trace_data" | awk -F= '$1=="loc"{print $2}' | tr -d '\n\r ')
+    
+    local colo
+    colo=$(echo "$trace_data" | awk -F= '$1=="colo"{print $2}' | tr -d '\n\r ')
+
+    [[ ! "$cn" =~ ^[A-Z]{2}$ ]] && cn="unknown"
+    [[ ! "$colo" =~ ^[A-Z]{3}$ ]] && colo="n/a"
+
+    local srv
+    srv=$(wg show all endpoints 2>/dev/null | awk '{print $3}' | cut -d: -f1 | head -n1)
+    VPN_GEO_STR="VPN Geo:        ${B_CYAN}${cn}${NC} ${B_WHITE}→${NC} ${B_YELLOW}${colo}${NC} ${B_WHITE}→${NC} ${B_PURPLE}${srv:-searching...}${NC}"
 }
 
-RT1=$(awk '/tun0:/ {print $2}' /proc/net/dev); RT1=${RT1:-0}
-TT1=$(awk '/tun0:/ {print $10}' /proc/net/dev); TT1=${TT1:-0}
+WG_IFACE=$(ls /sys/class/net | grep -vE 'lo|eth|wlan|veth|docker' | head -n1)
+WG_IFACE=${WG_IFACE:-wg0}
+RT1=$(awk "/$WG_IFACE:/ {print \$2}" /proc/net/dev); RT1=${RT1:-0}
+TT1=$(awk "/$WG_IFACE:/ {print \$10}" /proc/net/dev); TT1=${TT1:-0}
 START_BYTES_TUN=$RT1
 
 while true; do
@@ -48,22 +60,27 @@ while true; do
     if [ -n "$VPN_IFACE" ]; then
         [ "$GEO_COUNTER" -le 0 ] && { get_vpn_geo; GEO_COUNTER=30; }
         GEO_COUNTER=$((GEO_COUNTER - 1))
+        
         RT2=$(awk "/$VPN_IFACE:/ {print \$2}" /proc/net/dev); RT2=${RT2:-0}
         TT2=$(awk "/$VPN_IFACE:/ {print \$10}" /proc/net/dev); TT2=${TT2:-0}
         
-        if [ "$FIRST_RUN" -eq 1 ]; then R_MBPS="0.00"; T_MBPS="0.00"; FIRST_RUN=0
+        if [ "$FIRST_RUN" -eq 1 ]; then 
+            R_MBPS="0.00"; T_MBPS="0.00"; FIRST_RUN=0
+            START_BYTES_TUN=$RT2 
         else
-            R_MBPS=$(awk -v r2="$RT2" -v r1="$RT1" 'BEGIN { s=((r2-r1)*4)/1000000; printf "%.2f", (s>2000?0:s) }')
-            T_MBPS=$(awk -v t2="$TT2" -v t1="$TT1" 'BEGIN { s=((t2-t1)*4)/1000000; printf "%.2f", (s>2000?0:s) }')
+            R_MBPS=$(awk -v r2="$RT2" -v r1="$RT1" 'BEGIN { s=((r2-r1)*8)/2000000; printf "%.2f", (s>2000?0:s) }')
+            T_MBPS=$(awk -v t2="$TT2" -v t1="$TT1" 'BEGIN { s=((t2-t1)*8)/2000000; printf "%.2f", (s>2000?0:s) }')
         fi
+        SESSION_BYTES=$((RT2 - START_BYTES_TUN))
+        [ $SESSION_BYTES -lt 0 ] && { START_BYTES_TUN=$RT2; SESSION_BYTES=0; }
+
         echo -e "\nVPN Status:     ${B_GREEN}CONNECTED ($VPN_IFACE)${NC}"
         echo -e "Current Speed:  ${B_GREEN}↓ ${R_MBPS} Mbps${NC}  ${B_YELLOW}↑ ${T_MBPS} Mbps${NC}"
-        echo -e "Total Session:  ↓ $(awk "BEGIN {printf \"%.2f\", ($RT2-$START_BYTES_TUN)/1073741824}") GiB"
-        echo -e "$VPN_GEO_STR ${NC}\n"
+        echo -e "Total Session:  ↓ $(awk -v sb="$SESSION_BYTES" 'BEGIN {printf "%.2f", sb/1073741824}') GiB"
+        echo -e "$VPN_GEO_STR\n"
     else
         echo -e "\nVPN Status:     ${B_RED}DISCONNECTED${NC}"; GEO_COUNTER=0; FIRST_RUN=1
     fi
-
 
     IGNORE_SYS="addhereyourignores"
     LAST_SYS_ERR=$(journalctl -n 20 --no-pager -p 0..3 --format=short-iso 2>/dev/null | grep -Ev "$IGNORE_SYS" | tail -n 1)
@@ -74,12 +91,12 @@ while true; do
         journalctl -u vpn-watchdog.service --no-pager -n 8 | cut -c1-145
     elif [ -n "$LAST_SYS_ERR" ] && is_recent "$SYS_TS"; then
         echo -e "${B_CYAN}--- SYSTEM JOURNAL ---${NC} ${B_RED}!! ERRORS DETECTED !!${NC}"
-        journalctl -n 20 --no-pager -p 0..3 2>/dev/null | grep -Ev "$IGNORE_SYS" | tail -n 8 | cut -c1-145
+        journalctl -n 20 --no-pager -p 0..3 2>/dev/null | grep -Ev "$IGNORE_SYS" | tail -n 10 | cut -c1-145
     else
         echo -e "${B_CYAN}--- SYSTEM JOURNAL ---${NC} ${B_YELLOW}(No recent system errors)${NC}"
-        journalctl -n 10 --no-pager | grep -Ev "$IGNORE_SYS" | tail -n 8 | cut -c1-145
+        journalctl -n 10 --no-pager | grep -Ev "$IGNORE_SYS" | tail -n 10 | cut -c1-145
     fi
-    echo -e "${NC}\n"
+    echo -e "${NC}"
     KODI_LOG="/storage/.kodi/temp/kodi.log"
     WG_LOG_CONTENT=$(grep -i "service.wireguard.manager.*:" "$KODI_LOG" | tail -n 500)
     IGNORE_WG="addhereyourignores"
@@ -88,12 +105,11 @@ while true; do
 
     if [ -n "$LAST_WG_ERR" ] && is_recent "$WG_TS"; then
         echo -e "${B_CYAN}--- WG MANAGER ALERTS ---${NC} ${B_RED}!! ERRORS DETECTED !!${NC}"
-        echo "$WG_LOG_CONTENT" | grep -Ei "error|warning" | grep -Eiv "$IGNORE_WG" | tail -n 8 | cut -c1-145
+        echo "$WG_LOG_CONTENT" | grep -Ei "error|warning" | grep -Eiv "$IGNORE_WG" | tail -n 10 | cut -c1-145
     else
         echo -e "${B_CYAN}--- WIREGUARD MANAGER ---${NC} ${B_YELLOW}(Recent Activity)${NC}"
-        echo "$WG_LOG_CONTENT" | tail -n 8 | cut -c 1-150
+        echo "$WG_LOG_CONTENT" | tail -n 10 | cut -c 1-150
     fi
-
     echo -e "${NC}\n${B_YELLOW}[Ctrl+C] to Exit${NC}"
     RT1=$RT2; TT1=$TT2
     read -t 2 -n 1 -s && break

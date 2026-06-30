@@ -1,4 +1,5 @@
-''' ./resources/lib/providers/nord_utils.py '''
+""" ./resources/lib/providers/nord_utils.py """
+import kodi_env
 import base64
 import json
 import os
@@ -8,14 +9,14 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import xbmcaddon
-import xbmcvfs
 from logger import log_message
 
-_ADDON = xbmcaddon.Addon('service.wireguard.manager')
-_LIB = xbmcvfs.translatePath(os.path.join(_ADDON.getAddonInfo('path'), 'resources', 'lib'))
-if _LIB not in sys.path:
-    sys.path.insert(0, _LIB)
+
+def inject_lib_path():
+    addon_dir = kodi_env.ADDON_DIR
+    lib_path = os.path.join(addon_dir, "resources", "lib")
+    if lib_path not in sys.path:
+        sys.path.insert(0, lib_path)
 
 
 def resolve_host_fallback(hostname):
@@ -30,6 +31,7 @@ def resolve_host_fallback(hostname):
 
 
 def fetch_nord_url(url, token=None, post_data=None):
+    inject_lib_path()
     headers = {
         'User-Agent': 'service.wireguard.manager/1.0',
         'Accept': 'application/json'
@@ -50,41 +52,51 @@ def fetch_nord_url(url, token=None, post_data=None):
         headers['Host'] = target_host
         url = url.replace(target_host, resolved_ip)
 
+    data_bytes = None
+    if post_data is not None:
+        data_bytes = json.dumps(post_data).encode('utf-8')
+        headers['Content-Type'] = 'application/json'
+        log_message("Nord Utils: Converting post_data to JSON", 0)
+
     try:
-        data_bytes = None
-        if post_data is not None:
-            data_bytes = json.dumps(post_data).encode('utf-8')
-            headers['Content-Type'] = 'application/json'
-            log_message("Nord Utils: Converting post_data to JSON", 0)
+        req_ctx = ssl.create_default_context()
+        req_ctx.check_hostname = False
+        req_ctx.verify_mode = ssl.CERT_NONE
+    except Exception:
+        req_ctx = ssl._create_unverified_context()
 
-        req = urllib.request.Request(url, data=data_bytes, headers=headers)
-        log_message(f"Nord Utils: Sending request to {url}", 0)
+    req = urllib.request.Request(url, data=data_bytes, headers=headers)
+    log_message(f"Nord Utils: Sending request to {url}", 0)
 
+    for attempt in range(2):
         try:
-            req_ctx = ssl.create_default_context()
-            req_ctx.check_hostname = False
-            req_ctx.verify_mode = ssl.CERT_NONE
-        except Exception:
-            req_ctx = ssl._create_unverified_context()
+            if attempt > 0:
+                time.sleep(1.0)
+                log_message(f"Nord Utils: Retrying connection to {url}", 1)
 
-        t_start = time.perf_counter()
+            t_start = time.perf_counter()
+            with urllib.request.urlopen(req, timeout=8, context=req_ctx) as response:
+                raw_body = response.read().decode('utf-8').strip()
+                t_elapsed = (time.perf_counter() - t_start) * 1000.0
+                log_message(f"Nord Utils: Network execution took {t_elapsed:.2f}ms", 0)
+                if raw_body:
+                    return json.loads(raw_body)
+                return None
 
-        with urllib.request.urlopen(req, timeout=4, context=req_ctx) as response:
-            raw_body = response.read().decode('utf-8').strip()
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8')
+            log_message(f"Nord Utils: HTTP ERROR {e.code} on {url}. Body: {error_body}", 3)
+            try:
+                return json.loads(error_body)
+            except Exception:
+                return None
+        except Exception as e:
+            log_message(f"Nord Utils: Attempt {attempt + 1} failed on {url}: {e}", 2)
+            if attempt == 1:
+                log_message(f"Nord Utils: UNKNOWN ERROR on {url}: {e}", 3)
+                kodi_env.clear_script_globals()
+                return None
 
-            t_elapsed = (time.perf_counter() - t_start) * 1000.0
-            log_message(f"Nord Utils: Network execution took {t_elapsed:.2f}ms", 0)
 
-            if raw_body:
-                return json.loads(raw_body)
-
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode('utf-8')
-        log_message(f"Nord Utils: HTTP ERROR {e.code} on {url}. Body: {error_body}", 3)
-        try:
-            return json.loads(error_body)
-        except Exception:
-            return None
-    except Exception as e:
-        log_message(f"Nord Utils: UNKNOWN ERROR on {url}: {e}", 3)
-        return None
+if __name__ == "__main__":
+    pass

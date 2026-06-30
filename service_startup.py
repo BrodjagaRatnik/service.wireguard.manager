@@ -1,14 +1,17 @@
-''' ./service_startup.py '''
-import os
+""" ./service_startup.py """
 import sys
 
-ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
-LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
 
-if LIB_PATH not in sys.path:
-    sys.path.insert(0, LIB_PATH)
+def main():
+    lib_path = "/storage/.kodi/addons/service.wireguard.manager/resources/lib"
+    if lib_path not in sys.path:
+        sys.path.insert(0, lib_path)
+    import kodi_env
+    try:
+        __import__("service_launcher").start()
+    finally:
+        kodi_env.clear_script_globals()
 
-service_launcher = __import__('resources.lib.service_launcher', fromlist=['service_launcher'])
 
-if __name__ == '__main__':
-    service_launcher.start()
+if __name__ == "__main__":
+    main()

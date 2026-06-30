@@ -1,44 +1,60 @@
-''' .resources/scripts/update_vpn.py '''
+""" ./resources/scripts/update_vpn.py """
+import kodi_env
 import sys
 import os
-import xbmcaddon
 from vpn_config import PROVIDER_MAP
 from logger import log_message
 
-script_path = os.path.dirname(__file__)
-lib_path = os.path.join(script_path, '..', 'lib')
-sys.path.append(os.path.normpath(lib_path))
+SCRIPT_PATH = os.path.dirname(__file__)
+LIB_PATH = os.path.normpath(os.path.join(SCRIPT_PATH, "..", "lib"))
+
+if LIB_PATH not in sys.path:
+    sys.path.append(LIB_PATH)
 
 
 def main():
-    addon = xbmcaddon.Addon('service.wireguard.manager')
-    provider_idx = addon.getSettingInt("vpn_provider")
-    config_dir = '/storage/.config/wireguard/'
+    addon_obj = kodi_env.get_addon_instance()
+    if not addon_obj:
+        kodi_env.clear_script_globals()
+        return
+
+    provider_idx = addon_obj.getSettingInt("vpn_provider")
+    config_dir = "/storage/.config/wireguard/"
 
     p_data = PROVIDER_MAP.get(provider_idx)
     if not p_data:
+        kodi_env.clear_script_globals()
         return
 
     provider_module = p_data["module"]
 
     try:
         if provider_idx == 0:
-            token = addon.getSetting("vpn_token")
-            countries = addon.getSetting("selected_countries")
+            token = addon_obj.getSetting("vpn_token")
+            countries = addon_obj.getSetting("selected_countries")
             provider_module.update(token, countries, config_dir)
 
         elif provider_idx == 1:
-            user = addon.getSetting("pia_user")
-            pw = addon.getSetting("pia_pass")
-            countries = addon.getSetting("selected_countries")
+            user = addon_obj.getSetting("pia_user")
+            pw = addon_obj.getSetting("pia_pass")
+            countries = addon_obj.getSetting("selected_countries")
             provider_module.update(user, pw, countries, config_dir)
 
+        elif provider_idx == 2:
+            account = addon_obj.getSetting("mullvad_account")
+            countries = addon_obj.getSetting("mullvad_filter")
+            mtu = addon_obj.getSettingInt("mullvad_mtu")
+            provider_module.generate_mullvad_configs(account, countries, mtu)
+            provider_module.convert_to_connman_configs()
+
         elif provider_idx == 99:
-            path = addon.getSetting("custom_path")
+            path = addon_obj.getSetting("custom_path")
             provider_module.update(path, config_dir)
 
     except Exception as e:
         log_message(f"Script Error: {e}", 3)
+    finally:
+        kodi_env.clear_script_globals()
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-''' .resources/lib/providers/nordvpn.py
+""" .resources/lib/providers/nordvpn.py
 
     user_data = fetch_nord_url("https://api.nordvpn.com/v1/users/services/credentials", token=token)
 
@@ -8,42 +8,50 @@
             f"&filters[country_id]={c_id.strip()}&limit=1"
         )
 
-'''
+"""
+import kodi_env
 import os
 import socket
 import subprocess
 import sys
 import time
-import xbmcaddon
-import xbmcvfs
 from logger import log_message
-from resources.lib.providers.nord_utils import fetch_nord_url
-
-_ADDON = xbmcaddon.Addon('service.wireguard.manager')
-_LIB = xbmcvfs.translatePath(os.path.join(_ADDON.getAddonInfo('path'), 'resources', 'lib'))
-
-if _LIB not in sys.path:
-    sys.path.insert(0, _LIB)
+from providers.nord_utils import fetch_nord_url
+from state_manager import get_active_vpn, write_state
 
 NORD_DNS = "103.86.96.100, 103.86.99.100"
 
 
 def update(token, country_ids, config_dir):
+    addon_obj = kodi_env.get_addon_instance()
+    if not addon_obj:
+        kodi_env.clear_script_globals()
+        return False
+
+    addon_path = kodi_env.ADDON_DIR
+    lib_path = os.path.join(addon_path, "resources", "lib")
+
+    if lib_path not in sys.path:
+        sys.path.insert(0, lib_path)
+
     log_message("NordVPN: Starting update process.", 0)
+
+    active_vpn_name = get_active_vpn()
 
     t_start_auth = time.perf_counter()
     user_data = fetch_nord_url("https://api.nordvpn.com/v1/users/services/credentials", token=token)
     t_elapsed_auth = (time.perf_counter() - t_start_auth) * 1000.0
     log_message(f"NordVPN: Credentials endpoint took {t_elapsed_auth:.2f}ms", 0)
 
-    if not user_data or 'nordlynx_private_key' not in user_data:
+    if not user_data or "nordlynx_private_key" not in user_data:
         log_message(f"NordVPN: Private Key fetch failed. Response {user_data}", 3)
+        kodi_env.clear_script_globals()
         return False
 
-    priv_key = user_data['nordlynx_private_key']
+    priv_key = user_data["nordlynx_private_key"]
     log_message("NordVPN: Private key successfully retrieved.", 0)
 
-    ids = [i.strip() for i in country_ids.split(',')]
+    ids = [i.strip() for i in country_ids.split(",")]
     success_count = 0
 
     for c_id in ids:
@@ -65,7 +73,7 @@ def update(token, country_ids, config_dir):
 
         data = servers[0]
         try:
-            hostname = data.get('hostname')
+            hostname = data.get("hostname")
             log_message(f"NordVPN: Processing server {hostname}", 0)
 
             try:
@@ -77,11 +85,10 @@ def update(token, country_ids, config_dir):
                     log_message(f"NordVPN: DNS failed for {hostname} {dns_err}", 3)
                     continue
 
-            country_name = data['locations'][0]['country']['name'].replace(' ', '_')
-
+            country_name = data["locations"][0]["country"]["name"].replace(" ", "_")
             wg_tech = None
-            for t in data.get('technologies', []):
-                if t.get('identifier') == 'wireguard_udp':
+            for t in data.get("technologies", []):
+                if t.get("identifier") == "wireguard_udp":
                     wg_tech = t
                     break
 
@@ -89,9 +96,9 @@ def update(token, country_ids, config_dir):
                 log_message(f"NordVPN: 'wireguard_udp' tech not found for {hostname}", 3)
                 continue
 
-            meta = wg_tech.get('metadata', [])
-            pub_key = next((m['value'] for m in meta if m['name'] == 'public_key'), None)
-            port = next((m['value'] for m in meta if m['name'] == 'port'), '51820')
+            meta = wg_tech.get("metadata", [])
+            pub_key = next((m["value"] for m in meta if m["name"] == "public_key"), None)
+            port = next((m["value"] for m in meta if m["name"] == "port"), "51820")
 
             if not pub_key:
                 log_message(f"NordVPN: Public Key missing in metadata for {hostname}", 3)
@@ -108,13 +115,13 @@ def update(token, country_ids, config_dir):
                 f"WireGuard.PrivateKey = {priv_key}\n"
                 f"WireGuard.PublicKey = {pub_key}\n"
                 f"WireGuard.DNS = {NORD_DNS}\n"
-                "WireGuard.AllowedIPs = 0.0.0.0/0\n"
+                "WireGuard.AllowedIPs = 0.0.0.0/0, ::/0\n"
                 f"WireGuard.EndpointPort = {port}\n"
                 "WireGuard.PersistentKeepalive = 25\n"
             )
 
             file_path = os.path.join(config_dir, f"nord_{country_name.lower()}.config")
-            with open(file_path, 'w') as f:
+            with open(file_path, "w") as f:
                 f.write(config)
 
             log_message(f"NordVPN: Successfully saved config {file_path}", 0)
@@ -127,9 +134,16 @@ def update(token, country_ids, config_dir):
     if success_count > 0:
         log_message(f"NordVPN: Finalizing {success_count} configs.", 0)
         finalize_configs(config_dir)
+
+        if os.path.exists('/sys/class/net/wg0') is True and active_vpn_name:
+            log_message("NordVPN: Active interface detected. Scheduling deferred reconnect.", 1)
+            write_state('reconnect', str(active_vpn_name))
+
+        kodi_env.clear_script_globals()
         return True
 
     log_message(f"NordVPN: Update failed for IDs {country_ids}", 3)
+    kodi_env.clear_script_globals()
     return False
 
 

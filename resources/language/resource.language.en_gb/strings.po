@@ -233,8 +233,8 @@ msgid "Provider-specific Settings"
 msgstr "Provider-specific Settings"
 
 msgctxt "#32057"
-msgid "VPN Update Interval (Days)"
-msgstr "VPN Update Interval (Days)"
+msgid "VPN Update Interval (Hours)"
+msgstr "VPN Update Interval (Hours)"
 
 msgctxt "#32058"
 msgid "Set the interval for updating server data to ensure the fastest and most reliable VPN connections."
@@ -247,6 +247,30 @@ msgstr "►WireGuard AllowedIPs◄"
 msgctxt "#32060"
 msgid "Toggles custom subnet routing matrices to bypass local network footprints and prevent ConnMan gateway routing locks. Fixes connection lockups and freezing issues on certain VPN server locations."
 msgstr "Toggles custom subnet routing matrices to bypass local network footprints and prevent ConnMan gateway routing locks. Fixes connection lockups and freezing issues on certain VPN server locations."
+
+msgctxt "#32061"
+msgid "◄ Provider Settings ►"
+msgstr "◄ Provider Settings ►"
+
+msgctxt "#32062"
+msgid "WireGuard VPN Options"
+msgstr "WireGuard VPN Options"
+
+msgctxt "#32063"
+msgid "►DNS Leak Test◄"
+msgstr "►DNS Leak Test◄"
+
+msgctxt "#32064"
+msgid "Executes a network diagnostic test to verify that your requests are safely encrypted inside the WireGuard tunnel and are not leaking to your internet provider."
+msgstr "Executes a network diagnostic test to verify that your requests are safely encrypted inside the WireGuard tunnel and are not leaking to your internet provider."
+
+msgctxt "#32065"
+msgid "Check WireGuard tunnel dead or alive:"
+msgstr "Check WireGuard tunnel dead or alive:"
+
+msgctxt "#32066"
+msgid "Check if WireGuard tunnel are dead or alive On|Off if the tunnel is dead connection gets restarted."
+msgstr "Check if WireGuard tunnel are dead or alive On|Off if the tunnel is dead connection gets restarted."
 
 
 msgctxt "#32992"

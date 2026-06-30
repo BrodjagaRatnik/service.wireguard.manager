@@ -16,6 +16,7 @@ if LIB_PATH not in sys.path:
 log_message = __import__('logger').log_message
 get_default_gateway = __import__('network_utils').get_default_gateway
 DHCP_RECOVERY_DELAY = __import__('vpn_config').DHCP_RECOVERY_DELAY
+get_file_path = __import__('state_manager').get_file_path
 
 try:
     import xbmcgui
@@ -24,14 +25,13 @@ except ImportError:
     HAS_KODI = False
 
 MAX_RETRIES = 10
-RETRY_FILE = "/tmp/vpn_reconnect_count.txt"
-LOCK_FILE = "/tmp/vpn_connector_active.lock"
 
 
 def get_retry_count():
-    if os.path.exists(RETRY_FILE):
+    retry_path = get_file_path('reconnect')
+    if retry_path is not None and (os.path.exists(retry_path) is True):
         try:
-            with open(RETRY_FILE, "r") as f:
+            with open(retry_path, "r") as f:
                 return int(f.read().strip())
         except Exception as e:
             log_message(f"Reconnect Helper: Failed to read retry count file: {e}", 3)
@@ -41,38 +41,41 @@ def get_retry_count():
 
 def increment_retry():
     count = get_retry_count() + 1
-    try:
-        with open(RETRY_FILE, "w") as f:
-            f.write(str(count))
-            f.flush()
-            os.fsync(f.fileno())
-    except Exception as e:
-        log_message(f"Reconnect Helper: Failed to write incremented retry count: {e}", 3)
+    retry_path = get_file_path('reconnect')
+    if retry_path is not None:
+        try:
+            with open(retry_path, "w") as f:
+                f.write(str(count))
+                f.flush()
+                os.fsync(f.fileno())
+        except Exception as e:
+            log_message(f"Reconnect Helper: Failed to write incremented retry count: {e}", 3)
     return count
 
 
 def run_reconnect():
-    if os.path.exists(LOCK_FILE):
+    lock_path = get_file_path('connector_lock')
+    if lock_path is not None and (os.path.exists(lock_path) is True):
         try:
-            with open(LOCK_FILE, "r") as f:
+            with open(lock_path, "r") as f:
                 pid = int(f.read().strip())
             os.kill(pid, 0)
             log_message("Reconnect Helper: Active connector process running. Exiting.", 1)
             return
         except (ValueError, OSError):
             try:
-                os.remove(LOCK_FILE)
+                os.remove(lock_path)
             except Exception:
                 pass
     vpn_name = None
-    state_path = "/tmp/vpn_manager_active.txt"
-    if os.path.exists(state_path):
+    state_path = get_file_path('active')
+    if state_path is not None and (os.path.exists(state_path) is True):
         try:
             with open(state_path, "r") as f:
                 vpn_name = f.read().strip()
         except Exception as e:
             log_message(f"Reconnect Helper: Failed to read vpn manager active state: {e}", 3)
-    if (not vpn_name or vpn_name.lower() == "true") and HAS_KODI:
+    if (not vpn_name or vpn_name.lower() == "true") and HAS_KODI is True:
         vpn_name = xbmcgui.Window(10000).getProperty('vpn_manual_session')
     if not vpn_name or vpn_name.lower() == "true":
         return
@@ -81,12 +84,13 @@ def run_reconnect():
             count = get_retry_count()
             if count >= MAX_RETRIES:
                 log_message(f"Reconnect Helper: Max retries ({MAX_RETRIES}) reached. Standing down.", 2)
-                if os.path.exists(RETRY_FILE):
-                    os.remove(RETRY_FILE)
+                retry_path = get_file_path('reconnect')
+                if retry_path is not None and (os.path.exists(retry_path) is True):
+                    os.remove(retry_path)
                 break
             gw_ready = False
             sleep_time = DHCP_RECOVERY_DELAY / 1000.0
-            for i in range(1, 7):
+            for check_idx in range(1, 7):
                 if get_default_gateway():
                     gw_ready = True
                     break
@@ -132,10 +136,11 @@ def run_reconnect():
                         except Exception:
                             pass
                         time.sleep(0.2)
-                    if verified:
+                    if verified is True:
                         log_message("Reconnect Helper: Connection verified... Task complete.", 1)
-                        if os.path.exists(RETRY_FILE):
-                            os.remove(RETRY_FILE)
+                        retry_path = get_file_path('reconnect')
+                        if retry_path is not None and (os.path.exists(retry_path) is True):
+                            os.remove(retry_path)
                         break
             log_message("Reconnect Helper: ConnMan reported failure. Retrying...", 2)
             increment_retry()

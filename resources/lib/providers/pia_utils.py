@@ -1,4 +1,5 @@
-''' ./resources/lib/providers/pia_utils.py '''
+""" ./resources/lib/providers/pia_utils.py """
+import kodi_env
 import base64
 import json
 import os
@@ -7,33 +8,18 @@ import ssl
 import urllib.parse
 import urllib.request
 from logger import log_message
-from resources.lib.providers import pia
+from providers import pia
 
 try:
     import xbmc
-    import xbmcaddon
     import xbmcgui
-    import xbmcvfs
     HAS_KODI = True
 except ImportError:
-    xbmc = None
-    xbmcaddon = None
-    xbmcgui = None
-    xbmcvfs = None
     HAS_KODI = False
 
-ADDON_ID = 'service.wireguard.manager'
 
-if HAS_KODI:
-    try:
-        ADDON_PATH = xbmcvfs.translatePath(xbmcaddon.Addon(ADDON_ID).getAddonInfo('path'))
-    except Exception:
-        ADDON_PATH = '/storage/.kodi/addons/service.wireguard.manager'
-else:
-    ADDON_PATH = '/storage/.kodi/addons/service.wireguard.manager'
-
-ICON_INFO = os.path.join(ADDON_PATH, 'resources', 'media', 'icon.png')
-ICON_ERROR = os.path.join(ADDON_PATH, 'resources', 'media', 'error.png')
+def get_addon_path():
+    return kodi_env.ADDON_DIR
 
 
 def fetch_pia_url(url, token=None, user=None, password=None, post_data=None):
@@ -95,8 +81,29 @@ def fetch_pia_url(url, token=None, user=None, password=None, post_data=None):
 
 
 def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
-    from resources.lib.wm_utils import safe_decrypt_password
-    log_message("PIA Utils: Entering setup_pia_handshake...", 0)
+    from wm_utils import safe_decrypt_password
+    from providers.pia_config import PiaHandshakeEngine
+
+    engine = PiaHandshakeEngine()
+    is_blocked, remaining_time = engine.check_rate_limit()
+
+    if is_blocked:
+        log_message(f"PIA Utils: Request blocked due to active cooldown. Remaining: {remaining_time}s", 2)
+        if has_kodi:
+            rem_m = int(float(remaining_time)) // 60
+            rem_s = int(float(remaining_time)) % 60
+            title = "[B]≡ [ COOL DOWN MECHANISM ] ≡[/B]"
+            msg = (
+                "[COLOR ffff0000]Connection Request Temporarily Blocked![/COLOR]\n\n"
+                "This node is in cool-down to protect against upstream API locks.\n"
+                f"[COLOR ffffff00]SOLUTION:[/COLOR] Please wait [B]{rem_m}m {rem_s}s[/B] before retrying connection."
+            )
+            xbmcgui.Dialog().ok(title, msg)
+        kodi_env.clear_script_globals()
+        return False
+
+    addon_path = get_addon_path()
+    icon_info = os.path.join(addon_path, 'resources', 'media', 'icon.png')
 
     try:
         user = str(addon_obj.getSetting("pia_user")).strip().lower()
@@ -104,18 +111,18 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
         pw = safe_decrypt_password(raw_pw)
         config_path = None
         region_id = None
-        conf_dir = '/storage/.config/wireguard/'
-        target_suffix = sid.replace('vpn_provider_wireguard_pia_', '').replace('vpn_pia_', '')
+        conf_dir = "/storage/.config/wireguard/"
+        target_suffix = sid.replace("vpn_provider_wireguard_pia_", "").replace("vpn_pia_", "")
 
-        pure_ip = target_suffix.replace('vpn_', '').replace('_', '.')
+        pure_ip = target_suffix.replace("vpn_", "").replace("_", ".")
 
         for filename in os.listdir(conf_dir):
             if filename.startswith("pia_") and filename.endswith(".config"):
                 path_check = os.path.join(conf_dir, filename)
                 try:
-                    with open(path_check, 'r') as cf:
+                    with open(path_check, "r") as cf:
                         file_content = cf.read()
-                    f_id = filename.replace('pia_', '').replace('.config', '')
+                    f_id = filename.replace("pia_", "").replace(".config", "")
                     if f_id.lower() == target_suffix.lower() or f"Host = {pure_ip}" in file_content:
                         config_path = path_check
                         region_id = f_id
@@ -124,7 +131,7 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
                     continue
 
         if not config_path:
-            log_message(f"PIA Utils: No blueprint found for {target_suffix}", 2)
+            log_message(f"PIA Utils: No blueprint found for {target_suffix}", 0)
             return True
 
         log_message(f"PIA Utils: Found config path={config_path}", 0)
@@ -132,27 +139,27 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
         pool_cns = []
         original_name = None
 
-        with open(config_path, 'r') as f:
+        with open(config_path, "r") as f:
             content = f.read()
-            host_match = re.search(r'^\s*Host\s*=\s*(.*)', content, re.MULTILINE)
+            host_match = re.search(r"^\s*Host\s*=\s*(.*)", content, re.MULTILINE)
             if host_match:
                 target_ip = host_match.group(1).strip()
 
-            name_match = re.search(r'^\s*Name\s*=\s*(.*)', content, re.MULTILINE)
+            name_match = re.search(r"^\s*Name\s*=\s*(.*)", content, re.MULTILINE)
             if name_match:
                 original_name = name_match.group(1).strip().replace("PIA_", "")
 
-            cn_pool_match = re.search(r'^\s*WireGuard\.CN_Pool\s*=\s*(.*)', content, re.MULTILINE)
+            cn_pool_match = re.search(r"^\s*WireGuard\.CN_Pool\s*=\s*(.*)", content, re.MULTILINE)
             if cn_pool_match:
-                pool_cns = [c.strip() for c in cn_pool_match.group(1).split(',') if c.strip()]
+                pool_cns = [c.strip() for c in cn_pool_match.group(1).split(",") if c.strip()]
 
         log_message(f"PIA Utils: Parsed IP={target_ip} ID={region_id} CNs={len(pool_cns)}", 0)
 
         if not target_ip or not pool_cns:
-            log_message("PIA VPN_Utils: Error - Missing nodes or Host IP.", 3)
+            log_message("PIA VPN_Utils: Missing nodes or Host IP.", 3)
             return False
 
-        log_message("PIA Utils: Requesting single token for pool...", 0)
+        log_message("PIA Utils: Requesting single token for pool...", 1)
         active_token = pia.get_cached_token(user, pw)
 
         if not active_token:
@@ -160,6 +167,7 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
 
         raw_cn_str = ",".join(pool_cns)
         skipping_handshake = False
+        live_cfg = None
 
         for current_cn in pool_cns:
             clean_cn = current_cn.strip().lower()
@@ -174,10 +182,10 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
                 break
 
             if live_cfg and "[provider_wireguard]" in live_cfg:
-                with open(config_path, 'w') as f:
+                with open(config_path, "w") as f:
                     f.write(live_cfg)
                     if has_kodi:
-                        xbmc.sleep(1500)
+                        xbmc.sleep(500)
                 break
 
         if skipping_handshake:
@@ -185,24 +193,24 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
             return True
 
         if live_cfg and "[provider_wireguard]" in live_cfg:
-            log_message("PIA Utils: Handshake OK! Writing live config...", 0)
+            log_message("PIA Utils: Handshake OK! Configuration saved.", 1)
             return True
         else:
-            raise Exception("PIA Utils: Handshake declined by all upstream target API nodes.")
+            raise Exception("PIA Utils: Handshake declined by all upstream target API nodes.", 3)
 
     except Exception as e:
         err_str = str(e)
         log_message(f"PIA Error: {err_str}", 3)
 
         if "429" in err_str or "Too Many Requests" in err_str:
+            engine.enforce_cooldown(900.0)
             title = "[B]≡ [ API 15 minutes RATE LIMIT ] ≡[/B]"
             msg = (
                 "[COLOR ffff0000]PIA API Blocked Your Connection Request![/COLOR]\n\n"
-                "Your IP address has been temporarily rate-limited.\n\n"
+                "Your IP address has been temporarily rate-limited.\n"
                 "[COLOR ffffff00]SOLUTION:[/COLOR] Please wait [B]15 minutes[/B] before starting to connect again."
             )
             if has_kodi:
-                import xbmcgui
                 xbmc.executebuiltin("ActivateWindow(home)")
                 xbmcgui.Dialog().ok(title, msg)
                 log_message("PIA API 15 minutes Blockade Connection Request start", 2)
@@ -210,14 +218,33 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
                 log_message("PIA API Blockade Connection Request over.", 1)
                 title = "[B][COLOR FFE6E6FA]≡ [ WG MANAGER ] ≡[/COLOR][/B]"
                 msg = "[COLOR FFFFFF00]PIA API Blockade over you can connect to PIA again.[/COLOR]"
-                xbmcgui.Dialog().notification(title, msg, ICON_INFO, 5000)
+                xbmcgui.Dialog().notification(title, msg, icon_info, 5000)
+        elif "accepted handshake but rejected network data" in err_str.lower():
+            title = "[B]≡ [ PIA SERVER DOWN ] ≡[/B]"
+            msg = (
+                "[COLOR ffff0000]PIA Gateway Server is Currently Broken![/COLOR]\n\n"
+                "The tunnel connected successfully but no internet data can flow.\n"
+                "[COLOR ffffff00]SOLUTION:[/COLOR] This node is dead. Please update regions or choose another country."
+            )
+            if has_kodi:
+                import xbmcgui
+                xbmc.executebuiltin("ActivateWindow(home)")
+                xbmcgui.Dialog().ok(title, msg)
         else:
+            engine.enforce_cooldown(600.0)
             title = "[B]≡ [ CONNECTION FAILURE ] ≡[/B]"
             msg = (
                 "[COLOR ffff0000]VPN Handshake Failed to Establish![/COLOR]\n\n"
-                f"System Error: [COLOR ffffff00]{err_str}[/COLOR]\n\n"
+                f"System Error: [COLOR ffffff00]{err_str}[/COLOR]\n"
                 "The manager was unable to reach the PIA authorization nodes."
             )
+            if "token acquisition failed" in err_str.lower():
+                title = "[B]≡ [ WRONG CREDENTIALS ] ≡[/B]"
+                msg = (
+                    "[COLOR ffff0000]PIA Authentication Denied (HTTP 401)![/COLOR]\n\n"
+                    "Your username or password credentials are invalid.\n"
+                    "[COLOR ffffff00]SOLUTION:[/COLOR] PIA locked this node for [B]10 minutes[/B]. Fix credentials."
+                )
             if has_kodi:
                 import xbmcgui
                 xbmc.executebuiltin("ActivateWindow(home)")
@@ -227,5 +254,7 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
                 log_message("PIA Connection Cool Down over.", 1)
                 title = "[B][COLOR FFE6E6FA]≡ [ WG MANAGER ] ≡[/COLOR][/B]"
                 msg = "[COLOR FFFFFF00]PIA Network 10 minutes cool down over. Ready to retry connection.[/COLOR]"
-                xbmcgui.Dialog().notification(title, msg, ICON_INFO, 5000)
+                xbmcgui.Dialog().notification(title, msg, icon_info, 5000)
         return False
+    finally:
+        kodi_env.clear_script_globals()
