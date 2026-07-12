@@ -6,8 +6,8 @@ Please use the table below to see if the version you are using is currently rece
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.0.x   | :white_check_mark: |
-| < 1.0   | :x:                |
+| 1.4.x   | :white_check_mark: |
+| < 1.4   | :x:                |
 
 ## Reporting a Vulnerability
 
