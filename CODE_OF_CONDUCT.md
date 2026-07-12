@@ -1,8 +1,8 @@
-# Contributor Covenant Code of Conduct
+# Community Code of Conduct
 
 ## Our Pledge
 
-We as members, contributors, and leaders pledge to make participation in our
+We as participants and contributors pledge to make participation in our
 community a harassment-free experience for everyone, regardless of age, body
 size, visible or invisible disability, ethnicity, sex characteristics, gender
 identity and expression, level of experience, education, socio-economic status,
@@ -34,95 +34,64 @@ Examples of unacceptable behavior include:
 * Publishing others' private information, such as a physical or email
   address, without their explicit permission
 * Other conduct which could reasonably be considered inappropriate in a
-  professional setting
+  shared collaborative space
 
-## Enforcement Responsibilities
+## Collective Responsibilities
 
-Community leaders are responsible for clarifying and enforcing our standards of
-acceptable behavior and will take appropriate and fair corrective action in
-response to any behavior that they deem inappropriate, threatening, offensive,
-or harmful.
+This community operates horizontally without leaders, bosses, or hierarchy. Maintaining and upholding our standards of acceptable behavior is the shared responsibility of everyone who participates.
 
-Community leaders have the right and responsibility to remove, edit, or reject
-comments, commits, code, wiki edits, issues, and other contributions that are
-not aligned to this Code of Conduct, and will communicate reasons for moderation
-decisions when appropriate.
+Participants have the collective right and responsibility to address, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned to this Code of Conduct through open dialogue and mutual consensus.
 
 ## Scope
 
 This Code of Conduct applies within all community spaces, and also applies when
-an individual is officially representing the community in public spaces.
-Examples of representing our community include using an official e-mail address,
-posting via an official social media account, or acting as an appointed
-representative at an online or offline event.
+an individual is actively collaborating in public spaces directly associated with this project.
 
-## Enforcement
+## Addressing Harm
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
+brought to the attention of the community for collective accountability, or reported confidentially to the mutual aid contact point at
 kasuta@riseup.net.
-All complaints will be reviewed and investigated promptly and fairly.
+All concerns will be reviewed and investigated through decentralized, restorative dialogue promptly and fairly.
 
-All community leaders are obligated to respect the privacy and security of the
-reporter of any incident.
+We are all obligated to respect the privacy and security of anyone reporting an incident.
 
-## Enforcement Guidelines
+## Community Accountability Guidelines
 
-Community leaders will follow these Community Impact Guidelines in determining
-the consequences for any action they deem in violation of this Code of Conduct:
+When resolving conflicts or addressing harm, the collective will follow these restorative guidelines rather than relying on punitive measures or bans:
 
-### 1. Correction
+### 1. Dialogue and Correction
 
 **Community Impact**: Use of inappropriate language or other behavior deemed
-unprofessional or unwelcome in the community.
+unwelcome in the community.
 
-**Consequence**: A private, written warning from community leaders, providing
-clarity around the nature of the violation and an explanation of why the
-behavior was inappropriate. A public apology may be requested.
+**Resolution**: A direct or mediated conversation providing clarity around the nature of the issue and why the behavior caused harm. A voluntary public apology or adjustment may be requested to restore trust.
 
-### 2. Warning
+### 2. Space and Reflection
 
 **Community Impact**: A violation through a single incident or series
 of actions.
 
-**Consequence**: A warning with consequences for continued behavior. No
-interaction with the people involved, including unsolicited interaction with
-those enforcing the Code of Conduct, for a specified period of time. This
-includes avoiding interactions in community spaces as well as external channels
-like social media. Violating these terms may lead to a temporary or
-permanent ban.
+**Resolution**: A request for the individual to take a voluntary step back from interacting with the affected parties or the space for a specified period of time. This boundary is set to give space for reflection, de-escalation, and community healing.
 
-### 3. Temporary Ban
+### 3. Mediation and Restorative Processes
 
-**Community Impact**: A serious violation of community standards, including
+**Community Impact**: A serious breakdown of community standards, including
 sustained inappropriate behavior.
 
-**Consequence**: A temporary ban from any sort of interaction or public
-communication with the community for a specified period of time. No public or
-private interaction with the people involved, including unsolicited interaction
-with those enforcing the Code of Conduct, is allowed during this period.
-Violating these terms may lead to a permanent ban.
+**Resolution**: Engaging in active, consensual mediation with trusted third parties from the collective to address the root causes of the behavior, establish firm personal boundaries, and build a path toward accountability.
 
-### 4. Permanent Ban
+### 4. Dissociation
 
-**Community Impact**: Demonstrating a pattern of violation of community
-standards, including sustained inappropriate behavior,  harassment of an
-individual, or aggression toward or disparagement of classes of individuals.
+**Community Impact**: Demonstrating a continuous pattern of violation of community
+standards, refusal to engage in accountability, or sustained aggression toward individuals.
 
-**Consequence**: A permanent ban from any sort of public interaction within
-the community.
+**Resolution**: If a participant refuses to respect boundaries or engage in restorative processes, the collective may choose to protect the community by collectively dissociating from that individual and revoking access to shared project infrastructure.
 
 ## Attribution
 
 This Code of Conduct is adapted from the [Contributor Covenant][homepage],
 version 2.0, available at
-https://www.contributor-covenant.org/version/2/0/code_of_conduct.html.
-
-Community Impact Guidelines were inspired by [Mozilla's code of conduct
-enforcement ladder](https://github.com/mozilla/diversity).
+https://www.contributor-covenant.org/version/2/0/code_of_conduct.html, with all hierarchical enforcement infrastructure removed.
 
 [homepage]: https://www.contributor-covenant.org
-
-For answers to common questions about this code of conduct, see the FAQ at
-https://www.contributor-covenant.org/faq. Translations are available at
-https://www.contributor-covenant.org/translations.
