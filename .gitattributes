@@ -44,3 +44,4 @@ ca.rsa.4096.txt binary
 /zips/ export-ignore
 /zips/service.wireguard.manager/ export-ignore
 README.md export-ignore
+SECURITY.md export-ignore
