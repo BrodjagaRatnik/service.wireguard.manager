@@ -7,7 +7,7 @@
 ![Size](https://img.shields.io/github/repo-size/BrodjagaRatnik/service.wireguard.manager)
 ![License](https://img.shields.io/github/license/BrodjagaRatnik/service.wireguard.manager)
 ---
-A lightweight, high-performance Kodi service addon for **LibreELEC 11, 12, and 13+**. Built entirely in pure Python with a memory-isolated, lazy-loaded architecture, this tool manages WireGuard connections natively via `connmanctl`. It provides a rock-solid, zero-leak experience that is fully architecture-independent, running flawlessly across all **Raspberry Pi** models and **x86 HTPC** systems.
+A lightweight, high-performance Kodi service addon for **LibreELEC 11, 12, and 13+**. Built entirely in pure Python with a memory-isolated, lazy-loaded architecture, this tool manages WireGuard connections natively via `connmanctl`. It features a zero-leak, kernel-level firewall **killswitch** with automatic LAN whitelisting to guarantee complete data privacy if the tunnel drops. It provides a rock-solid experience that is fully architecture-independent, running flawlessly across all **Raspberry Pi** models and **x86 HTPC** systems.
 
 ## 📖 Quick Links
 For detailed instructions for this Add-on, please visit our **[Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki)**:
