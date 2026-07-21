@@ -32,6 +32,19 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 11, 12, and 1
 * **OS**: LibreELEC 11.0 or higher (built-in WireGuard kernel module support required).
 * **Network**: Active network connection managed via default LibreELEC networking (`connman`).
 
+## Automated Upstream ConnMan FD Leak Mitigation (v1.5.0+)
+
+Older versions of `connmand` contain native tracking bugs within their network cache and DNS proxy layers that trigger when virtual interfaces (like `wg0`) alter default routing metrics. This causes a severe **file descriptor (FD) leak** (approx. 10 FDs/min from the DNS proxy loop, and 2-3 FDs/min from orphaned `CLOSE_WAIT` sockets via `ipv4.connman.net`).
+
+To prevent the system from exhausting resources and crashing, **WGM automatically deploys a system-level optimization on initialization**—requiring zero user intervention or SSH configuration. 
+
+The addon silently injects and applies the following mitigations directly to LibreELEC:
+* **Disables ConnMan's Online Check**: Patches `/storage/.config/connman_main.conf` to set `EnableOnlineCheck = false`, stopping orphaned `CLOSE_WAIT` sockets.
+* **Bypasses Internal DNS Proxy**: Deploys a systemd drop-in override at `/storage/.config/system.d/connman.service.d/override.conf` forcing the daemon to run with the `--nodnsproxy` flag.
+* **Hot-Reloads Networking**: Safely triggers a `systemctl daemon-reload && systemctl restart connman` cycle to instantly lock and flatline the file descriptor baseline (stabilizing at ~22 FDs on Pi hardware and ~30 FDs on x86 platforms).
+
+*Note: The structural tracking details for this bug have been forwarded to the upstream ConnMan developer mailing list (`connman@lists.linux.dev`) to ensure a permanent resolution in future core daemon releases.*
+
 ## 📖 Quick Links
 For detailed instructions for this Add-on, please visit our **[Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki)**:
 *   **[🚀 Features](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Features)**
