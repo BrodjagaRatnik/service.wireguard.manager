@@ -51,6 +51,23 @@ SAVED_GATEWAY = None
 
 def watchdog_logic():
     global LAST_INTERFACE, BLACKOUT_ALERTED
+
+    eth_link = is_physically_connected("eth0")
+    wifi_link = is_physically_connected("wlan0")
+
+    if not eth_link and not wifi_link:
+        if BLACKOUT_ALERTED is False:
+            log_message("Watchdog Check: Initial drop caught. Pausing for link stabilization.", 2)
+            time.sleep(0.5)
+
+            if not is_physically_connected("eth0") and not is_physically_connected("wlan0"):
+                log_err = "Service: TOTAL PHYSICAL DISCONNECT. Triggering Blackout UI."
+                log_message(log_err, 3)
+                subprocess.run(["pkill", "-f", HELPER_SCRIPT], check=False)
+                threading.Thread(target=trigger_blackout_ui, daemon=True).start()
+                BLACKOUT_ALERTED = True
+        return
+
     log_message("Watchdog Check: Commencing logical evaluation cycle.", 0)
 
     conn_lock_path = get_file_path("connector_lock")
@@ -60,8 +77,6 @@ def watchdog_logic():
 
     log_message(f"Watchdog Check: Blackout alert tracking state is {BLACKOUT_ALERTED}", 0)
     if BLACKOUT_ALERTED is True:
-        eth_link = is_physically_connected("eth0")
-        wifi_link = is_physically_connected("wlan0")
         log_message(f"Watchdog Check: Physical links during blackout: eth0={eth_link}, wlan0={wifi_link}", 0)
         if eth_link or wifi_link:
             log_message("Service: Physical connection restored.", 1)
@@ -79,7 +94,7 @@ def watchdog_logic():
     try:
         if os.path.exists("/sys/class/net/"):
             for iface in os.listdir("/sys/class/net/"):
-                if iface.startswith(("vpn_", "wg")):
+                if iface.startswith("wg"):
                     wg0_active = True
                     if not current_iface or current_iface in ["eth0", "wlan0"]:
                         current_iface = iface
@@ -107,26 +122,6 @@ def watchdog_logic():
         log_message(log_msg, 0)
 
         if should_be_active is True:
-            eth_link = is_physically_connected("eth0")
-            wifi_link = is_physically_connected("wlan0")
-            log_msg = f"Watchdog Check: Carrier detection states: eth0={eth_link}, wlan0={wifi_link}"
-            log_message(log_msg, 0)
-            if not eth_link and not wifi_link:
-                log_message("Watchdog Check: Initial drop caught. Pausing for link stabilization.", 2)
-                time.sleep(0.5)
-                eth_link = is_physically_connected("eth0")
-                wifi_link = is_physically_connected("wlan0")
-                log_msg = f"Watchdog Check: Post-pause link check states: eth0={eth_link}, wlan0={wifi_link}"
-                log_message(log_msg, 0)
-                if not eth_link and not wifi_link:
-                    if BLACKOUT_ALERTED is False:
-                        log_err = "Service: TOTAL PHYSICAL DISCONNECT. Triggering Blackout UI."
-                        log_message(log_err, 3)
-                        subprocess.run(["pkill", "-f", HELPER_SCRIPT], check=False)
-                        threading.Thread(target=trigger_blackout_ui, daemon=True).start()
-                        BLACKOUT_ALERTED = True
-                return
-
             log_message("Service: Internet detected but Tunnel missing. Triggering Helper...", 2)
             proc = subprocess.Popen([sys.executable, HELPER_SCRIPT])
             proc.wait()
@@ -199,7 +194,9 @@ if __name__ == "__main__":
                 if shield_logged:
                     log_message("Service: Shield cleared. Resuming watchdog operation.", 0)
                 shield_logged = False
+
                 watchdog_logic()
+
             time.sleep(WATCHDOG_HEARTBEAT / 1000.0)
     finally:
         kodi_env.clear_script_globals()

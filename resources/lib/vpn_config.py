@@ -26,25 +26,28 @@ def get_hardware_model():
 
 
 MODEL_STRING = get_hardware_model()
-PI4 = 'pi 4' in MODEL_STRING or 'raspberry pi 4' in MODEL_STRING
 PI5 = 'pi 5' in MODEL_STRING or 'raspberry pi 5' in MODEL_STRING
+PI4 = 'pi 4' in MODEL_STRING or 'raspberry pi 4' in MODEL_STRING
+PI3 = 'pi 3' in MODEL_STRING or 'raspberry pi 3' in MODEL_STRING
+PI2 = 'pi 2' in MODEL_STRING or 'raspberry pi 2' in MODEL_STRING
 
 PROP_SYNC_DELAY = 100
-OS_RELEASE_DELAY = 1500 if PI5 else (1650 if PI4 else 500)
-CONN_POLL_INTERVAL = 500 if PI5 else (600 if PI4 else 250)
-ROUTE_PROP_DELAY = 100 if PI5 else (150 if PI4 else 100)
-DHCP_RECOVERY_DELAY = 200 if PI5 else (300 if PI4 else 100)
-VPN_CONNECTION_TIMEOUT = 4000 if PI5 else (4500 if PI4 else 2500)
-WATCHDOG_HEARTBEAT = 1000 if PI5 else (1500 if PI4 else 500)
-WATCHDOG_SETTLE_DELAY = 5000 if PI5 else (6000 if PI4 else 2500)
-WATCHDOG_RECOVERY_DELAY = 2000 if PI5 else (2500 if PI4 else 1000)
-HELPER_MAX_WAIT = 4000 if PI5 else (5000 if PI4 else 2500)
-SHIELD_SLEEP_DELAY = 5000 if PI5 else (5000 if PI4 else 2500)
-SYSTEMD_POLL_DELAY = 300 if PI5 else (400 if PI4 else 150)
-SERVICE_INIT_DELAY = 400 if PI5 else (600 if PI4 else 200)
-UI_BUFFER_DELAY_MENU = 50 if PI5 else (100 if PI4 else 50)
-CONNMAN_RESTART_DELAY = 100 if PI5 else (150 if PI4 else 50)
-CONNMAN_SYSTEM_CHECK_INTERVAL = 5400 if PI5 else (18000 if PI4 else 19800)
+OS_RELEASE_DELAY = 1500 if PI5 else (1800 if PI4 else (2000 if (PI3 or PI2) else 1000))
+CONN_POLL_INTERVAL = 500 if PI5 else (600 if PI4 else (400 if (PI3 or PI2) else 250))
+ROUTE_PROP_DELAY = 100 if PI5 else (150 if PI4 else (150 if (PI3 or PI2) else 100))
+DHCP_RECOVERY_DELAY = 200 if PI5 else (300 if PI4 else (250 if (PI3 or PI2) else 100))
+VPN_CONNECTION_TIMEOUT = 3000 if PI5 else (4500 if PI4 else (5500 if (PI3 or PI2) else 2500))
+WATCHDOG_HEARTBEAT = 1000 if PI5 else (1500 if PI4 else (1200 if (PI3 or PI2) else 500))
+WATCHDOG_SETTLE_DELAY = 5000 if PI5 else (6000 if PI4 else (5000 if (PI3 or PI2) else 2500))
+WATCHDOG_RECOVERY_DELAY = 2000 if PI5 else (2500 if PI4 else (2000 if (PI3 or PI2) else 1000))
+HELPER_MAX_WAIT = 4000 if PI5 else (5000 if PI4 else (4500 if (PI3 or PI2) else 2500))
+SHIELD_SLEEP_DELAY = 5000 if PI5 else (5000 if PI4 else (5000 if (PI3 or PI2) else 2500))
+SYSTEMD_POLL_DELAY = 300 if PI5 else (400 if PI4 else (300 if (PI3 or PI2) else 150))
+SERVICE_INIT_DELAY = 400 if PI5 else (600 if PI4 else (400 if (PI3 or PI2) else 200))
+UI_BUFFER_DELAY_MENU = 50 if PI5 else (100 if PI4 else (100 if (PI3 or PI2) else 50))
+CONNMAN_RESTART_DELAY = 100 if PI5 else (150 if PI4 else (100 if (PI3 or PI2) else 50))
+SANITY_POLL_INTERVAL = 500 if PI5 else (500 if PI4 else (500 if PI3 or PI2 else 500))
+SANITY_SETTLE_DELAY = 500 if PI5 else (1000 if PI4 else (1500 if PI3 or PI2 else 500))
 """
 PROP_SYNC_DELAY = Stops Kodi from getting confused if two updates happen at once
 OS_RELEASE_DELAY = Gives the system time to completely kill the old VPN tunnel
@@ -63,7 +66,22 @@ SYSTEMD_POLL_DELAY = Wait for Linux to finish the Start/Stop command
 SERVICE_INIT_DELAY = Wait for the system to fully 'birth' the new VPN process
 UI_BUFFER_DELAY_MENU = Give Kodi time to process the button click animation before connecting
 CONNMAN_RESTART_DELAY = Network Interface Stabilization & Core System State Sync
+SANITY_POLL_INTERVAL = How often the health-check asks the system if the dead VPN interface is gone yet
+SANITY_SETTLE_DELAY = The final rest time to let the network clean up before starting the fallback recovery
 """
+
+try:
+    import xbmc
+    KODI_VERSION = xbmc.getInfoLabel("System.BuildVersion").split(".")
+    HAS_KODI = True
+except Exception as e:
+    HAS_KODI = False
+    err_msg = str(e)
+    if "No module named 'xbmc'" in err_msg or "No module named 'xbmcaddon'" in err_msg:
+        log_message("Background daemon initialization active (Kodi env absent).", 0)
+    else:
+        log_message(f"CRITICAL: vpn_config initialization failed: {err_msg}", 3)
+
 """
 Central Provider Mapping
 ./resources/lib/service_launcher.py
@@ -79,7 +97,51 @@ Below need editing if adding new VPN provider!
 ./resources/lib/vpn_core.py (if provider == 0:)
 ./resources/lib/setup_helper.py (prefixes = ("nord_", "pia_", "custom_", "template"))
 """
-PROVIDER_MAP = {
+
+
+class LProviderMap(dict):
+
+    def __init__(self, data):
+        super().__init__(data)
+        self._loaded = False
+
+    def _load_modules(self):
+        if not self._loaded and HAS_KODI:
+            self._loaded = True
+            try:
+                from providers import nordvpn, pia, mullvad, custom
+
+                nord_dict = super().__getitem__(0)
+                pia_dict = super().__getitem__(1)
+                mullvad_dict = super().__getitem__(2)
+                custom_dict = super().__getitem__(99)
+                nord_dict["module"] = nordvpn
+                pia_dict["module"] = pia
+                mullvad_dict["module"] = mullvad
+                custom_dict["module"] = custom
+
+            except Exception as e:
+                self._loaded = False
+                log_message(f"Failed to load provider modules dynamically: {e}", 3)
+
+    def __getitem__(self, key):
+        self._load_modules()
+        return super().__getitem__(key)
+
+    def get(self, key, default=None):
+        self._load_modules()
+        return super().get(key, default)
+
+    def values(self):
+        self._load_modules()
+        return super().values()
+
+    def items(self):
+        self._load_modules()
+        return super().items()
+
+
+PROVIDER_MAP = LProviderMap({
     0: {
         "name": "NordVPN",
         "api_url": "https://api.nordvpn.com/v1/servers/countries",
@@ -119,24 +181,4 @@ PROVIDER_MAP = {
         "needs_file_check": False,
         "requires_endpoint_route": False
     }
-}
-
-try:
-    import xbmc
-    KODI_VERSION = xbmc.getInfoLabel("System.BuildVersion").split(".")[0]
-    HAS_KODI = True
-
-    from providers import nordvpn, pia, mullvad, custom
-    PROVIDER_MAP[0]["module"] = nordvpn
-    PROVIDER_MAP[1]["module"] = pia
-    PROVIDER_MAP[2]["module"] = mullvad
-    PROVIDER_MAP[99]["module"] = custom
-
-except Exception as e:
-    HAS_KODI = False
-
-    err_msg = str(e)
-    if "No module named 'xbmc'" in err_msg or "No module named 'xbmcaddon'" in err_msg:
-        log_message("Background daemon initialization active (Kodi env absent).", 0)
-    else:
-        log_message(f"CRITICAL: vpn_config initialization failed: {err_msg}", 3)
+})

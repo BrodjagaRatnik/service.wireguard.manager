@@ -1,14 +1,31 @@
 #!/bin/bash
 <<'COMMENT'
 
-mkdir /storage/.config/scripts
-cp /storage/.kodi/addons/service.wireguard.manager/resources/data/wgm-stats.sh.txt /storage/.config/scripts/wgm-stats.sh
-chmod +x /storage/.config/scripts/wgm-stats.sh
+ mkdir /storage/.config/scripts
+ cp /storage/.kodi/addons/service.wireguard.manager/resources/data/wgm-stats.sh.txt /storage/.config/scripts/wgm-stats.sh
+ chmod +x /storage/.config/scripts/wgm-stats.sh
 
  Start it with:
  bash /storage/.config/scripts/wgm-stats.sh
 
 COMMENT
+if [ -f /proc/device-tree/model ]; then
+    MODEL_STRING=$(tr -d '\0' < /proc/device-tree/model | tr '[:upper:]' '[:lower:]')
+else
+    MODEL_STRING=""
+fi
+
+if [[ "$MODEL_STRING" == *"pi 5"* || "$MODEL_STRING" == *"raspberry pi 5"* ]]; then
+    device_title="Raspberry Pi 5"
+elif [[ "$MODEL_STRING" == *"pi 4"* || "$MODEL_STRING" == *"raspberry pi 4"* ]]; then
+    device_title="Raspberry Pi 4"
+elif [[ "$MODEL_STRING" == *"pi 3"* || "$MODEL_STRING" == *"raspberry pi 3"* ]]; then
+    device_title="Raspberry Pi 3"
+elif [[ "$MODEL_STRING" == *"pi 2"* || "$MODEL_STRING" == *"raspberry pi 2"* ]]; then
+    device_title="Raspberry Pi 2"
+else
+    device_title="Generic Device"
+fi
 
 GEO_COUNTER=0
 FIRST_RUN=1
@@ -34,7 +51,7 @@ get_vpn_geo() {
 
     local cn
     cn=$(echo "$trace_data" | awk -F= '$1=="loc"{print $2}' | tr -d '\n\r ')
-    
+
     local colo
     colo=$(echo "$trace_data" | awk -F= '$1=="colo"{print $2}' | tr -d '\n\r ')
 
@@ -54,16 +71,16 @@ START_BYTES_TUN=$RT1
 
 while true; do
     printf '\033c'
-    echo -e "${B_CYAN}--- PI WireGuard VPN Manager System Stat, LibreELEC $LE_VER (Kodi $KODI_VER) ---${NC}"
+    echo -e "${B_CYAN}--- $device_title WireGuard VPN Manager System Stats, LibreELEC $LE_VER (Kodi $KODI_VER) ---${NC}"
 
     VPN_IFACE=$(ls /sys/class/net | grep -vE 'lo|eth|wlan|veth|docker' | head -n1)
     if [ -n "$VPN_IFACE" ]; then
         [ "$GEO_COUNTER" -le 0 ] && { get_vpn_geo; GEO_COUNTER=30; }
         GEO_COUNTER=$((GEO_COUNTER - 1))
-        
+
         RT2=$(awk "/$VPN_IFACE:/ {print \$2}" /proc/net/dev); RT2=${RT2:-0}
         TT2=$(awk "/$VPN_IFACE:/ {print \$10}" /proc/net/dev); TT2=${TT2:-0}
-        
+
         if [ "$FIRST_RUN" -eq 1 ]; then 
             R_MBPS="0.00"; T_MBPS="0.00"; FIRST_RUN=0
             START_BYTES_TUN=$RT2 
@@ -82,7 +99,7 @@ while true; do
         echo -e "\nVPN Status:     ${B_RED}DISCONNECTED${NC}"; GEO_COUNTER=0; FIRST_RUN=1
     fi
 
-    IGNORE_SYS="addhereyourignores"
+    IGNORE_SYS="AddHereYourIgnores"
     LAST_SYS_ERR=$(journalctl -n 20 --no-pager -p 0..3 --format=short-iso 2>/dev/null | grep -Ev "$IGNORE_SYS" | tail -n 1)
     SYS_TS=$(echo "$LAST_SYS_ERR" | cut -d' ' -f1)
 
@@ -99,7 +116,7 @@ while true; do
     echo -e "${NC}"
     KODI_LOG="/storage/.kodi/temp/kodi.log"
     WG_LOG_CONTENT=$(grep -i "service.wireguard.manager.*:" "$KODI_LOG" | tail -n 500)
-    IGNORE_WG="addhereyourignores"
+    IGNORE_WG="AddHereYourIgnores"
     LAST_WG_ERR=$(echo "$WG_LOG_CONTENT" | grep -Ei "error|warning" | grep -Eiv "$IGNORE_WG" | tail -n 1)
     WG_TS=$(echo "$LAST_WG_ERR" | cut -c1-19)
 

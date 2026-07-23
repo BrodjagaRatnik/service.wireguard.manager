@@ -34,6 +34,8 @@ _setup_paths()
 def perform_cleanup(silent=False):
     addon = kodi_env.get_addon_instance()
     wg_config_path = "/storage/.config/wireguard/"
+    connman_override_dir = "/storage/.config/system.d/connman.service.d"
+    connman_main_conf = "/storage/.config/connman_main.conf"
 
     try:
         log_message("Setup Helper: Cleanup Starting factory reset...", 1)
@@ -44,6 +46,24 @@ def perform_cleanup(silent=False):
             subprocess.run(["systemctl", "disable", "vpn-watchdog.service"], check=False)
             os.remove(service_file)
             subprocess.run(["systemctl", "daemon-reload"], check=False)
+
+        if os.path.exists(connman_override_dir) is True:
+            try:
+                shutil.rmtree(connman_override_dir)
+                log_message("Setup Helper: Cleanup Connman DNS override configuration removed.", 1)
+            except Exception as ce:
+                log_message(f"Setup Helper: Cleanup Error removing Connman override folder: {ce}", 3)
+
+        if os.path.exists(connman_main_conf) is True:
+            try:
+                os.remove(connman_main_conf)
+                log_message("Setup Helper: Cleanup Global connman_main.conf removed.", 1)
+            except Exception as me:
+                log_message(f"Setup Helper: Cleanup Error removing connman_main.conf: {me}", 3)
+
+        if os.path.exists(connman_override_dir) is True or os.path.exists(connman_main_conf) is True:
+            subprocess.run(["systemctl", "daemon-reload"], check=False)
+            subprocess.run(["systemctl", "restart", "connman"], check=False)
 
         if os.path.exists(wg_config_path) is True:
             cmd = "rm -f /storage/.config/wireguard/*_*.config"
@@ -103,6 +123,8 @@ def ensure_setup(addon_path, silent=False):
     connman_source = os.path.join(addon_path, 'resources', 'data', 'connman_main.conf.txt')
     cert_source = os.path.join(addon_path, "resources", "data", "ca.rsa.4096.txt")
     cert_dest = os.path.join(addon_path, "resources", "lib", "providers", "ca.rsa.4096.crt")
+    connman_override_dest = '/storage/.config/system.d/connman.service.d/override.conf'
+    connman_override_source = os.path.join(addon_path, 'resources', 'data', 'override.conf.txt')
 
     setup_updated = False
 
@@ -120,7 +142,7 @@ def ensure_setup(addon_path, silent=False):
         except Exception as e:
             log_message(f"Setup Helper: Setup Error (Keymap): {e}", 3)
 
-    progress.update(30, "Checking network configuration...")
+    progress.update(25, "Checking network configuration...")
     if not os.path.exists(connman_dest):
         try:
             shutil.copy2(connman_source, connman_dest)
@@ -129,6 +151,19 @@ def ensure_setup(addon_path, silent=False):
             setup_updated = True
         except Exception as e:
             log_message(f"Setup Helper: Setup Error (Connman): {e}", 3)
+
+    progress.update(35, "Checking DNS override configuration...")
+    if not os.path.exists(connman_override_dest):
+        try:
+            dest_dir = os.path.dirname(connman_override_dest)
+            os.makedirs(dest_dir, exist_ok=True)
+            shutil.copy2(connman_override_source, connman_override_dest)
+            subprocess.run(["systemctl", "daemon-reload"], check=False)
+            subprocess.run(["systemctl", "restart", "connman"], check=False)
+            log_message("Setup Helper: Connman dns override installed.", 1)
+            setup_updated = True
+        except Exception as e:
+            log_message(f"Setup Helper: Setup Error (Connman dns override): {e}", 3)
 
     progress.update(45, "Installing VPN Watchdog...")
     if not os.path.exists(service_dest):

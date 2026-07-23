@@ -17,8 +17,9 @@ except ImportError:
     HAS_KODI = False
 
 from logger import log_message
-from vpn_utils import is_interface_active, get_active_interface
+from vpn_utils import is_interface_active, get_active_interface, fetch_vpn_metadata
 from state_manager import get_active_vpn, write_state
+from vpn_config import PI5, PI4, PI3, PI2, SANITY_POLL_INTERVAL, SANITY_SETTLE_DELAY
 
 
 def run_tunnel_sanity_check():
@@ -70,15 +71,27 @@ def run_tunnel_sanity_check():
 
         if tunnel_is_broken:
             log_message("Tunnel Check: Dead link confirmed. Forcing reconnect sequence...", 2)
-
             boot_target = get_active_vpn()
-
             import vpn_ops
+            teardown_start = time.perf_counter()
             vpn_ops.disconnect_vpn(silent=True, flush_dns=True)
 
             while is_interface_active("wg0"):
-                time.sleep(0.5)
-            time.sleep(1.0)
+                time.sleep(SANITY_POLL_INTERVAL / 1000.0)
+            time.sleep(SANITY_SETTLE_DELAY / 1000.0)
+
+            elapsed_ms = (time.perf_counter() - teardown_start) * 1000
+            hw_name = (
+                "Raspberry Pi 5" if PI5 else
+                "Raspberry Pi 4" if PI4 else
+                "Raspberry Pi 3" if PI3 else
+                "Raspberry Pi 2" if PI2 else "Generic Device"
+            )
+            log_message(
+                f"Timing Tracker: Interface teardown completed. "
+                f"Hardware Matrix: {hw_name} | "
+                f"Teardown Release Time: {elapsed_ms:.2f}ms", 0
+            )
 
             try:
                 from vpn_core import check_for_updates
@@ -102,8 +115,9 @@ def run_tunnel_sanity_check():
                     vpn_ops.connect_vpn(str(boot_target), str(sid), silent=True)
 
                     if HAS_GUI:
+                        ip, country = fetch_vpn_metadata()
                         title = "[B][COLOR FF00FF00]▄■ [ TUNNEL RESTORED ] ■▄[/COLOR][/B]"
-                        msg = f"[COLOR FFE6E6FA]Reconnected to {boot_target}[/COLOR]"
+                        msg = f"[B][COLOR FF32CD32]{boot_target}[/COLOR] • ({country})[/B]"
                         xbmcgui.Dialog().notification(title, msg, icon_con, 4500)
                 else:
                     log_message(f"Tunnel Check: Service ID lookup dropped for {boot_target}", 3)

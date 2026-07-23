@@ -153,6 +153,6 @@ def finalize_configs(config_dir):
         if files:
             subprocess.run(["chmod", "600"] + files, check=False)
             subprocess.run(["systemctl", "restart", "connman-vpn"], check=False)
-            log_message("NordVPN: Configs updated and service restarted.", 1)
+            log_message("NordVPN: Configs updated and service restarted.", 0)
     except Exception as e:
         log_message(f"NordVPN: Finalization failed: {e}", 3)

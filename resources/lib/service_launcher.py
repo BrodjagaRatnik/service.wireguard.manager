@@ -3,13 +3,13 @@ import kodi_env
 import os
 import time
 from logger import log_message
-from vpn_config import PI4, PI5, WATCHDOG_HEARTBEAT, CONNMAN_SYSTEM_CHECK_INTERVAL
+from vpn_config import PI2, PI3, PI4, PI5, WATCHDOG_HEARTBEAT
 import vpn_ops
 from service_updater import handle_settings_update
 from service_resolver import resolve_service_id
 from service_loop import execute_monitor_loop
 from vpn_core import check_for_updates
-from wm_utils import check_system_interval
+from wm_utils import flush_connman_sockets
 
 try:
     import xbmc
@@ -32,14 +32,19 @@ if HAS_KODI_MONITOR:
             super().__init__()
             self._ADDON = addon
             self.vpn_ops = vpn_ops_mod
-            self.cleanup_count = 0
-            self.last_connman_check_time = 0
             self.last_bg_check_time = time.time()
+            self.last_socket_flush_time = 0
+            self.cleanup_count = 0
+            self.last_tunnel_check_time = time.time()
 
             if PI5:
                 hardware = "Raspberry Pi 5"
             elif PI4:
                 hardware = "Raspberry Pi 4"
+            elif PI3:
+                hardware = "Raspberry Pi 3"
+            elif PI2:
+                hardware = "Raspberry Pi 2"
             else:
                 hardware = "Generic Device"
 
@@ -50,15 +55,12 @@ if HAS_KODI_MONITOR:
             handle_settings_update(self._ADDON)
 
             try:
-                from vpn_utils import encrypt_setting_to_base64
+                from wm_utils import encrypt_setting_to_base64
                 encrypt_setting_to_base64("pia_pass")
-            except ImportError:
-                try:
-                    from wm_utils import encrypt_setting_to_base64
-                    encrypt_setting_to_base64("pia_pass")
-                except Exception as e:
-                    log_err = f"Service Launcher: Settings encryption helper unavailable: {e}"
-                    log_message(log_err, 2)
+
+            except Exception as e:
+                log_err = f"Service Launcher: Settings encryption helper unavailable: {e}"
+                log_message(log_err, 2)
 
         def get_service_id_by_name(self, name):
             return resolve_service_id(self._ADDON, name)
@@ -69,13 +71,12 @@ if HAS_KODI_MONITOR:
             addon_path = kodi_env.ADDON_DIR
             media_path = os.path.join(addon_path, "resources", "media")
 
-            if (current_time - self.last_connman_check_time) >= CONNMAN_SYSTEM_CHECK_INTERVAL:
-                self.last_connman_check_time = current_time
+            if (current_time - getattr(self, "last_socket_flush_time", 0.0)) >= 60.0:
+                self.last_socket_flush_time = current_time
                 try:
-                    check_system_interval(media_path)
+                    flush_connman_sockets(threshold=512)
                 except Exception as e:
-                    log_err = f"Service Launcher: Network health verification failure: {e}"
-                    log_message(log_err, 3)
+                    log_message(f"Service Launcher: Failed to run socket garbage collector: {e}", 3)
 
             if (current_time - self.last_bg_check_time) >= 1800.0:
                 self.last_bg_check_time = current_time
@@ -85,10 +86,13 @@ if HAS_KODI_MONITOR:
                     log_err = f"Service Launcher: Update verification failure: {e}"
                     log_message(log_err, 3)
 
+            if (current_time - self.last_tunnel_check_time) >= 300.0:
+                self.last_tunnel_check_time = current_time
                 if self._ADDON.getSettingBool("check_tunnel"):
                     try:
                         from tunnel_checker import run_tunnel_sanity_check
-                        run_tunnel_sanity_check()
+                        import threading
+                        threading.Thread(target=run_tunnel_sanity_check, daemon=True).start()
                     except Exception as e:
                         log_err = f"Service Launcher: Tunnel health tracking exception: {e}"
                         log_message(log_err, 3)
@@ -149,14 +153,13 @@ def start():
                 icon_path = os.path.join(path, 'resources', 'media', 'icon.png')
                 if ip and ip != "Unknown":
                     msg = (
-                        f" [B]═≡═ [COLOR FFFFFF00]Tunnel Restored"
-                        f"[/COLOR] ═≡═[/B]\n[B]Profile "
-                        f"[COLOR FF32CD32]{boot_target}[/COLOR] • ({country})[/B]"
+                        f" [B]═≡═ [COLOR FFFFFF00]Tunnel Restored[/COLOR] ═≡═[/B]\n"
+                        f"[B][COLOR FF32CD32]{boot_target}[/COLOR] • ({country})[/B]"
                     )
                 else:
                     msg = (
                         f" [B]═≡═ [COLOR FFFFFF00]Tunnel Restored"
-                        f"[/COLOR] ═≡═[/B]\n[B]Profile "
+                        f"[/COLOR] ═≡═[/B]\n[B]"
                         f"[COLOR FF32CD32]{boot_target}[/COLOR][/B]"
                     )
                 dialog = xbmcgui.Dialog()

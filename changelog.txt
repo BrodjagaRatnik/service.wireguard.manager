@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+v1.5.0 (2026-07-23)
+- Added: Zero-leak kernel-level Firewall Killswitch for IPv4 (nftables/iptables support)
+- Added: Smart Local Network (LAN) bypass ensuring local media shares (Samba/NFS) stay online when VPN drops
+- Added: Automated Zero-Hardcode infrastructure (Dynamic home subnet and server IP detection)
+- Added: Integrated Systemd runtime override configuration deploying '--nodnsproxy' to permanently halt ConnMan DNS file descriptor loops
+- Added: Automatic 'EnableOnlineCheck = false' injection to cleanly stop HTTP socket leaks on legacy LE 12 environments
+- Improved: Cleaned up background dependencies and optimized core network parsing speed
+- Improved: Subinterpreter-safe Python background garbage collector as a robust safety net for underlying network daemons
+
 v1.4.9 (2026-06-30)
 - Added automated tunnel health and routing verification checks
 - Fixed memory leaks by replacing global assignments with lazy-loaded references

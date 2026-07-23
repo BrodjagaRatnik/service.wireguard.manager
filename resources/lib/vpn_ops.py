@@ -9,6 +9,10 @@ from vpn_config import (
     OS_RELEASE_DELAY,
     PROP_SYNC_DELAY,
     PROVIDER_MAP,
+    PI5,
+    PI4,
+    PI3,
+    PI2,
 )
 from network_utils import (
     set_secure_dns,
@@ -17,6 +21,7 @@ from network_utils import (
 )
 from vpn_utils import flush_connman_dns_cache
 from state_manager import get_file_path, set_active_vpn
+from resources.scripts.killswitch import ZeroHardcodeKillSwitch
 
 try:
     import xbmc
@@ -31,6 +36,15 @@ def get_addon_path():
 
 
 def disconnect_vpn(silent=False, flush_dns=True):
+    start_time = time.perf_counter()
+
+    try:
+        fallback_ks = ZeroHardcodeKillSwitch(vpn_server_ip="0.0.0.0")
+        fallback_ks.enabled = True
+        fallback_ks.disable()
+    except Exception as ks_err:
+        log_message(f"VPN Ops: Killswitch manual disengage wrapper error: {ks_err}", 2)
+
     if silent is False and HAS_KODI is True:
         xbmcgui.Window(10000).setProperty("vpn_manual_session", "")
 
@@ -105,11 +119,11 @@ def disconnect_vpn(silent=False, flush_dns=True):
     set_secure_dns(vpn_active=False)
     set_active_vpn(None)
 
-    if HAS_KODI is True:
-        xbmc.sleep(OS_RELEASE_DELAY)
-    else:
-        time.sleep(OS_RELEASE_DELAY / 1000.0)
-
+    if silent is False:
+        if HAS_KODI is True:
+            xbmc.sleep(OS_RELEASE_DELAY)
+        else:
+            time.sleep(OS_RELEASE_DELAY / 1000.0)
     try:
         enable_connman_ipv6()
         flush_connman_dns_cache()
@@ -167,6 +181,21 @@ def disconnect_vpn(silent=False, flush_dns=True):
             os.remove(intentional_path)
         except Exception as e:
             log_message(f"VPN Ops: Error removing intentional disconnect file: {e}", 3)
+
+    elapsed_ms = (time.perf_counter() - start_time) * 1000
+    hw_name = (
+        "Raspberry Pi 5" if PI5 else
+        "Raspberry Pi 4" if PI4 else
+        "Raspberry Pi 3" if PI3 else
+        "Raspberry Pi 2" if PI2 else "Generic Device"
+    )
+    actual_allowed_timeout = OS_RELEASE_DELAY + 2000 if silent is False else 2000
+    log_message(
+        f"Timing Tracker: Tear-down execution completed. "
+        f"Hardware Matrix: {hw_name} | "
+        f"Disconnect Processing Time: {elapsed_ms:.2f}ms | "
+        f"Allowed Timeout: {actual_allowed_timeout}ms", 0
+    )
 
     kodi_env.clear_script_globals()
 

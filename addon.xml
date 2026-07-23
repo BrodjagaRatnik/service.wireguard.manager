@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="service.wireguard.manager" name="WireGuard VPN Manager" version="1.4.9" provider-name="Doemela">
+<addon id="service.wireguard.manager" name="WireGuard VPN Manager" version="1.5.0" provider-name="Doemela">
 	<requires>
 		<import addon="xbmc.python" version="3.0.1"/>
 	</requires>
@@ -10,27 +10,14 @@
 	<extension point="xbmc.addon.metadata">
 		<summary lang="en_GB">Multi-Provider WireGuard VPN Manager (NordVPN, PIA, Custom, ProtonVPN)</summary>
 		<description lang="en_GB">High-performance, hardened WireGuard VPN manager for LibreELEC. Supports multiple providers including NordVPN (NordLynx), Private Internet Access (PIA), ProtonVPN via Custom Mode, and Custom configurations. Features an automated Systemd watchdog to prevent connection drops.[CR][CR][B]Note:[/B] Designed specifically for LibreELEC. [CR][CR][B]Features:[/B][CR]• Multi-Provider Support (Nord, PIA, Custom)[CR]• Pure Python WireGuard Handshake logic[CR]• Smart Watchdog &amp; Auto-Reconnect[CR]• Hardened DNS &amp; IPv6 Leak Protection[CR][CR][B]Disclaimer:[/B] Not an official product of any VPN provider. Use at your own risk.</description>
-		<news>v1.4.9 (2026-06-30)
-- Added automated tunnel health and routing verification checks
-- Fixed memory leaks by replacing global assignments with lazy-loaded references
-- 100% LibreELEC 13 compatible with verified cross-platform support for x86 systems
-- Added network diagnostic test to verify tunnel encryption and stop IPv6 leaks
-- Converted dynamic config checks from daily intervals to precision hourly parameters
-- Hardened ConnMan loop engine to isolate custom nameservers onto active interfaces
-- Fixed cold boot and restart detection inside Service Launcher
-- Relocated state variables from /tmp/ storage to profile paths
-- Fixed dual-default gateway collision using dual-bucket /1 split routing for PIA
-- Added ProtonVPN via Custom Mode support
-- Initial preparation for Mullvad VPN support (in development)
-- Fixed 55-minute handshake cache lockout bug for instant connection retries
-- Added dynamic multi-tiered latency fallback engine for robust region updates
-- Implemented persistent 10-min anti-abuse tracking with 15-min cooldown locks
-- Added forced virtual interface data-ping to block ghost handshakes of PIA
-- Added split-title error handling to display clear server and credential alerts
-- Hardened connection teardown with route cache flushing and daemon restarts
-- Optimized hardware timing for Raspberry Pi 4, Pi 5 and Generic Device
-- Added manual trigger compatibility directly via HDMI-CEC keymaps
-- Dynamic MTU scaling maximizes packet throughput over standard links</news>
+		<news>v1.5.0 (2026-07-23)
+- Added: Zero-leak kernel-level Firewall Killswitch for IPv4 (nftables/iptables support)
+- Added: Smart Local Network (LAN) bypass ensuring local media shares (Samba/NFS) stay online when VPN drops
+- Added: Automated Zero-Hardcode infrastructure (Dynamic home subnet and server IP detection)
+- Added: Integrated Systemd runtime override configuration deploying '--nodnsproxy' to permanently halt ConnMan DNS file descriptor loops
+- Added: Automatic 'EnableOnlineCheck = false' injection to cleanly stop HTTP socket leaks on legacy LE 12 environments
+- Improved: Cleaned up background dependencies and optimized core network parsing speed
+- Improved: Subinterpreter-safe Python background garbage collector as a robust safety net for underlying network daemons</news>
 		<language>en_gb</language>
 		<platform>linux</platform>
 		<license>GPL-3.0-or-later</license>

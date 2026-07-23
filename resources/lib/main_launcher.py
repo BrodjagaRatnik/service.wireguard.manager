@@ -43,7 +43,7 @@ def run(argv):
         "choose_countries", "mode=country_selector", "mode=list_assets",
         "mode=dnsleaktest", "cleanup", "mode=tos", "mode=disclaimer",
         "mode=import_token", "mode=import_creds", "mode=import_custom_browser",
-        "mode=show_codes"
+        "mode=show_codes", "mode=net_reset"
     ]
 
     if any(cmd in args_str for cmd in commands):
@@ -268,7 +268,7 @@ def run(argv):
 
             elif "cleanup" in args_str:
                 import setup_helper
-                setup_helper.cleanup()
+                setup_helper.perform_cleanup()
 
             elif "mode=tos" in args_str:
                 scripts_path = os.path.join(addon_path, "resources", "scripts")
@@ -290,6 +290,13 @@ def run(argv):
                     sys.path.insert(0, scripts_path)
                 import show_codes
                 show_codes.run_viewer(args_str)
+
+            elif "mode=net_reset" in args_str:
+                scripts_path = os.path.join(addon_path, "resources", "scripts")
+                if scripts_path not in sys.path:
+                    sys.path.insert(0, scripts_path)
+                import network
+                network.run_network_cleanup()
 
         except Exception as e:
             log_message(f"Main Launcher: {str(e)}", 3)

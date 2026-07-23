@@ -139,6 +139,20 @@
 					<default>false</default>
 					<control type="toggle"/>
 				</setting>
+				<setting id="enable_killswitch" type="boolean" label="32069" help="32070">
+					<dependencies>
+						<dependency type="visible">
+							<or>
+								<condition setting="vpn_provider" operator="is">0</condition>
+								<condition setting="vpn_provider" operator="is">1</condition>
+								<condition setting="vpn_provider" operator="is">99</condition>
+							</or>
+						</dependency>
+					</dependencies>
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
 				<setting id="home_timeout_sec" type="integer" label="32052" help="32053">
 					<dependencies>
 						<dependency type="visible">
@@ -522,6 +536,12 @@
 				</setting>
 			</group>
 			<group id="14" label="32045">
+				<setting id="net_reset" type="action" label="32067" help="32068">
+					<level>3</level>
+					<control type="button" format="action">
+						<data>RunScript(service.wireguard.manager, mode=mode=net_reset)</data>
+					</control>
+				</setting>
 				<setting id="factory_reset" type="action" label="32015" help="32029">
 					<level>3</level>
 					<control type="button" format="action">

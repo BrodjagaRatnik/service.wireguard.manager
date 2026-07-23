@@ -6,10 +6,10 @@ import os
 import re
 import socket
 import subprocess
-import time
 
 try:
     import xbmc
+    import xbmcgui
     HAS_KODI = True
 except ImportError:
     HAS_KODI = False
@@ -19,6 +19,10 @@ from state_manager import get_file_path
 
 BASE64_PREFIX = "b64:"
 B64_REGEX = re.compile(r"^b64:([A-Za-z0-9+/=]+)$")
+LAST_RESTART_TIMES = {
+    "connman": 0.0,
+    "connman-vpn": 0.0
+}
 
 
 def get_addon_dir():
@@ -26,6 +30,7 @@ def get_addon_dir():
 
 
 ADDON_DIR = get_addon_dir()
+CONNMAN_ALERT_SHOWN = False
 
 
 def trigger_blackout_ui():
@@ -46,12 +51,9 @@ def trigger_blackout_ui():
         xbmc.executebuiltin("PlayerControl(Stop)")
         xbmc.executebuiltin("Action(Stop)")
         xbmc.executebuiltin("Dialog.Close(all,true)")
-        xbmc.executebuiltin(f'Notification("{title}", "{msg}", 14000, "{icon}")')
+        xbmcgui.Dialog().notification(title, msg, icon, 14000, False)
         if os.path.exists(sound) is True:
-            subprocess.run(
-                ["kodi-send", f'--action=PlayMedia("{sound}", 1)'],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
+            xbmc.executebuiltin(f"PlayMedia({sound},1)")
         else:
             xbmc.executebuiltin("PlayAction(rightclick)")
     except (ImportError, Exception):
@@ -60,13 +62,16 @@ def trigger_blackout_ui():
                 ["kodi-send", "--action=PlayerControl(Stop);Action(Stop);Dialog.Close(all,true)"],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
+            escaped_title = title.replace('"', '\\"')
+            escaped_msg = msg.replace('"', '\\"')
+            notify_action = f'Notification("{escaped_title}","{escaped_msg}",14000,"{icon}")'
             subprocess.run(
-                ["kodi-send", f'--action=Notification("{title}", "{msg}", 14000, "{icon}")'],
+                ["kodi-send", f"--action={notify_action}"],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
             if os.path.exists(sound) is True:
                 subprocess.run(
-                    ["kodi-send", f'--action=PlayMedia("{sound}", 1)'],
+                    ["kodi-send", f'--action=PlayMedia("{sound}",1)'],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                 )
         except Exception:
@@ -127,52 +132,86 @@ def safe_decrypt_password(stored_password: str) -> str:
         return html.unescape(stored_password)
 
 
-def check_system_interval(media_path):
+def flush_connman_sockets(threshold=400) -> bool:
+    global CONNMAN_ALERT_SHOWN
     try:
-        if time.localtime().tm_year < 2026:
-            return
+        res = subprocess.run(["pidof", "connmand"], capture_output=True, text=True)
 
-        if HAS_KODI and xbmc.Player().isPlaying():
-            playing_file = xbmc.Player().getPlayingFile()
-            stream_protocols = ["http://", "https://", "rtmp://", "pvr://"]
-            if any(playing_file.startswith(proto) for proto in stream_protocols):
-                log_message("Wm Utils: Active stream detected. Postponing network health check.", 0)
-                return
+        if res.returncode != 0 or not res.stdout.strip():
+            return False
 
-        DAEMON_LIMITS = {
-            "connman-vpnd": 512,
-            "connmand": 512
-        }
+        pids = sorted([int(x) for x in res.stdout.strip().split()])
+        pid = pids[0]
+        fd_dir = f"/proc/{pid}/fd"
+
+        if not os.path.exists(fd_dir):
+            return False
 
         try:
-            import subprocess
+            fds = os.listdir(fd_dir)
+        except OSError:
+            return False
 
-            for daemon, limit in DAEMON_LIMITS.items():
-                try:
-                    pid_out = subprocess.check_output(["pidof", daemon], text=True).strip()
-                    if pid_out:
-                        target_pid = pid_out.split()[0]
+        current_count = len(fds)
 
-                        fd_out = subprocess.check_output(["ls", f"/proc/{target_pid}/fd"], text=True)
-                        fd_count = len(fd_out.splitlines())
+        if current_count < threshold:
+            return False
 
-                        if fd_count > limit:
-                            msg = (
-                                f"Wm Utils: Background active tunnel socket buildup "
-                                f"detected in {daemon} ({fd_count}/{limit} fds). Clearing memory."
-                            )
-                            log_message(msg, 1)
-                            service_to_restart = "connman" if daemon == "connmand" else "connman-vpn"
-                            subprocess.run(["systemctl", "restart", service_to_restart], check=False)
-                except subprocess.CalledProcessError:
-                    continue
-        except Exception:
-            pass
+        socket_count = 0
+        for fd in fds:
+            try:
+                fd_path = f"{fd_dir}/{fd}"
+                link = os.readlink(fd_path)
+                if "socket:" in link:
+                    socket_count += 1
+            except OSError:
+                continue
 
-        log_message("Wm Utils: Network health check complete.", 0)
-        return
+        if current_count >= threshold and socket_count > 0:
+            vpn_active = os.path.exists("/sys/class/net/wg0")
 
-    except Exception as e:
-        log_message(f"Wm Utils: System interval monitoring tracking error: {e}", 3)
+            if vpn_active:
+                msg = (
+                    f"Wm Utils: Connman socket leak detected ({socket_count}/{current_count} FDs). "
+                    f"VPN connection is active. Skipping restart to protect tunnel integrity."
+                )
+                log_message(msg, 1)
+
+                if current_count >= 724 and not CONNMAN_ALERT_SHOWN:
+                    try:
+                        dialog = xbmcgui.Dialog()
+                        dialog.ok(
+                            "WireGuard Manager Alert",
+                            f"ConnMan socket leak has reached dangerous levels!\n"
+                            f"Current Count: {current_count} FDs\n"
+                            "Please cycle your VPN connection to safely clear resources."
+                        )
+                        CONNMAN_ALERT_SHOWN = True
+                    except Exception as e:
+                        log_message(f"Wm Utils: Failed to render Kodi OK dialog: {e}", 2)
+
+                return False
+
+            CONNMAN_ALERT_SHOWN = False
+            msg = (
+                f"Wm Utils: Connman socket leak detected ({socket_count}/{current_count} FDs). "
+                f"VPN connection is inactive. Executing safe background network reclamation..."
+            )
+            log_message(msg, 1)
+
+            cmd = "systemctl restart connman && ifconfig eth0 up 2>/dev/null; ifconfig wlan0 up 2>/dev/null"
+            subprocess.Popen(
+                ["nohup", "sh", "-c", cmd],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
+            )
+            return True
+
+        return False
+    except (IndexError, ValueError, OSError) as e:
+        log_message(f"Wm Utils: Internal exception during connmand socket monitoring: {e}", 3)
+        return False
+
     finally:
         kodi_env.clear_script_globals()

@@ -272,6 +272,23 @@ msgctxt "#32066"
 msgid "Check if WireGuard tunnel are dead or alive On|Off if the tunnel is dead connection gets restarted."
 msgstr "Check if WireGuard tunnel are dead or alive On|Off if the tunnel is dead connection gets restarted."
 
+msgctxt "#32067"
+msgid "►Reset Network Subsystem◄"
+msgstr "►Reset Network Subsystem◄"
+
+msgctxt "#32068"
+msgid "Only use if there are network troubles this will disconnect all VPN connections! Disconnects VPN services, clears service cache, flushes IP routing, restarts ConnMan and disengage Firewall killswitch."
+msgstr "Only use if there are network troubles this will disconnect all VPN connections! Disconnects VPN services, clears service cache, flushes IP routing, and restarts ConnMan and disengage Firewall killswitch."
+
+msgctxt "#32069"
+msgid "Enable VPN Killswitch"
+msgstr "Enable VPN Killswitch"
+
+msgctxt "#32070"
+msgid "Zero-leak kernel-level Firewall Killswitch for IPv4 nftables/iptables support. Smart Local Network (LAN) bypass ensuring local media shares (Samba/NFS) stay online when VPN drops."
+msgstr "Zero-leak kernel-level Firewall Killswitch for IPv4 nftables/iptables support. Smart Local Network (LAN) bypass ensuring local media shares (Samba/NFS) stay online when VPN drops."
+
+
 
 msgctxt "#32992"
 msgid "Independent project, not affiliated with NordVPN. Use at your own risk, read Terms of Service!"
