@@ -18,6 +18,7 @@ from network_utils import (
     set_secure_dns,
     enable_connman_ipv6,
     get_default_gateway,
+    verify_and_fix_dns,
 )
 from vpn_utils import flush_connman_dns_cache
 from state_manager import get_file_path, set_active_vpn
@@ -181,6 +182,11 @@ def disconnect_vpn(silent=False, flush_dns=True):
             os.remove(intentional_path)
         except Exception as e:
             log_message(f"VPN Ops: Error removing intentional disconnect file: {e}", 3)
+
+    try:
+        verify_and_fix_dns()
+    except Exception as dns_err:
+        log_message(f"VPN Ops: Failed to execute verify_and_fix_dns: {dns_err}", 3)
 
     elapsed_ms = (time.perf_counter() - start_time) * 1000
     hw_name = (

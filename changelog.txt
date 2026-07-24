@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+v1.5.1 (2026-07-24)
+- Fixed: Resolved an intermittent post-disconnect DNS deadlock on LibreELEC platforms where ConnMan stale state tracking preserved inactive VPN nameservers, inducing immediate host name resolution execution failures.
+- Optimized: Implemented a lightweight, non-intrusive runtime DNS connectivity check engine inside the tear-down routine to ensure network communication integrity.
+- Optimized: Refactored the core network utility interface recycling sequence to programmatically enforce dynamic upstream DHCP nameserver fallback allocations upon tunnel termination without resetting IPv6 state profiles.
+- Optimized: Added conditional routing validation to dynamically inspect interface allocation methods, preserving manual nameserver entries and preventing IP loss for static configuration profiles.
+
 v1.5.0 (2026-07-23)
 - Added: Zero-leak kernel-level Firewall Killswitch for IPv4 (nftables/iptables support)
 - Added: Smart Local Network (LAN) bypass ensuring local media shares (Samba/NFS) stay online when VPN drops

@@ -219,3 +219,40 @@ def get_profile_allowed_ips(sid):
     except Exception:
         pass
     return ""
+
+
+def verify_and_fix_dns():
+    import socket
+    try:
+        log_message("Network Utils: Running post-disconnect DNS sanity check...", 0)
+        socket.gethostbyname("ifconfig.co")
+        log_message("Network Utils: DNS check passed successfully.", 0)
+        return True
+    except socket.gaierror:
+        log_message("Network Utils: DNS deadlock detected! Enforcing dynamic fallback...", 3)
+        try:
+            result = subprocess.check_output(["connmanctl", "services"], text=True)
+            phys_service = next(
+                (
+                    line.split()[-1] for line in result.splitlines()
+                    if line.startswith(("*", "R")) and "vpn_" not in line
+                ),
+                None
+            )
+            if phys_service:
+                subprocess.run(["connmanctl", "config", phys_service, "--nameservers", "off"], check=False)
+                subprocess.run(["connmanctl", "config", phys_service, "--nameservers", ""], check=False)
+
+                ipv4_info = subprocess.check_output(
+                    ["connmanctl", "service", phys_service, "ipv4"],
+                    text=True, stderr=subprocess.DEVNULL
+                ).replace(" ", "")
+
+                if "Method=dhcp" in ipv4_info:
+                    subprocess.run(["connmanctl", "config", phys_service, "--ipv4", "dhcp"], check=False)
+                return True
+            else:
+                log_message("Network Utils: Remediate failed. No active physical ConnMan service found.", 3)
+        except Exception as fallback_err:
+            log_message(f"Network Utils: Critical failure during DNS fallback recovery: {fallback_err}", 3)
+    return False

@@ -58,7 +58,8 @@ def flush_connman_dns_cache():
                 if not parts:
                     continue
                 srv_id = parts[-1]
-                subprocess.run(["connmanctl", "config", srv_id, "--nameservers"], check=False)
+                subprocess.run(["connmanctl", "config", srv_id, "--nameservers", "off"], check=False)
+                subprocess.run(["connmanctl", "config", srv_id, "--nameservers", ""], check=False)
                 ipv4_info = subprocess.check_output(
                     ["connmanctl", "service", srv_id, "ipv4"],
                     text=True, stderr=subprocess.DEVNULL
