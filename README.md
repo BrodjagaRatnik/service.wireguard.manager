@@ -41,7 +41,7 @@ To prevent the system from exhausting resources and crashing, **WGM automaticall
 The addon silently injects and applies the following mitigations directly to LibreELEC:
 * **Disables ConnMan's Online Check**: Patches `/storage/.config/connman_main.conf` to set `EnableOnlineCheck = false`, stopping orphaned `CLOSE_WAIT` sockets.
 * **Bypasses Internal DNS Proxy**: Deploys a systemd drop-in override at `/storage/.config/system.d/connman.service.d/override.conf` forcing the daemon to run with the `--nodnsproxy` flag.
-* **Hot-Reloads Networking**: Safely triggers a `systemctl daemon-reload && systemctl restart connman` cycle to instantly lock and flatline the file descriptor baseline (stabilizing at ~22 FDs on Pi hardware and ~30 FDs on x86 platforms).
+* **Hot-Reloads Networking**: Safely triggers a `systemctl daemon-reload && systemctl restart connman` cycle to instantly lock and flatline the file descriptor baseline (stabilizing at ~20 FDs on Pi hardware and ~18 FDs on x86 platforms).
 * **[See LibreELEC forum](https://forum.libreelec.tv/thread/30529-rpi-connman-resource-socket-leak-1024-fd-crash-when-using-kernel-space-wireguard/?postID=206516#post206516)**
 
 *Note: The structural tracking details for this bug have been forwarded to the upstream ConnMan developer mailing list (`connman@lists.linux.dev`) to ensure a permanent resolution in future core daemon releases.*
