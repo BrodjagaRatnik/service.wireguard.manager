@@ -1,9 +1,11 @@
 """ ./resources/lib/kodi_env.py """
 import os
+import sys
 
 ADDON_ID = "service.wireguard.manager"
 
 try:
+    import xbmc
     import xbmcaddon
     import xbmcvfs
     HAS_KODI_IMPORTS = True
@@ -37,6 +39,32 @@ def get_addon_dir():
 def clear_script_globals():
     global _ADDON_INSTANCE
     _ADDON_INSTANCE = None
+
+    if HAS_KODI_IMPORTS:
+        try:
+            leaking_modules = []
+            ignored_core_modules = [
+                "kodi_env",
+                "main",
+                "service_startup",
+                "main_launcher",
+                "service_launcher"
+            ]
+
+            for module_name in list(sys.modules.keys()):
+                if ADDON_ID in module_name:
+                    base_name = module_name.split(".")[-1]
+                    if base_name not in ignored_core_modules:
+                        leaking_modules.append(module_name)
+
+            if leaking_modules:
+                log_txt = f"kodi_env: LEAK DETECTION: Rogue modules trapped in memory: {leaking_modules}"
+                xbmc.log(log_txt, xbmc.LOGWARNING)
+            else:
+                xbmc.log("kodi_env: LEAK DETECTION: System modules trace is completely clean.", xbmc.LOGINFO)
+        except Exception:
+            pass
+
     import gc
     gc.collect()
 

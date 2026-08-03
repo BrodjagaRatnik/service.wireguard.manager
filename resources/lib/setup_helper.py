@@ -103,124 +103,129 @@ def perform_cleanup(silent=False):
     except Exception as e:
         log_message(f"Setup Helper: Cleanup Error: {e}", 3)
 
-    kodi_env.clear_script_globals()
+    finally:
+        kodi_env.clear_script_globals()
 
 
 def ensure_setup(addon_path, silent=False):
-    ADDON = kodi_env.get_addon_instance()
+    try:
+        ADDON = kodi_env.get_addon_instance()
 
-    if not ADDON or not HAS_KODI:
-        log_message("Setup Helper: Abstractions missing. Skipping interface orchestration.", 2)
+        if not ADDON or not HAS_KODI:
+            log_message("Setup Helper: Abstractions missing. Skipping interface orchestration.", 2)
+            return
+
+        keymap_dest = xbmcvfs.translatePath("special://userdata/keymaps/wireguard_manager_key.xml")
+        keymap_source = os.path.join(addon_path, "resources", "keymaps", "wireguard_manager_key.xml")
+        wg_config_path = "/storage/.config/wireguard/"
+        service_dest = "/storage/.config/system.d/vpn-watchdog.service"
+        service_source = os.path.join(addon_path, "resources", "data", "vpn-watchdog.service.txt")
+        connman_dest = '/storage/.config/connman_main.conf'
+        connman_source = os.path.join(addon_path, 'resources', 'data', 'connman_main.conf.txt')
+        cert_source = os.path.join(addon_path, "resources", "data", "ca.rsa.4096.txt")
+        cert_dest = os.path.join(addon_path, "resources", "lib", "providers", "ca.rsa.4096.crt")
+        connman_override_dest = '/storage/.config/system.d/connman.service.d/override.conf'
+        connman_override_source = os.path.join(addon_path, 'resources', 'data', 'override.conf.txt')
+
+        setup_updated = False
+
+        progress = xbmcgui.DialogProgress()
+        progress.create("WireGuard Manager", "Starting system check...")
+
+        progress.update(15, "Checking Keymaps...")
+        if not os.path.exists(keymap_dest):
+            try:
+                os.makedirs(os.path.dirname(keymap_dest), exist_ok=True)
+                shutil.copy2(keymap_source, keymap_dest)
+                log_message("Setup Helper: Keymap installed.", 1)
+                xbmc.executebuiltin("Action(ReloadKeymaps)")
+                log_message("Setup Helper: Keymaps reloaded in Kodi.", 1)
+            except Exception as e:
+                log_message(f"Setup Helper: Setup Error (Keymap): {e}", 3)
+
+        progress.update(25, "Checking network configuration...")
+        if not os.path.exists(connman_dest):
+            try:
+                shutil.copy2(connman_source, connman_dest)
+                subprocess.run(["systemctl", "restart", "connman"], check=False)
+                log_message("Setup Helper: Connman config installed.", 1)
+                setup_updated = True
+            except Exception as e:
+                log_message(f"Setup Helper: Setup Error (Connman): {e}", 3)
+
+        progress.update(35, "Checking DNS override configuration...")
+        if not os.path.exists(connman_override_dest):
+            try:
+                dest_dir = os.path.dirname(connman_override_dest)
+                os.makedirs(dest_dir, exist_ok=True)
+                shutil.copy2(connman_override_source, connman_override_dest)
+                subprocess.run(["systemctl", "daemon-reload"], check=False)
+                subprocess.run(["systemctl", "restart", "connman"], check=False)
+                log_message("Setup Helper: Connman dns override installed.", 1)
+                setup_updated = True
+            except Exception as e:
+                log_message(f"Setup Helper: Setup Error (Connman dns override): {e}", 3)
+
+        progress.update(45, "Installing VPN Watchdog...")
+        if not os.path.exists(service_dest):
+            try:
+                os.makedirs(os.path.dirname(service_dest), exist_ok=True)
+                shutil.copy2(service_source, service_dest)
+                subprocess.run(["systemctl", "daemon-reload"], check=False)
+                subprocess.run(["systemctl", "enable", "vpn-watchdog.service"], check=False)
+                subprocess.run(["systemctl", "start", "vpn-watchdog.service"], check=False)
+                log_message("Setup Helper: Watchdog service installed.", 1)
+                setup_updated = True
+            except Exception as e:
+                log_message(f"Setup Helper: Setup Error (Service): {e}", 3)
+
+        progress.update(60, "Deploying PIA provider certificates...")
+        if not os.path.exists(cert_dest):
+            try:
+                os.makedirs(os.path.dirname(cert_dest), exist_ok=True)
+                shutil.copy2(cert_source, cert_dest)
+                log_message("Setup Helper: Secure verification certificate deployed.", 1)
+            except Exception as e:
+                log_message(f"Setup Helper: Setup Error (Certificate Copy): {e}", 3)
+
+        progress.update(80, "Verifying VPN credentials...")
+        current_p_id = ADDON.getSettingInt("vpn_provider")
+        has_creds = False
+        if current_p_id == -1:
+            log_message("Setup Helper: No VPN provider selected yet. Skipping credential check.", 1)
+        else:
+            p_data = PROVIDER_MAP.get(current_p_id, {"name": "Unknown", "prefix": "unknown_"})
+            token_setting = p_data.get("setting")
+            if token_setting:
+                has_creds = bool(ADDON.getSetting(token_setting).strip())
+            if current_p_id == 99 or not has_creds:
+                prefix = p_data["prefix"]
+                if os.path.exists(wg_config_path):
+                    has_files = any(f.startswith((prefix, "custom_")) for f in os.listdir(wg_config_path))
+                    has_creds = has_creds or has_files
+
+        progress.update(100, "Setup Complete.")
+        if setup_updated:
+            log_message("Setup Helper: All system checks completed successfully.", 0)
+        progress.close()
+
+        if setup_updated:
+            log_message("Setup Helper: Success! System services installed. WireGuard manager active.", 1)
+
+            path_fixed = kodi_env.ADDON_DIR
+            ICON_INFO = os.path.join(path_fixed, "resources", "media", "icon.png")
+            title = "[B][COLOR FFEEFFEE]≡ [ SETUP SUCCESS ] ≡[/B]"
+            message = (
+                "[COLOR FFE6E6FA]System services installed.[/COLOR]\n"
+                "[COLOR FFFFFF00]WireGuard manager is now active.[/COLOR]"
+            )
+            xbmcgui.Dialog().notification(title, message, ICON_INFO, 6000)
+
+    except Exception as major_err:
+        log_message(f"Setup Helper: Orchestration master failure: {major_err}", 3)
+
+    finally:
         kodi_env.clear_script_globals()
-        return
-
-    keymap_dest = xbmcvfs.translatePath("special://userdata/keymaps/wireguard_manager_key.xml")
-    keymap_source = os.path.join(addon_path, "resources", "keymaps", "wireguard_manager_key.xml")
-    wg_config_path = "/storage/.config/wireguard/"
-    service_dest = "/storage/.config/system.d/vpn-watchdog.service"
-    service_source = os.path.join(addon_path, "resources", "data", "vpn-watchdog.service.txt")
-    connman_dest = '/storage/.config/connman_main.conf'
-    connman_source = os.path.join(addon_path, 'resources', 'data', 'connman_main.conf.txt')
-    cert_source = os.path.join(addon_path, "resources", "data", "ca.rsa.4096.txt")
-    cert_dest = os.path.join(addon_path, "resources", "lib", "providers", "ca.rsa.4096.crt")
-    connman_override_dest = '/storage/.config/system.d/connman.service.d/override.conf'
-    connman_override_source = os.path.join(addon_path, 'resources', 'data', 'override.conf.txt')
-
-    setup_updated = False
-
-    progress = xbmcgui.DialogProgress()
-    progress.create("WireGuard Manager", "Starting system check...")
-
-    progress.update(15, "Checking Keymaps...")
-    if not os.path.exists(keymap_dest):
-        try:
-            os.makedirs(os.path.dirname(keymap_dest), exist_ok=True)
-            shutil.copy2(keymap_source, keymap_dest)
-            log_message("Setup Helper: Keymap installed.", 1)
-            xbmc.executebuiltin("Action(ReloadKeymaps)")
-            log_message("Setup Helper: Keymaps reloaded in Kodi.", 1)
-        except Exception as e:
-            log_message(f"Setup Helper: Setup Error (Keymap): {e}", 3)
-
-    progress.update(25, "Checking network configuration...")
-    if not os.path.exists(connman_dest):
-        try:
-            shutil.copy2(connman_source, connman_dest)
-            subprocess.run(["systemctl", "restart", "connman"], check=False)
-            log_message("Setup Helper: Connman config installed.", 1)
-            setup_updated = True
-        except Exception as e:
-            log_message(f"Setup Helper: Setup Error (Connman): {e}", 3)
-
-    progress.update(35, "Checking DNS override configuration...")
-    if not os.path.exists(connman_override_dest):
-        try:
-            dest_dir = os.path.dirname(connman_override_dest)
-            os.makedirs(dest_dir, exist_ok=True)
-            shutil.copy2(connman_override_source, connman_override_dest)
-            subprocess.run(["systemctl", "daemon-reload"], check=False)
-            subprocess.run(["systemctl", "restart", "connman"], check=False)
-            log_message("Setup Helper: Connman dns override installed.", 1)
-            setup_updated = True
-        except Exception as e:
-            log_message(f"Setup Helper: Setup Error (Connman dns override): {e}", 3)
-
-    progress.update(45, "Installing VPN Watchdog...")
-    if not os.path.exists(service_dest):
-        try:
-            os.makedirs(os.path.dirname(service_dest), exist_ok=True)
-            shutil.copy2(service_source, service_dest)
-            subprocess.run(["systemctl", "daemon-reload"], check=False)
-            subprocess.run(["systemctl", "enable", "vpn-watchdog.service"], check=False)
-            subprocess.run(["systemctl", "start", "vpn-watchdog.service"], check=False)
-            log_message("Setup Helper: Watchdog service installed.", 1)
-            setup_updated = True
-        except Exception as e:
-            log_message(f"Setup Helper: Setup Error (Service): {e}", 3)
-
-    progress.update(60, "Deploying PIA provider certificates...")
-    if not os.path.exists(cert_dest):
-        try:
-            os.makedirs(os.path.dirname(cert_dest), exist_ok=True)
-            shutil.copy2(cert_source, cert_dest)
-            log_message("Setup Helper: Secure verification certificate deployed.", 1)
-        except Exception as e:
-            log_message(f"Setup Helper: Setup Error (Certificate Copy): {e}", 3)
-
-    progress.update(80, "Verifying VPN credentials...")
-    current_p_id = ADDON.getSettingInt("vpn_provider")
-    has_creds = False
-    if current_p_id == -1:
-        log_message("Setup Helper: No VPN provider selected yet. Skipping credential check.", 1)
-    else:
-        p_data = PROVIDER_MAP.get(current_p_id, {"name": "Unknown", "prefix": "unknown_"})
-        token_setting = p_data.get("setting")
-        if token_setting:
-            has_creds = bool(ADDON.getSetting(token_setting).strip())
-        if current_p_id == 99 or not has_creds:
-            prefix = p_data["prefix"]
-            if os.path.exists(wg_config_path):
-                has_files = any(f.startswith((prefix, "custom_")) for f in os.listdir(wg_config_path))
-                has_creds = has_creds or has_files
-
-    progress.update(100, "Setup Complete.")
-    if setup_updated:
-        log_message("Setup Helper: All system checks completed successfully.", 0)
-    progress.close()
-
-    if setup_updated:
-        log_message("Setup Helper: Success! System services and configurations installed. WireGuard manager active.", 1)
-
-        path_fixed = kodi_env.ADDON_DIR
-        ICON_INFO = os.path.join(path_fixed, "resources", "media", "icon.png")
-        title = "[B][COLOR FFEEFFEE]≡ [ SETUP SUCCESS ] ≡[/COLOR][/B]"
-        message = (
-            "[COLOR FFE6E6FA]System services installed.[/COLOR]\n"
-            "[COLOR FFFFFF00]WireGuard manager is now active.[/COLOR]"
-        )
-        xbmcgui.Dialog().notification(title, message, ICON_INFO, 6000)
-
-    kodi_env.clear_script_globals()
 
 
 if __name__ == "__main__":

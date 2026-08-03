@@ -4,7 +4,7 @@ import sys
 import xbmc
 import xbmcgui
 from logger import log_message
-from vpn_config import WATCHDOG_HEARTBEAT, PROVIDER_MAP
+from vpn_config import WATCHDOG_HEARTBEAT, PROVIDER_MAP, CONNMAN_SETTLE_DELAY
 from state_manager import get_file_path
 from service_matcher import is_nord_match, is_pia_match, is_custom_match
 
@@ -117,6 +117,9 @@ def execute_monitor_loop(instance):
 
                 instance.vpn_ops.disconnect_vpn(silent=True, flush_dns=False)
 
+                if CONNMAN_SETTLE_DELAY > 0:
+                    xbmc.sleep(CONNMAN_SETTLE_DELAY)
+
                 if "resources.lib.providers.pia_utils" in sys.modules:
                     try:
                         pia_mod = sys.modules["resources.lib.providers.pia_utils"]
@@ -127,7 +130,7 @@ def execute_monitor_loop(instance):
 
                 sid = instance.get_service_id_by_name(vpn_target)
                 if sid:
-                    instance.vpn_ops.connect_vpn(str(vpn_target), str(sid))
+                    instance.vpn_ops.connect_vpn(str(vpn_target), str(sid), silent=True)
                     match_found = True
                 else:
                     err_msg = f"Service Loop: Target ID for profile {vpn_target} not found."

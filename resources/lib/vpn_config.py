@@ -32,11 +32,11 @@ PI3 = 'pi 3' in MODEL_STRING or 'raspberry pi 3' in MODEL_STRING
 PI2 = 'pi 2' in MODEL_STRING or 'raspberry pi 2' in MODEL_STRING
 
 PROP_SYNC_DELAY = 100
-OS_RELEASE_DELAY = 1500 if PI5 else (1800 if PI4 else (2000 if (PI3 or PI2) else 1000))
+OS_RELEASE_DELAY = 15 if PI5 else (25 if PI4 else (35 if (PI3 or PI2) else 15))
 CONN_POLL_INTERVAL = 500 if PI5 else (600 if PI4 else (400 if (PI3 or PI2) else 250))
-ROUTE_PROP_DELAY = 100 if PI5 else (150 if PI4 else (150 if (PI3 or PI2) else 100))
-DHCP_RECOVERY_DELAY = 200 if PI5 else (300 if PI4 else (250 if (PI3 or PI2) else 100))
-VPN_CONNECTION_TIMEOUT = 3000 if PI5 else (4500 if PI4 else (5500 if (PI3 or PI2) else 2500))
+ROUTE_PROP_DELAY = 15 if PI5 else (15 if PI4 else (25 if (PI3 or PI2) else 10))
+DHCP_RECOVERY_DELAY = 10 if PI5 else (15 if PI4 else (25 if (PI3 or PI2) else 10))
+VPN_CONNECTION_TIMEOUT = 500 if PI5 else (500 if PI4 else (500 if (PI3 or PI2) else 500))
 WATCHDOG_HEARTBEAT = 1000 if PI5 else (1500 if PI4 else (1200 if (PI3 or PI2) else 500))
 WATCHDOG_SETTLE_DELAY = 5000 if PI5 else (6000 if PI4 else (5000 if (PI3 or PI2) else 2500))
 WATCHDOG_RECOVERY_DELAY = 2000 if PI5 else (2500 if PI4 else (2000 if (PI3 or PI2) else 1000))
@@ -46,8 +46,10 @@ SYSTEMD_POLL_DELAY = 300 if PI5 else (400 if PI4 else (300 if (PI3 or PI2) else 
 SERVICE_INIT_DELAY = 400 if PI5 else (600 if PI4 else (400 if (PI3 or PI2) else 200))
 UI_BUFFER_DELAY_MENU = 50 if PI5 else (100 if PI4 else (100 if (PI3 or PI2) else 50))
 CONNMAN_RESTART_DELAY = 100 if PI5 else (150 if PI4 else (100 if (PI3 or PI2) else 50))
-SANITY_POLL_INTERVAL = 500 if PI5 else (500 if PI4 else (500 if PI3 or PI2 else 500))
-SANITY_SETTLE_DELAY = 500 if PI5 else (1000 if PI4 else (1500 if PI3 or PI2 else 500))
+SANITY_POLL_INTERVAL = 500 if PI5 else (1000 if PI4 else (1500 if PI3 or PI2 else 1000))
+SANITY_SETTLE_DELAY = 500 if PI5 else (1000 if PI4 else (1500 if PI3 or PI2 else 1000))
+CONNMAN_SETTLE_DELAY = 100 if PI5 else (100 if PI4 else (100 if (PI3 or PI2) else 400))
+
 """
 PROP_SYNC_DELAY = Stops Kodi from getting confused if two updates happen at once
 OS_RELEASE_DELAY = Gives the system time to completely kill the old VPN tunnel

@@ -14,7 +14,7 @@ def get_allowed_ips(
 ) -> str:
     if use_split_default is True or provider_requires_split is True:
         return "0.0.0.0/1, 128.0.0.0/1"
-    return "0.0.0.0/0"
+    return "0.0.0.0/0, ::/0"
 
 
 def get_optimal_mtu() -> str:
@@ -22,7 +22,6 @@ def get_optimal_mtu() -> str:
     try:
         from vpn_utils import get_active_interface
         target_iface = get_active_interface()
-
         if not target_iface:
             out_route = subprocess.check_output(["ip", "route", "show", "default"], text=True)
             for line in out_route.splitlines():
@@ -32,11 +31,9 @@ def get_optimal_mtu() -> str:
                     if idx + 1 < len(parts):
                         target_iface = parts[idx + 1]
                         break
-
         if target_iface and (os.path.exists(f"/sys/class/net/{target_iface}/mtu") is True):
             with open(f"/sys/class/net/{target_iface}/mtu", "r") as f:
                 phys_mtu = int(f.read().strip())
-
             calculated_wg_mtu = phys_mtu - 80
             if calculated_wg_mtu >= 1420:
                 chosen_mtu = "1420"
@@ -48,7 +45,6 @@ def get_optimal_mtu() -> str:
                 chosen_mtu = "1280"
     except Exception as mtu_err:
         log_message(f"Routing: Kernel MTU calculation failure: {mtu_err}", 2)
-
     return chosen_mtu
 
 
@@ -80,34 +76,37 @@ def setup_vpn_routing(sid: str, requires_endpoint_route: bool) -> None:
                     if "dev" in line and "wg0" not in line:
                         parts = line.split("dev")[-1].strip().split()
                         if parts:
-                            local_dev = parts[0]
+                            local_dev = parts
                             break
                 if local_gw is not None and local_dev is not None:
                     subprocess.run(
-                        ["route", "add", "-host", server_ip, "gw", local_gw, "dev", local_dev],
+                        ["ip", "route", "add", server_ip, "via", local_gw, "dev", local_dev],
                         check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                     )
         except Exception:
             pass
         try:
             subprocess.run(
-                ["route", "del", "default", "netmask", "128.0.0.0", "dev", "wg0"],
+                ["ip", "route", "add", "0.0.0.0/128.0.0.0", "dev", "wg0"],
                 check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
             subprocess.run(
-                ["route", "add", "-net", "0.0.0.0", "netmask", "128.0.0.0", "dev", "wg0"],
+                ["ip", "route", "add", "128.0.0.0/128.0.0.0", "dev", "wg0"],
                 check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
-            subprocess.run(
-                ["route", "add", "-net", "128.0.0.0", "netmask", "128.0.0.0", "dev", "wg0"],
-                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
+            from network_utils import get_dns_from_config
+            dns_ips = get_dns_from_config(sid)
+            for dns_target in dns_ips:
+                subprocess.run(
+                    ["ip", "route", "del", dns_target],
+                    check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
         except Exception:
             pass
     else:
         try:
             subprocess.run(
-                ["ip", "route", "add", "default", "dev", "wg0", "metric", "0"],
+                ["ip", "route", "add", "default", "dev", "wg0"],
                 check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
             )
         except Exception:

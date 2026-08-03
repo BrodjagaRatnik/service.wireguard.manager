@@ -37,16 +37,21 @@ def trigger_blackout_ui():
     lock_path = get_file_path("blackout")
     if lock_path is None or (os.path.exists(lock_path) is True):
         return
+
+    log_message("Wm Utils: NO INTERNET CONNECTION DETECTED! Check Wifi|Wire|Modem|Telecom provider.", 3)
+
     try:
         with open(lock_path, "w") as f:
             f.write("active")
     except Exception:
         pass
+
     addon_dir = get_addon_dir()
     icon = os.path.join(addon_dir, "resources", "media", "router-network-error-alert.png")
     sound = os.path.join(addon_dir, "resources", "media", "networkerror.wav")
     title = "[B][COLOR ffff0000]▀■▄ NO NETWORK DETECTED! ▄■▀[/COLOR][/B]"
     msg = "[COLOR fffffff00]Check Wifi|Wire|Modem|Telecom provider.[/COLOR]"
+
     try:
         xbmc.executebuiltin("PlayerControl(Stop)")
         xbmc.executebuiltin("Action(Stop)")
@@ -76,7 +81,6 @@ def trigger_blackout_ui():
                 )
         except Exception:
             pass
-    log_message("Wm Utils: NO INTERNET CONNECTION DETECTED! Check Wifi|Wire|Modem|Telecom provider.", 3)
 
 
 def get_ip_from_host(hostname):

@@ -1,6 +1,21 @@
 CHANGELOG
 =========
 
+v1.5.2
+[B]v1.5.2 (2026-08-03)[/B]
+- Fixed: Resolved an exit status 22 argument error on Wi-Fi profile swaps
+- Fixed: Prevented system lockouts and file tracking freezes on slower hardware tiers
+- Optimized: Maintained local subnets and gateway paths to guarantee uninterrupted SSH/Samba access
+- Fixed: Resolved an exception routing conflict where upstream HTTP 429 server blocks returned empty token responses
+- Fixed: Resolved an issue causing the exception tree to misinterpret events and erroneously trigger the 401 alert window
+- Optimized: Implemented dynamic file state inspection within the token verification routine to accurately isolate locks
+- Optimized: Prioritized system rate-limiting locks over authentication validation screens during active profile swaps
+- Fixed: Resolved a critical ConnMan file descriptor leak causing system instability and orphaned CLOSE_WAIT TCP sockets during interface state changes
+- Optimized: Implemented direct, transactional runtime synchronization of /etc/resolv.conf to bypass OS DNS proxy fallbacks
+- Fixed: Resolved geographical Anycast routing mismatches and DNS leak false-positives to guarantee uninterrupted access to geo-blocked streams
+- Optimized: Engineered a dynamic dual-stack DNS fallback routine restoring custom privacy upstreams and IPv6 structural paths upon tunnel disengagement
+- Fixed: Restructured firewall iptables rule execution hierarchy to ensure legitimate tunnel DNS handshakes execute cleanly above interface drop policies
+
 v1.5.1 (2026-07-24)
 - Fixed: Resolved an intermittent post-disconnect DNS deadlock on LibreELEC platforms where ConnMan stale state tracking preserved inactive VPN nameservers, inducing immediate host name resolution execution failures.
 - Optimized: Implemented a lightweight, non-intrusive runtime DNS connectivity check engine inside the tear-down routine to ensure network communication integrity.

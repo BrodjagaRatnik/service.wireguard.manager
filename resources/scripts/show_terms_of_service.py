@@ -22,7 +22,6 @@ def show_tos():
         addon_obj = kodi_env.get_addon_instance()
         if not addon_obj or not HAS_KODI_UI:
             log_message("ShowToS: Environment missing Kodi abstractions. Execution stopped.", 2)
-            kodi_env.clear_script_globals()
             return
 
         addon_path = kodi_env.ADDON_DIR
@@ -86,6 +85,7 @@ def show_tos():
 
     except Exception as e:
         log_message(f"ShowInfo: Error in Terms of Service {e}", 3)
+
     finally:
         kodi_env.clear_script_globals()
 

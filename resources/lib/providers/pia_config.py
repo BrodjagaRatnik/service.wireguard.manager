@@ -1,10 +1,4 @@
-"""
-./resources/lib/providers/pia_config.py
-Manages persistent API rate-limiting and connection cooldown states.
-Saves expiration timestamps to file to prevent endpoint hammering.
-Allows API client to make a maximum of 3 attempts within a rolling or fixed time frame of 600 seconds (10 minutes).
-If a client exceeds 3 requests during this period, the system will block or throttle them 900 seconds (15 minutes).
-"""
+""" ./resources/lib/providers/pia_config.py """
 import os
 import time
 from logger import log_message
@@ -18,8 +12,8 @@ class PiaHandshakeEngine:
         self.cooldown_file = os.path.join(self.cooldown_dir, ".pia_cooldown")
         self.history_file = os.path.join(self.cooldown_dir, ".pia_sync_history")
 
-        self.max_attempts = 3
-        self.time_window_seconds = 600.0
+        self.max_attempts = 10
+        self.time_window_seconds = 180.0
         self.cooldown_duration_seconds = 900.0
 
     def check_rate_limit(self):
@@ -67,7 +61,8 @@ class PiaHandshakeEngine:
             except Exception as history_err:
                 log_message(f"PIA Rate Limit: Could not read previous synchronization records: {history_err}", 3)
 
-        log_message(f"PIA Rate Limit: Valid attempts in current window: {len(valid_timestamps)} / {self.max_attempts}", 0)
+        log_msg = f"PIA Rate Limit: Valid attempts in current window: {len(valid_timestamps)} / {self.max_attempts}"
+        log_message(log_msg, 0)
 
         if len(valid_timestamps) >= self.max_attempts:
             log_message("PIA Rate Limit: Abuse threshold exceeded. Initializing automatic lockout protocols.", 3)

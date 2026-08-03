@@ -94,7 +94,6 @@ def fetch_nord_url(url, token=None, post_data=None):
             log_message(f"Nord Utils: Attempt {attempt + 1} failed on {url}: {e}", 2)
             if attempt == 1:
                 log_message(f"Nord Utils: UNKNOWN ERROR on {url}: {e}", 3)
-                kodi_env.clear_script_globals()
                 return None
 
 

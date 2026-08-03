@@ -25,52 +25,45 @@ def run(argv):
 
     if not addon_obj or not HAS_GUI_IMPORTS:
         log_message("Main Launcher: Environment missing Kodi abstractions. Execution stopped.", 2)
-        kodi_env.clear_script_globals()
         return
 
-    addon_path = kodi_env.ADDON_DIR
-    lib_path = os.path.join(addon_path, "resources", "lib")
-    media_path = os.path.join(addon_path, "resources", "media")
-    icon_update_ok = os.path.join(addon_path, "resources", "media", "update_ok.png")
+    try:
+        addon_path = kodi_env.ADDON_DIR
+        lib_path = os.path.join(addon_path, "resources", "lib")
+        media_path = os.path.join(addon_path, "resources", "media")
+        icon_update_ok = os.path.join(addon_path, "resources", "media", "update_ok.png")
 
-    if lib_path not in sys.path:
-        sys.path.insert(0, lib_path)
+        if lib_path not in sys.path:
+            sys.path.insert(0, lib_path)
 
-    args_str = "|".join(argv).lower()
+        args_str = "|".join(argv).lower()
 
-    commands = [
-        "status", "restart", "clear", "reinstall", "regen",
-        "choose_countries", "mode=country_selector", "mode=list_assets",
-        "mode=dnsleaktest", "cleanup", "mode=tos", "mode=disclaimer",
-        "mode=import_token", "mode=import_creds", "mode=import_custom_browser",
-        "mode=show_codes", "mode=net_reset"
-    ]
+        commands = [
+            "status", "restart", "clear", "reinstall", "regen",
+            "choose_countries", "mode=country_selector", "mode=list_assets",
+            "mode=dnsleaktest", "cleanup", "mode=tos", "mode=disclaimer",
+            "mode=import_token", "mode=import_creds", "mode=import_custom_browser",
+            "mode=show_codes", "mode=net_reset"
+        ]
 
-    if any(cmd in args_str for cmd in commands):
+        if any(cmd in args_str for cmd in commands):
 
-        if ",0" in args_str:
-            provider = 0
-        elif ",1" in args_str:
-            provider = 1
-        elif ",99" in args_str:
-            provider = 99
-        else:
-            provider = addon_obj.getSettingInt("vpn_provider")
+            if ",0" in args_str:
+                provider = 0
+            elif ",1" in args_str:
+                provider = 1
+            elif ",99" in args_str:
+                provider = 99
+            else:
+                provider = addon_obj.getSettingInt("vpn_provider")
 
-        if provider == -1:
-            provider = 0
+            if provider == -1:
+                provider = 0
 
-        try:
             if "reinstall" in args_str:
-                src_svc = os.path.join(
-                    addon_path, "resources", "data", "vpn-watchdog.service.txt"
-                )
-                dst_svc = os.path.join(
-                    "/storage/.config/system.d/", "vpn-watchdog.service"
-                )
-                install_service(
-                    src_svc, dst_svc, "vpn-watchdog.service", media_path
-                )
+                src_svc = os.path.join(addon_path, "resources", "data", "vpn-watchdog.service.txt")
+                dst_svc = os.path.join("/storage/.config/system.d/", "vpn-watchdog.service")
+                install_service(src_svc, dst_svc, "vpn-watchdog.service", media_path)
 
             elif any(cmd in args_str for cmd in ["status", "restart", "clear"]):
                 import service_control
@@ -104,71 +97,49 @@ def run(argv):
                         time.sleep(0.1)
                     except Exception as e:
                         log_message(f"Main Launcher: Token import pause failure: {e}", 3)
-                    icon_info = os.path.join(
-                        addon_path, "resources", "media", "icon.png"
-                    )
+                    icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
                     title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
-                    message = (
-                        "Selection cached. You MUST press 'OK' in the "
-                        "main settings menu to apply changes!"
-                    )
+                    message = "Selection cached. You MUST press 'OK' in the main settings menu to apply changes!"
                     xbmcgui.Dialog().notification(title, message, icon_info, 1500)
-                    kodi_env.clear_script_globals()
-                    return
-
-                token_file = xbmcgui.Dialog().browse(
-                    1, "Select Token", "local", ".txt|.key"
-                )
-                if token_file:
-                    f = xbmcvfs.File(token_file, "r")
-                    content = f.read()
-                    f.close()
-
-                    if isinstance(content, bytes):
-                        content = content.decode("utf-8")
-                        content = content.strip()
-
-                    addon_obj.setSetting(p_data["setting"], content)
-                    log_message("Imported Token", 0)
-                    run_update(direct_token=content)
-
-                    notification_lock = get_file_path("notif_lock")
-                    if notification_lock is not None and (not os.path.exists(notification_lock)):
-                        try:
-                            lock_dir = os.path.dirname(notification_lock)
-                            if not os.path.exists(lock_dir):
-                                os.makedirs(lock_dir)
-                            with open(notification_lock, "w") as f:
-                                f.write("locked")
-                        except Exception as e:
-                            log_message(f"Main Launcher: Failed to create token lock: {e}", 3)
-                        icon_info = os.path.join(
-                            addon_path, "resources", "media", "icon.png"
-                        )
-                        title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
-                        message = (
-                            "Selection cached. You [B]MUST[/B] press "
-                            "[B]'OK'[/B] in the main settings menu to "
-                            "apply changes!"
-                        )
-                        xbmcgui.Dialog().notification(
-                            title, message, icon_info, 1500
-                        )
                 else:
-                    log_message("Main Launcher: Token import cancelled by user", 0)
+                    token_file = xbmcgui.Dialog().browse(1, "Select Token", "local", ".txt|.key")
+                    if token_file:
+                        f = xbmcvfs.File(token_file, "r")
+                        content = f.read()
+                        f.close()
+
+                        if isinstance(content, bytes):
+                            content = content.decode("utf-8")
+                            content = content.strip()
+
+                        addon_obj.setSetting(p_data["setting"], content)
+                        log_message("Imported Token", 0)
+                        run_update(direct_token=content)
+
+                        notification_lock = get_file_path("notif_lock")
+                        if notification_lock is not None and (not os.path.exists(notification_lock)):
+                            try:
+                                lock_dir = os.path.dirname(notification_lock)
+                                if not os.path.exists(lock_dir):
+                                    os.makedirs(lock_dir)
+                                with open(notification_lock, "w") as f:
+                                    f.write("locked")
+                            except Exception as e:
+                                log_message(f"Main Launcher: Failed to create token lock: {e}", 3)
+                            icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
+                            title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
+                            message = "Selection cached. You [B]MUST[/B] press [B]'OK'[/B] in settings menu!"
+                            xbmcgui.Dialog().notification(title, message, icon_info, 1500)
+                    else:
+                        log_message("Main Launcher: Token import cancelled by user", 0)
 
             elif "import_creds" in args_str:
                 p_user_setting = "pia_user"
                 p_setting = "pia_pass"
 
                 has_gls = hasattr(addon_obj, "getLocalizedString")
-                heading = (
-                    addon_obj.getLocalizedString(32048) if has_gls
-                    else "Select Credentials File"
-                )
-                token_file = xbmcgui.Dialog().browse(
-                    1, heading, "local", ".txt"
-                )
+                heading = addon_obj.getLocalizedString(32048) if has_gls else "Select Credentials File"
+                token_file = xbmcgui.Dialog().browse(1, heading, "local", ".txt")
                 if token_file:
                     f = xbmcvfs.File(token_file, "r")
                     content = f.read()
@@ -177,10 +148,7 @@ def run(argv):
                     if isinstance(content, bytes):
                         content = content.decode("utf-8")
 
-                    lines = [
-                        line.strip() for line in content.splitlines()
-                        if line.strip()
-                    ]
+                    lines = [line.strip() for line in content.splitlines() if line.strip()]
 
                     if len(lines) >= 2:
                         import base64
@@ -202,62 +170,34 @@ def run(argv):
 
                         run_update(direct_token=encoded_pwd)
 
-                        icon_info = os.path.join(
-                            addon_path, "resources", "media", "icon.png"
-                        )
+                        icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
                         title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
-                        message = (
-                            "Selection cached. You [B]MUST[/B] press "
-                            "[B]'OK'[/B] in the main settings menu to "
-                            "apply changes!"
-                        )
-                        xbmcgui.Dialog().notification(
-                            title, message, icon_info, 1500
-                        )
+                        message = "Selection cached. You [B]MUST[/B] press [B]'OK'[/B] in settings menu!"
+                        xbmcgui.Dialog().notification(title, message, icon_info, 1500)
                     else:
                         title = "[B]≡ ERROR ≡[/B]"
-                        msg = (
-                            "File must have 2 lines:\n"
-                            "User and Pass"
-                        )
+                        msg = "File must have 2 lines:\nUser and Pass"
                         xbmcgui.Dialog().ok(title, msg)
                 else:
                     log_message("Main Launcher: Import cancelled by user", 0)
 
             elif "import_custom_browser" in args_str:
-                source_path = xbmcgui.Dialog().browse(
-                    1, "Select WireGuard Config", "local", ".conf|.config"
-                )
+                source_path = xbmcgui.Dialog().browse(1, "Select WireGuard Config", "local", ".conf|.config")
                 if source_path:
                     if custom.update(source_path, "/storage/.config/wireguard") is True:
-                        country = os.path.basename(source_path).lower().replace(
-                            ".config", ""
-                        ).replace(".conf", "").replace(
-                            "custom_", ""
-                        ).capitalize()
+                        country = os.path.basename(source_path).lower().replace(".config", "")
+                        country = country.replace(".conf", "").replace("custom_", "").capitalize()
                         addon_obj.setSetting("custom_path", source_path)
                         addon_obj.setSetting("vpn_token", country)
 
                         title = "[B]≡ [ WireGuard Manager ] ≡[/B]"
-                        msg = (
-                            "Please Save Settings before you "
-                            f"continue next...\n\nImported: {country}.\n"
-                            "Note: Ensure you click 'OK' in Settings."
-                        )
+                        msg = "Please Save Settings before you continue...\n\nImported: {country}."
                         xbmcgui.Dialog().ok(title, msg)
 
-                        icon_info = os.path.join(
-                            addon_path, "resources", "media", "icon.png"
-                        )
+                        icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
                         title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
-                        message = (
-                            "Selection cached. You [B]MUST[/B] press "
-                            "[B]'OK'[/B] in the main settings menu to "
-                            "apply changes!"
-                        )
-                        xbmcgui.Dialog().notification(
-                            title, message, icon_info, 1500
-                        )
+                        message = "Selection cached. You [B]MUST[/B] press [B]'OK'[/B] in settings menu!"
+                        xbmcgui.Dialog().notification(title, message, icon_info, 1500)
 
             elif "mode=dnsleaktest" in args_str:
                 scripts_path = os.path.join(addon_path, "resources", "scripts")
@@ -297,20 +237,18 @@ def run(argv):
                     sys.path.insert(0, scripts_path)
                 import network
                 network.run_network_cleanup()
+        else:
+            try:
+                provider = addon_obj.getSettingInt("vpn_provider")
+            except Exception as e:
+                log_message(f"Main Launcher: Failed to read vpn_provider setting: {e}", 3)
+                provider = 0
 
-        except Exception as e:
-            log_message(f"Main Launcher: {str(e)}", 3)
+            import vpn_menu
+            vpn_menu.show_menu(media_path, provider)
 
+    except Exception as master_fault:
+        log_message(f"Main Launcher: Fatal routing interception breakdown: {master_fault}", 3)
+
+    finally:
         kodi_env.clear_script_globals()
-        return
-
-    try:
-        provider = addon_obj.getSettingInt("vpn_provider")
-
-    except Exception as e:
-        log_message(f"Main Launcher: Failed to read vpn_provider setting: {e}", 3)
-        provider = 0
-
-    import vpn_menu
-    vpn_menu.show_menu(media_path, provider)
-    kodi_env.clear_script_globals()

@@ -36,6 +36,7 @@ def flush_connman_dns_cache():
             xbmc.sleep(CONNMAN_RESTART_DELAY)
         else:
             time.sleep(CONNMAN_RESTART_DELAY / 1000.0)
+
         try:
             vpn_out = subprocess.check_output(["connmanctl", "services"], text=True)
             for vpn_line in vpn_out.splitlines():
@@ -60,11 +61,24 @@ def flush_connman_dns_cache():
                 srv_id = parts[-1]
                 subprocess.run(["connmanctl", "config", srv_id, "--nameservers", "off"], check=False)
                 subprocess.run(["connmanctl", "config", srv_id, "--nameservers", ""], check=False)
-                ipv4_info = subprocess.check_output(
-                    ["connmanctl", "service", srv_id, "ipv4"],
-                    text=True, stderr=subprocess.DEVNULL
-                ).replace(" ", "")
-                if "Method=dhcp" in ipv4_info:
+                try:
+                    service_info = subprocess.check_output(
+                        ["connmanctl", "service", srv_id],
+                        text=True, stderr=subprocess.DEVNULL
+                    )
+                    ipv4_line = next((line for line in service_info.splitlines() if "IPv4 =" in line), "")
+                    ipv4_info = ipv4_line.replace(" ", "")
+                except Exception:
+                    ipv4_info = ""
+                if "Method=manual" in ipv4_info:
+                    clean_info = ipv4_info.replace("{", "").replace("}", "")
+                    settings = dict(item.split("=") for item in clean_info.split(",") if "=" in item)
+                    addr = settings.get("Address")
+                    mask = settings.get("Netmask")
+                    gw = settings.get("Gateway")
+                    if addr and mask and gw:
+                        subprocess.run(["connmanctl", "config", srv_id, "--ipv4", "manual", addr, mask, gw], check=False)
+                elif "Method=dhcp" in ipv4_info:
                     subprocess.run(["connmanctl", "config", srv_id, "--ipv4", "dhcp"], check=False)
 
         subprocess.run(["ip", "link", "delete", "wg0"], stderr=subprocess.DEVNULL, check=False)
@@ -188,7 +202,4 @@ def fetch_vpn_metadata():
 
 def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
     from providers.pia_utils import setup_pia_handshake as resolve_pia_handshake
-    try:
-        return resolve_pia_handshake(sid, provider_data, addon_obj, has_kodi)
-    finally:
-        kodi_env.clear_script_globals()
+    return resolve_pia_handshake(sid, provider_data, addon_obj, has_kodi)

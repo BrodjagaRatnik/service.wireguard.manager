@@ -29,12 +29,11 @@ def inject_lib_path():
 def show_menu(media_path, provider_index):
     inject_lib_path()
 
-    if not kodi_env.get_addon_instance() or not HAS_KODI_UI:
-        log_message("Menu Launcher: Environment missing Kodi UI abstractions. Execution stopped.", 2)
-        kodi_env.clear_script_globals()
-        return
-
     try:
+        if not kodi_env.get_addon_instance() or not HAS_KODI_UI:
+            log_message("Menu Launcher: Environment missing Kodi UI abstractions. Execution stopped.", 2)
+            return
+
         raw_state = get_active_vpn()
         active_name = raw_state.replace("_", " ").strip() if raw_state else None
         output = subprocess.check_output(["connmanctl", "services"], text=True)
@@ -118,6 +117,8 @@ def show_menu(media_path, provider_index):
                 vpn_ops.connect_vpn(target_name, target_sid)
 
     except Exception as e:
-        log_message(f"Menu Error: {e}", 3)
+        err_msg = str(e)
+        log_message(f"Menu Error Captured: {err_msg}", 3)
+
     finally:
         kodi_env.clear_script_globals()

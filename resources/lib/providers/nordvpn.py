@@ -25,7 +25,6 @@ NORD_DNS = "103.86.96.100, 103.86.99.100"
 def update(token, country_ids, config_dir):
     addon_obj = kodi_env.get_addon_instance()
     if not addon_obj:
-        kodi_env.clear_script_globals()
         return False
 
     addon_path = kodi_env.ADDON_DIR
@@ -45,7 +44,6 @@ def update(token, country_ids, config_dir):
 
     if not user_data or "nordlynx_private_key" not in user_data:
         log_message(f"NordVPN: Private Key fetch failed. Response {user_data}", 3)
-        kodi_env.clear_script_globals()
         return False
 
     priv_key = user_data["nordlynx_private_key"]
@@ -138,12 +136,9 @@ def update(token, country_ids, config_dir):
         if os.path.exists('/sys/class/net/wg0') is True and active_vpn_name:
             log_message("NordVPN: Active interface detected. Scheduling deferred reconnect.", 1)
             write_state('reconnect', str(active_vpn_name))
-
-        kodi_env.clear_script_globals()
         return True
 
     log_message(f"NordVPN: Update failed for IDs {country_ids}", 3)
-    kodi_env.clear_script_globals()
     return False
 
 
@@ -156,3 +151,6 @@ def finalize_configs(config_dir):
             log_message("NordVPN: Configs updated and service restarted.", 0)
     except Exception as e:
         log_message(f"NordVPN: Finalization failed: {e}", 3)
+
+    finally:
+        kodi_env.clear_script_globals()

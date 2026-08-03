@@ -22,7 +22,6 @@ def show_disclaimer():
         addon_obj = kodi_env.get_addon_instance()
         if not addon_obj or not HAS_KODI_UI:
             log_message("ShowDisclaimer: Environment missing Kodi abstractions. Execution stopped.", 2)
-            kodi_env.clear_script_globals()
             return
 
         addon_path = kodi_env.ADDON_DIR
@@ -90,6 +89,7 @@ def show_disclaimer():
 
     except Exception as e:
         log_message(f"ShowInfo: Error in disclaimer {e}", 3)
+
     finally:
         kodi_env.clear_script_globals()
 

@@ -12,7 +12,8 @@ FILE_MAP = {
     'pia_map': 'pia_name_map.json',
     'pia_cache': 'pia_token_cache.json',
     'connector_lock': 'vpn_connector_active.lock',
-    'notif_lock': 'vpn_notif_sent.lock'
+    'notif_lock': 'vpn_notif_sent.lock',
+    'dns_backup': 'vpn_dns_backup.json'
 }
 
 
@@ -23,7 +24,7 @@ def get_file_path(key):
 
 
 def clear_startup_states():
-    startup_keys = ['active', 'reconnect']
+    startup_keys = ['active', 'reconnect', 'dns_backup']
     for key in startup_keys:
         path = get_file_path(key)
         if path is not None and (os.path.exists(path) is True):

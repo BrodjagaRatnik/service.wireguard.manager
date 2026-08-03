@@ -1,9 +1,7 @@
 """ ./resources/lib/network_utils.py """
-
 import os
 import re
 import subprocess
-import time
 from logger import log_message
 from vpn_config import PROVIDER_MAP
 
@@ -82,27 +80,24 @@ def set_secure_dns(vpn_name=None, vpn_active=True):
     try:
         if vpn_active:
             disable_connman_ipv6()
-        result = subprocess.check_output(["connmanctl", "services"], text=True)
-        for line in result.splitlines():
-            if "*" in line and any(x in line for x in ("ethernet_", "wifi_", "vpn_")):
-                parts = line.strip().split()
-                if parts:
-                    sid = parts[-1]
-                    if vpn_active and dns_servers:
-                        if "vpn_" in sid:
-                            subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
-                            subprocess.run(["connmanctl", "config", sid, "--nameservers"] + dns_servers, check=False)
-                            subprocess.run(["connmanctl", "config", sid, "--domains", "."], check=False)
-                        else:
-                            subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
-                            subprocess.run(["connmanctl", "config", sid, "--domains"], check=False)
-                        time.sleep(0.05)
-                    else:
-                        subprocess.run(["connmanctl", "config", sid, "--nameservers"], check=False)
-                        subprocess.run(["connmanctl", "config", sid, "--domains"], check=False)
-                        time.sleep(0.05)
+            if dns_servers:
+                lines = [f"nameserver {dns_ip}" for dns_ip in dns_servers]
+                with open("/etc/resolv.conf", "w") as f:
+                    f.write("\n".join(lines) + "\n")
+                log_message(f"Network Utils: Enforced {len(dns_servers)} VPN DNS servers to resolv.conf", 0)
+        else:
+            enable_connman_ipv6()
+            fallback_dns = [
+                "nameserver 1.1.1.1",
+                "nameserver 9.9.9.9",
+                "nameserver 2606:4700:4700::1111",
+                "nameserver 2620:fe::fe"
+            ]
+            with open("/etc/resolv.conf", "w") as f:
+                f.write("\n".join(fallback_dns) + "\n")
+            log_message("Network Utils: Restored clean Cloudflare and Quad9 privacy DNS environments", 0)
     except Exception as e:
-        log_message(f"Network Utils: DNS Secure setup failed: {e}", 3)
+        log_message(f"Network Utils: Direct resolv.conf synchronization failed: {e}", 3)
 
 
 def toggle_sysctl_ipv6(disable=True):
@@ -219,40 +214,3 @@ def get_profile_allowed_ips(sid):
     except Exception:
         pass
     return ""
-
-
-def verify_and_fix_dns():
-    import socket
-    try:
-        log_message("Network Utils: Running post-disconnect DNS sanity check...", 0)
-        socket.gethostbyname("ifconfig.co")
-        log_message("Network Utils: DNS check passed successfully.", 0)
-        return True
-    except socket.gaierror:
-        log_message("Network Utils: DNS deadlock detected! Enforcing dynamic fallback...", 3)
-        try:
-            result = subprocess.check_output(["connmanctl", "services"], text=True)
-            phys_service = next(
-                (
-                    line.split()[-1] for line in result.splitlines()
-                    if line.startswith(("*", "R")) and "vpn_" not in line
-                ),
-                None
-            )
-            if phys_service:
-                subprocess.run(["connmanctl", "config", phys_service, "--nameservers", "off"], check=False)
-                subprocess.run(["connmanctl", "config", phys_service, "--nameservers", ""], check=False)
-
-                ipv4_info = subprocess.check_output(
-                    ["connmanctl", "service", phys_service, "ipv4"],
-                    text=True, stderr=subprocess.DEVNULL
-                ).replace(" ", "")
-
-                if "Method=dhcp" in ipv4_info:
-                    subprocess.run(["connmanctl", "config", phys_service, "--ipv4", "dhcp"], check=False)
-                return True
-            else:
-                log_message("Network Utils: Remediate failed. No active physical ConnMan service found.", 3)
-        except Exception as fallback_err:
-            log_message(f"Network Utils: Critical failure during DNS fallback recovery: {fallback_err}", 3)
-    return False

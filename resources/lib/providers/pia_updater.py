@@ -32,7 +32,7 @@ def update(user, password, country_ids, config_dir):
                     try:
                         os.remove(os.path.join(config_dir, filename))
                     except Exception as r_err:
-                        log_message(f"PIA Update: Server array tracking error skipped {r_err}", 3)
+                        log_message(f"PIA Updater: Server array tracking error skipped {r_err}", 3)
 
     raw_data = None
     for attempt in range(3):
@@ -52,10 +52,10 @@ def update(user, password, country_ids, config_dir):
                 if attempt == 0:
                     time.sleep(3.0)
                     continue
-            log_message(f"PIA Update: URL Error: {url_err}", 3)
+            log_message(f"PIA Updater: URL Error: {url_err}", 3)
             return False
         except Exception as fetch_err:
-            log_message(f"PIA Update: Fetch Error: {fetch_err}", 3)
+            log_message(f"PIA Updater: Fetch Error: {fetch_err}", 3)
             return False
 
     if raw_data is None:
@@ -162,7 +162,7 @@ def update(user, password, country_ids, config_dir):
 
         from state_manager import write_state
         if os.path.exists('/sys/class/net/wg0') is True:
-            log_message("PIA Update: Active interface detected. Scheduling deferred reconnect.", 1)
+            log_message("PIA Updater: Active interface detected. Scheduling deferred reconnect.", 1)
             boot_target = get_active_vpn()
             if boot_target:
                 write_state('reconnect', str(boot_target))
@@ -170,7 +170,7 @@ def update(user, password, country_ids, config_dir):
         return True
 
     except Exception as e:
-        log_message(f"PIA Update: {e}", 3)
+        log_message(f"PIA Updater: {e}", 3)
         return False
 
 

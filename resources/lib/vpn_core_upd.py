@@ -19,44 +19,43 @@ def get_addon_path():
 
 
 def run_update(direct_token=None, force_provider=None, silent=False):
-    addon_obj = kodi_env.get_addon_instance()
-    if not addon_obj:
-        kodi_env.clear_script_globals()
-        return False
-
-    if force_provider is not None:
-        provider_idx = force_provider
-    else:
-        provider_idx = addon_obj.getSettingInt("vpn_provider")
-
-    p_data = PROVIDER_MAP.get(provider_idx)
-
-    if not p_data:
-        kodi_env.clear_script_globals()
-        return False
-
-    provider_name = p_data["name"]
-
-    if provider_idx == 1:
-        from providers import pia
-        provider_module = pia
-    else:
-        provider_module = p_data["module"]
-
-    success = False
-
-    if provider_idx == 1:
-        country_setting = "selected_countries_pia"
-    else:
-        country_setting = "selected_countries"
-
-    countries = addon_obj.getSetting(country_setting)
     progress = None
-    if silent is False and HAS_KODI_UI:
-        progress = xbmcgui.DialogProgress()
-        progress.create("WG Manager", f"Updating {provider_name}...")
 
     try:
+        addon_obj = kodi_env.get_addon_instance()
+        if not addon_obj:
+            return False
+
+        if force_provider is not None:
+            provider_idx = force_provider
+        else:
+            provider_idx = addon_obj.getSettingInt("vpn_provider")
+
+        p_data = PROVIDER_MAP.get(provider_idx)
+        if not p_data:
+            return False
+
+        provider_name = p_data["name"]
+
+        if provider_idx == 1:
+            from providers import pia
+            provider_module = pia
+        else:
+            provider_module = p_data["module"]
+
+        success = False
+
+        if provider_idx == 1:
+            country_setting = "selected_countries_pia"
+        else:
+            country_setting = "selected_countries"
+
+        countries = addon_obj.getSetting(country_setting)
+
+        if silent is False and HAS_KODI_UI:
+            progress = xbmcgui.DialogProgress()
+            progress.create("WG Manager", f"Updating {provider_name}...")
+
         if provider_idx == 0:
             token = direct_token if direct_token else addon_obj.getSetting("vpn_token")
             token = token.strip().replace('"', '').replace("'", "")
@@ -89,7 +88,7 @@ def run_update(direct_token=None, force_provider=None, silent=False):
                         if len(lines) >= 2:
                             user = lines[0]
                             raw_pw = lines[1]
-                            log_message(f"Core Update: Direct File Import Success from {files[0]}: {user}", 0)
+                            log_message(f"Core Update: Import Success: {user}", 0)
             except Exception as e:
                 log_message(f"Core Update: File Scan/Read Error: {str(e)}", 3)
 
@@ -156,7 +155,7 @@ def run_update(direct_token=None, force_provider=None, silent=False):
             progress.close()
 
         if success:
-            log_message(f"Core Update: Success {provider_name} updated successfully.", 1)
+            log_message(f"Core Update: {provider_name} profile database updated successfully.", 1)
             if HAS_KODI_UI:
                 xbmc.executebuiltin("Container.Refresh")
             return True
@@ -172,5 +171,6 @@ def run_update(direct_token=None, force_provider=None, silent=False):
         if progress:
             progress.close()
         return False
+
     finally:
         kodi_env.clear_script_globals()

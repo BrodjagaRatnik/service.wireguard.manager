@@ -71,7 +71,6 @@ def control_service():
             if kodi_env.HAS_KODI_IMPORTS and HAS_KODI_UI:
                 confirmed = xbmcgui.Dialog().yesno("Confirm Reset", "Delete all VPN configurations?")
                 if not confirmed:
-                    kodi_env.clear_script_globals()
                     return
 
             log_message("Service Control: Clearing configs and disconnecting VPN...", 0)
@@ -109,6 +108,7 @@ def control_service():
             title = "[B][COLOR FFBF00FF]≡ ERROR ≡[/COLOR][/B]"
             message = f"[COLOR FFFFFF00]{action.capitalize()} failed[/COLOR]"
             xbmcgui.Dialog().notification(title, message, icon_err, 5000)
+
     finally:
         kodi_env.clear_script_globals()
 

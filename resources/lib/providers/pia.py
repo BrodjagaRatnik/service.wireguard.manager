@@ -104,7 +104,6 @@ def get_cached_token(user, password):
                 log_message("PIA: Got 401. Setting background pause...", 2)
                 time.sleep(2.0)
                 continue
-
             log_message(f"PIA: v2 authentication failed ({http_err.code}).", 3)
             break
         except Exception as v2_err:
@@ -117,7 +116,6 @@ def get_cached_token(user, password):
                 with open(cache_path, "w") as f:
                     json.dump({"token": token, "timestamp": time.time()}, f)
             except Exception as write_err:
-                json.dump({"token": token, "timestamp": time.time()}, f)
                 log_message(f"PIA: Could not write token to temporary cache {write_err}", 3)
         return token
 
@@ -177,7 +175,7 @@ def get_live_config(token, server_ip, server_cn, region_id, region_name=None, ra
                 import sys
                 py_ver = sys.version.split()
                 ssl_ver = getattr(ssl, "OPENSSL_VERSION", "Unknown")
-                log_msg = f"PIA: Handshake Warning. Nightly SSL rules tripped. System Info Python {py_ver} | {ssl_ver}"
+                log_msg = f"PIA: Handshake Warning. Nightly SSL Info Python {py_ver} | {ssl_ver}"
                 log_message(log_msg, 0)
                 fallback_ctx = ssl._create_unverified_context()
                 with urllib.request.urlopen(req_hs, timeout=5, context=fallback_ctx) as resp:
@@ -202,16 +200,10 @@ def get_live_config(token, server_ip, server_cn, region_id, region_name=None, ra
 
 
 def update(user, password, country_ids, config_dir):
-    try:
-        return real_update(user, password, country_ids, config_dir)
-    finally:
-        kodi_env.clear_script_globals()
+    return real_update(user, password, country_ids, config_dir)
 
 
 def build_final_config(wg_data, pk, server_ip, region_id, region_name=None, raw_cn_str="", allowed_ips_mode=1):
-    try:
-        return real_build_final_config(
-            wg_data, pk, server_ip, region_id, region_name, raw_cn_str, allowed_ips_mode
-        )
-    finally:
-        kodi_env.clear_script_globals()
+    return real_build_final_config(
+        wg_data, pk, server_ip, region_id, region_name, raw_cn_str, allowed_ips_mode
+    )

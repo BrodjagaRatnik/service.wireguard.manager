@@ -2,6 +2,7 @@
 import kodi_env
 import os
 import time
+import threading
 from logger import log_message
 from vpn_config import PI2, PI3, PI4, PI5, WATCHDOG_HEARTBEAT
 import vpn_ops
@@ -10,6 +11,8 @@ from service_resolver import resolve_service_id
 from service_loop import execute_monitor_loop
 from vpn_core import check_for_updates
 from wm_utils import flush_connman_sockets
+from vpn_utils import is_interface_active
+from tunnel_checker import run_tunnel_sanity_check
 
 try:
     import xbmc
@@ -80,18 +83,21 @@ if HAS_KODI_MONITOR:
 
             if (current_time - self.last_bg_check_time) >= 1800.0:
                 self.last_bg_check_time = current_time
-                try:
-                    check_for_updates(media_path)
-                except Exception as e:
-                    log_err = f"Service Launcher: Update verification failure: {e}"
-                    log_message(log_err, 3)
+
+                if is_interface_active("wg0"):
+                    log_message("Service Launcher: Tunnel is active. Deferring update to tunnel sanity check.", 0)
+                else:
+                    try:
+                        log_message("Service Launcher: No active tunnel. Executing scheduled update.", 0)
+                        check_for_updates(media_path)
+                    except Exception as e:
+                        log_err = f"Service Launcher: Update verification failure: {e}"
+                        log_message(log_err, 3)
 
             if (current_time - self.last_tunnel_check_time) >= 300.0:
                 self.last_tunnel_check_time = current_time
                 if self._ADDON.getSettingBool("check_tunnel"):
                     try:
-                        from tunnel_checker import run_tunnel_sanity_check
-                        import threading
                         threading.Thread(target=run_tunnel_sanity_check, daemon=True).start()
                     except Exception as e:
                         log_err = f"Service Launcher: Tunnel health tracking exception: {e}"
@@ -154,16 +160,17 @@ def start():
                 if ip and ip != "Unknown":
                     msg = (
                         f" [B]═≡═ [COLOR FFFFFF00]Tunnel Restored[/COLOR] ═≡═[/B]\n"
-                        f"[B][COLOR FF32CD32]{boot_target}[/COLOR] • ({country})[/B]"
+                        f"[B][COLOR FF32CD32]{boot_target}[/COLOR] • ({country}) •[/B]"
                     )
                 else:
                     msg = (
                         f" [B]═≡═ [COLOR FFFFFF00]Tunnel Restored"
-                        f"[/COLOR] ═≡═[/B]\n[B]"
-                        f"[COLOR FF32CD32]{boot_target}[/COLOR][/B]"
+                        f"[/COLOR] ═≡═[/B]\n[B] • "
+                        f"[COLOR FF32CD32]{boot_target}[/COLOR] •[/B]"
                     )
                 dialog = xbmcgui.Dialog()
                 dialog.notification(title, msg, icon_path, 4500)
+                log_message(f"Service Launcher: Profile [{boot_target}] connected safely. Tunnel restored after restart", 1)
             except Exception:
                 pass
         else:
@@ -194,8 +201,8 @@ def start():
 
                 if sid:
                     try:
-                        log_message(f"Service Launcher: Connecting profile [{boot_target}] safely.", 1)
                         vpn_ops.connect_vpn(str(boot_target), str(sid), silent=True)
+                        log_message(f"Service Launcher: Connecting profile [{boot_target}] safely after cold boot.", 1)
                     except Exception:
                         pass
                 else:

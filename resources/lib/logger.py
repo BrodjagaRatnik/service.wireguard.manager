@@ -56,7 +56,6 @@ def log_message(msg, level=1):
             pass
 
         if level == 0 and not is_debug_active:
-            kodi_env.clear_script_globals()
             return
 
         lvl_name = {0: "Debug", 1: "Info", 2: "Warning", 3: "Error"}.get(level, "Info")
@@ -68,8 +67,6 @@ def log_message(msg, level=1):
         else:
             sys.stdout.write(console_msg)
             sys.stdout.flush()
-
-    kodi_env.clear_script_globals()
 
 
 if HAS_KODI_LOGGING and kodi_env.HAS_KODI_IMPORTS:

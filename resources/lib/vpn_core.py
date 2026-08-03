@@ -47,8 +47,6 @@ def install_service(source, dest, name, media_path):
     except Exception as e:
         log_message(f"Core: Service Installation failed: {e}", 3)
         return False
-    finally:
-        kodi_env.clear_script_globals()
 
 
 def check_for_updates(media_path):
@@ -71,14 +69,12 @@ def check_for_updates(media_path):
 
         addon_obj = kodi_env.get_addon_instance()
         if not addon_obj:
-            kodi_env.clear_script_globals()
             return
 
         provider_idx = addon_obj.getSettingInt("vpn_provider")
         p_data = PROVIDER_MAP.get(provider_idx)
 
         if not p_data or not p_data.get("needs_file_check", False):
-            kodi_env.clear_script_globals()
             return
 
         file_prefix = p_data["prefix"]
@@ -90,7 +86,6 @@ def check_for_updates(media_path):
             ]
 
             if not files:
-                kodi_env.clear_script_globals()
                 return
 
             try:
@@ -112,7 +107,6 @@ def check_for_updates(media_path):
 
             if current_time < last_update_time:
                 addon_obj.setSetting("last_vpn_update_time", str(current_time))
-                kodi_env.clear_script_globals()
                 return
 
             first_file_path = os.path.join(CONFIG_DIR, files[0])
@@ -128,7 +122,6 @@ def check_for_updates(media_path):
 
             if file_age_seconds <= max_age_seconds:
                 log_message("Core: Update skipped. Configurations on disk are still fresh.", 0)
-                kodi_env.clear_script_globals()
                 return
 
             update_successful = run_update(silent=True)

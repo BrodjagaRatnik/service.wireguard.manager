@@ -19,32 +19,31 @@ except ImportError:
 from logger import log_message
 from vpn_utils import is_interface_active, get_active_interface, fetch_vpn_metadata
 from state_manager import get_active_vpn, write_state
-from vpn_config import PI5, PI4, PI3, PI2, SANITY_POLL_INTERVAL, SANITY_SETTLE_DELAY
+from vpn_config import SANITY_POLL_INTERVAL, SANITY_SETTLE_DELAY
 
 
 def run_tunnel_sanity_check():
-    addon_obj = kodi_env.get_addon_instance()
-    if not addon_obj:
-        kodi_env.clear_script_globals()
-        return
-
-    is_playing_stream = False
-    if HAS_KODI and xbmc.Player().isPlaying():
-        playing_file = xbmc.Player().getPlayingFile()
-        stream_protocols = ["http://", "https://", "rtmp://", "pvr://"]
-        is_playing_stream = any(playing_file.startswith(p) for p in stream_protocols)
-
-    if is_playing_stream:
-        log_message("Tunnel Check: Active stream detected. Postponing health check.", 0)
-        return
-
-    addon_path = kodi_env.ADDON_DIR
-    icon_con = os.path.join(addon_path, "resources", "media", "vpn_connected.png")
-
-    if not is_interface_active("wg0"):
-        return
-
     try:
+        addon_obj = kodi_env.get_addon_instance()
+        if not addon_obj:
+            return
+
+        is_playing_stream = False
+        if HAS_KODI and xbmc.Player().isPlaying():
+            playing_file = xbmc.Player().getPlayingFile()
+            stream_protocols = ["http://", "https://", "rtmp://", "pvr://"]
+            is_playing_stream = any(playing_file.startswith(p) for p in stream_protocols)
+
+        if is_playing_stream:
+            log_message("Tunnel Check: Active stream detected. Postponing health check.", 0)
+            return
+
+        addon_path = kodi_env.ADDON_DIR
+        icon_con = os.path.join(addon_path, "resources", "media", "vpn_connected.png")
+
+        if not is_interface_active("wg0"):
+            return
+
         current_default_iface = get_active_interface()
         tunnel_is_broken = False
 
@@ -73,31 +72,64 @@ def run_tunnel_sanity_check():
             log_message("Tunnel Check: Dead link confirmed. Forcing reconnect sequence...", 2)
             boot_target = get_active_vpn()
             import vpn_ops
-            teardown_start = time.perf_counter()
-            vpn_ops.disconnect_vpn(silent=True, flush_dns=True)
-
-            while is_interface_active("wg0"):
-                time.sleep(SANITY_POLL_INTERVAL / 1000.0)
-            time.sleep(SANITY_SETTLE_DELAY / 1000.0)
-
-            elapsed_ms = (time.perf_counter() - teardown_start) * 1000
-            hw_name = (
-                "Raspberry Pi 5" if PI5 else
-                "Raspberry Pi 4" if PI4 else
-                "Raspberry Pi 3" if PI3 else
-                "Raspberry Pi 2" if PI2 else "Generic Device"
-            )
-            log_message(
-                f"Timing Tracker: Interface teardown completed. "
-                f"Hardware Matrix: {hw_name} | "
-                f"Teardown Release Time: {elapsed_ms:.2f}ms", 0
-            )
+            vpn_ops.disconnect_vpn(silent=True, flush_dns=True, reason="recovery")
 
             try:
-                from vpn_core import check_for_updates
-                check_for_updates("")
-            except Exception as update_err:
-                log_message(f"Tunnel Check: Inline update invocation failed: {update_err}", 3)
+                log_message("Tunnel Check: Dismantling active killswitch rules safely...", 0)
+                try:
+                    from killswitch import ZeroHardcodeKillSwitch
+                    recovery_ks = ZeroHardcodeKillSwitch(vpn_server_ip="0.0.0.0")
+                    recovery_ks.enabled = True
+                    recovery_ks.disable(reason="recovery")
+                except Exception:
+                    pass
+
+                subprocess.run(
+                    "iptables -D OUTPUT -j LE_WG_KILLSWITCH",
+                    shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+                subprocess.run(
+                    "iptables -F LE_WG_KILLSWITCH",
+                    shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+                subprocess.run(
+                    "iptables -X LE_WG_KILLSWITCH",
+                    shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+
+            except Exception as fw_purge_err:
+                log_message(f"Tunnel Check: System firewall purge exception: {fw_purge_err}", 3)
+
+            timeout = 5.0
+            poll_interval = SANITY_POLL_INTERVAL / 1000.0
+
+            while is_interface_active("wg0") and timeout > 0:
+                time.sleep(poll_interval)
+                timeout -= poll_interval
+
+            time.sleep(SANITY_SETTLE_DELAY / 1000.0)
+
+            dns_timeout = 4.0
+            dns_ready = False
+
+            while dns_timeout > 0:
+                try:
+                    import socket
+                    socket.gethostbyname("one.one.one.one")
+                    dns_ready = True
+                    break
+                except socket.error:
+                    time.sleep(0.2)
+                    dns_timeout -= 0.2
+
+            if dns_ready:
+                try:
+                    from vpn_core import check_for_updates
+                    check_for_updates("")
+                except Exception as update_err:
+                    log_message(f"Tunnel Check: Inline update invocation failed: {update_err}", 3)
+            else:
+                log_message("Tunnel Check: WAN DNS resolution recovery timed out. Skipping update lookups.", 2)
 
             if boot_target:
                 from service_launcher import resolve_service_id
@@ -111,8 +143,8 @@ def run_tunnel_sanity_check():
                     if HAS_GUI:
                         xbmcgui.Window(10000).setProperty('vpn_manual_session', 'true')
 
-                    log_message(f"Tunnel Check: Re-establishing profile link [{boot_target}] safely.", 1)
                     vpn_ops.connect_vpn(str(boot_target), str(sid), silent=True)
+                    log_message(f"Tunnel Check: Profile link [{boot_target}] successfully re-established.", 1)
 
                     if HAS_GUI:
                         ip, country = fetch_vpn_metadata()
@@ -128,6 +160,7 @@ def run_tunnel_sanity_check():
 
     except Exception as e:
         log_message(f"Tunnel Check: Monitoring framework tracking exception: {e}", 3)
+
     finally:
         kodi_env.clear_script_globals()
 

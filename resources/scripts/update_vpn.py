@@ -13,22 +13,20 @@ if LIB_PATH not in sys.path:
 
 
 def main():
-    addon_obj = kodi_env.get_addon_instance()
-    if not addon_obj:
-        kodi_env.clear_script_globals()
-        return
-
-    provider_idx = addon_obj.getSettingInt("vpn_provider")
-    config_dir = "/storage/.config/wireguard/"
-
-    p_data = PROVIDER_MAP.get(provider_idx)
-    if not p_data:
-        kodi_env.clear_script_globals()
-        return
-
-    provider_module = p_data["module"]
-
     try:
+        addon_obj = kodi_env.get_addon_instance()
+        if not addon_obj:
+            return
+
+        provider_idx = addon_obj.getSettingInt("vpn_provider")
+        config_dir = "/storage/.config/wireguard/"
+
+        p_data = PROVIDER_MAP.get(provider_idx)
+        if not p_data:
+            return
+
+        provider_module = p_data["module"]
+
         if provider_idx == 0:
             token = addon_obj.getSetting("vpn_token")
             countries = addon_obj.getSetting("selected_countries")
@@ -53,6 +51,7 @@ def main():
 
     except Exception as e:
         log_message(f"Script Error: {e}", 3)
+
     finally:
         kodi_env.clear_script_globals()
 

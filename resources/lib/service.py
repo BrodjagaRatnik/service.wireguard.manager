@@ -164,20 +164,31 @@ def watchdog_logic():
 
 
 if __name__ == "__main__":
-    while SAVED_GATEWAY is None:
+    startup_attempts = 0
+    while startup_attempts < 15:
         SAVED_GATEWAY = get_default_gateway()
-        if SAVED_GATEWAY:
+        if SAVED_GATEWAY is not None:
             break
+        startup_attempts += 1
+        time.sleep(0.3)
+
+    if SAVED_GATEWAY is None:
         if BLACKOUT_ALERTED is False:
             threading.Thread(target=trigger_blackout_ui, daemon=True).start()
             BLACKOUT_ALERTED = True
         log_message("Service: Waiting for gateway...", 2)
-        time.sleep(SHIELD_SLEEP_DELAY / 1000.0)
+
+        while SAVED_GATEWAY is None:
+            SAVED_GATEWAY = get_default_gateway()
+            if SAVED_GATEWAY is not None:
+                break
+            time.sleep(SHIELD_SLEEP_DELAY / 1000.0)
 
     BLACKOUT_ALERTED = False
     LAST_INTERFACE = get_active_interface()
     log_message(f"Service: Initialized on {LAST_INTERFACE}. Monitoring started.", 1)
     shield_logged = False
+    cooldown_loops = 0
 
     try:
         while True:
@@ -190,13 +201,18 @@ if __name__ == "__main__":
                 if not shield_logged:
                     log_message("Service: SHIELD ACTIVE - SESSION FOUND. Pausing watchdog.", 0)
                     shield_logged = True
+                cooldown_loops = int(SHIELD_SLEEP_DELAY / WATCHDOG_HEARTBEAT)
             else:
                 if shield_logged:
                     log_message("Service: Shield cleared. Resuming watchdog operation.", 0)
                 shield_logged = False
 
-                watchdog_logic()
+                if cooldown_loops > 0:
+                    cooldown_loops -= 1
+                else:
+                    watchdog_logic()
 
             time.sleep(WATCHDOG_HEARTBEAT / 1000.0)
+
     finally:
         kodi_env.clear_script_globals()
