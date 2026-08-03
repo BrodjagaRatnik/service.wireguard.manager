@@ -1,5 +1,5 @@
 [![CodeQL Advanced](https://github.com/BrodjagaRatnik/service.wireguard.manager/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/BrodjagaRatnik/service.wireguard.manager/actions/workflows/codeql.yml)
-![Last Commit](https://img.shields.io/github/last-commit/BrodjagaRatnik/service.wireguard.manager)
+![Last Commit](https://shields.io/github/last-commit/BrodjagaRatnik/service.wireguard.manager)
 ![Build Status](https://github.com/BrodjagaRatnik/service.wireguard.manager/actions/workflows/test_addon.yml/badge.svg)
 ---
 # WireGuard VPN Manager
