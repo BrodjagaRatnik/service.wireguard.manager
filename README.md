@@ -32,19 +32,25 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 11, 12, and 1
 * **OS**: LibreELEC 11.0 or higher (built-in WireGuard kernel module support required).
 * **Network**: Active network connection managed via default LibreELEC networking (`connman`).
 
-## Automated Upstream ConnMan FD Leak Mitigation (v1.5.0+)
+## Automated Upstream ConnMan FD Leak Mitigation (v1.5.3+)
 
-Older versions of `connmand` contain native tracking bugs within their network cache and DNS proxy layers that trigger when virtual interfaces (like `wg0`) alter default routing metrics. This causes a severe **file descriptor (FD) leak** (approx. 10 FDs/min from the DNS proxy loop, and 2-3 FDs/min from orphaned `CLOSE_WAIT` sockets via `ipv4.connman.net`).
+Older versions of `connmand` contain structural resource-tracking bugs within their link-scanning and routing state machines that trigger when unmanaged virtual interfaces (like `wg0`) alter default routing metrics. 
 
-To prevent the system from exhausting resources and crashing, **WGM automatically deploys a system-level optimization on initialization**—requiring zero user intervention or SSH configuration. 
+Through exhaustive platform testing (including LibreELEC 13 Generic x86_64 and RPi profiles), we isolated a two-phase leak profile:
+1. **The Global Layer**: An unconditional loop within ConnMan's internal DNS proxy and online tracking engines that orphans HTTP probes and socket handles during interface state changes.
+2. **The Wireless Layer**: A severe, persistent netlink (`nl80211`) handle leak that is **strictly Wi-Fi interface specific**. On a hardwired Ethernet connection, applying our configuration flags completely stabilizes the daemon. However, on Wi-Fi links, disconnecting the WireGuard interface triggers an immediate, recurring surge of 72 leaked file descriptors per event that continues to accumulate over time.
 
-The addon silently injects and applies the following mitigations directly to LibreELEC:
-* **Disables ConnMan's Online Check**: Patches `/storage/.config/connman_main.conf` to set `EnableOnlineCheck = false`, stopping orphaned `CLOSE_WAIT` sockets.
-* **Bypasses Internal DNS Proxy**: Deploys a systemd drop-in override at `/storage/.config/system.d/connman.service.d/override.conf` forcing the daemon to run with the `--nodnsproxy` flag.
-* **Hot-Reloads Networking**: Safely triggers a `systemctl daemon-reload && systemctl restart connman` cycle to instantly lock and flatline the file descriptor baseline (stabilizing at ~20 FDs on Pi hardware and ~18 FDs on x86 platforms).
-* **[See LibreELEC forum](https://forum.libreelec.tv/thread/30529-rpi-connman-resource-socket-leak-1024-fd-crash-when-using-kernel-space-wireguard/?postID=206516#post206516)**
+To prevent the system from hitting the hard kernel wall of 1024 open files (which drops all routing tables and kills inbound SSH access), **WGM v1.5.3 automatically deploys an advanced, multi-tier system optimization on initialization** with zero user intervention required.
 
-*Note: The structural tracking details for this bug have been forwarded to the upstream ConnMan developer mailing list (`connman@lists.linux.dev`) to ensure a permanent resolution in future core daemon releases.*
+The addon silently configures and locks down the following parameters directly within the read-only appliance space:
+* **Forces Connection Privacy**: Modifies `/storage/.config/connman_main.conf` to declare `OnlineCheckMode = none`, successfully preventing connectivity check resource truncation.
+* **Bypasses Corrupted Subsystems**: Deploys an optimized systemd service drop-in override at `/storage/.config/system.d/connman.service.d/override.conf` running the daemon with the `--nodnsproxy` runtime parameter.
+* **Enforces Hardened Sandboxing**: Injects a custom process ceiling of `LimitNOFILE=512`. If a user runs exclusively on Wi-Fi and cycles the VPN repeatedly, systemd will cleanly catch, terminate, and restart `connmand` *before* it can reach the global OS exhaustion threshold, keeping local host networking and user terminal connections active.
+* **Unthrottled Error Resolution**: Asserts `LogRateLimitIntervalSec=0` to ensure systemd diagnostic capture streams are never dropped or suppressed during rapid interface switching windows.
+* **[See LibreELEC Forum Thread #30529](https://forum.libreelec.tv/thread/30529-rpi-connman-resource-socket-leak-1024-fd-crash-when-using-kernel-space-wireguard/)**
+
+*Note: The technical documentation and live wireless debugging metrics for this tracking discrepancy remain submitted to the upstream ConnMan developer mailing list (`connman@lists.linux.dev`) to isolate missing routing socket close callbacks in future core daemon upgrades.*
+
 
 ## 📖 Quick Links
 For detailed instructions for this Add-on, please visit our **[Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki)**:
