@@ -43,7 +43,7 @@ def run(argv):
             "choose_countries", "mode=country_selector", "mode=list_assets",
             "mode=dnsleaktest", "cleanup", "mode=tos", "mode=disclaimer",
             "mode=import_token", "mode=import_creds", "mode=import_custom_browser",
-            "mode=show_codes", "mode=net_reset"
+            "mode=show_codes", "mode=net_reset", "mode=import_mullvad"
         ]
 
         if any(cmd in args_str for cmd in commands):
@@ -237,6 +237,64 @@ def run(argv):
                     sys.path.insert(0, scripts_path)
                 import network
                 network.run_network_cleanup()
+
+            elif "import_mullvad" in args_str:
+                p_data = PROVIDER_MAP.get(2)
+
+                if not p_data or "setting" not in p_data:
+                    icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
+                    title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
+                    message = "Selection cached. You MUST press 'OK' in the main settings menu to apply changes!"
+                    xbmcgui.Dialog().notification(title, message, icon_info, 1500)
+                else:
+                    account_file = xbmcgui.Dialog().browse(1, "Select Account File", "local", ".txt")
+                    if account_file:
+                        f = xbmcvfs.File(account_file, "r")
+                        content = f.read()
+                        f.close()
+
+                        if isinstance(content, bytes):
+                            content = content.decode("utf-8")
+
+                        clean_account = "".join(content.split()).strip()
+
+                        if clean_account.isdigit() and len(clean_account) == 16:
+                            addon_obj.setSetting(p_data["setting"], clean_account)
+                            log_message(f"Imported Mullvad Account to dynamic target setting: {p_data['setting']}", 0)
+
+                            owned_val = addon_obj.getSetting("wg_owned").lower() == "true"
+
+                            import providers.mullvad_utils as m_utils
+                            m_utils.generate_mullvad_configs(
+                                account_id=clean_account,
+                                country_filter=addon_obj.getSetting(p_data.get("countries_setting", "filter")),
+                                mtu_setting=1380,
+                                owned=owned_val
+                            )
+
+                            notification_lock = get_file_path("notif_lock")
+                            if notification_lock is not None and (not os.path.exists(notification_lock)):
+                                try:
+                                    lock_dir = os.path.dirname(notification_lock)
+                                    if not os.path.exists(lock_dir):
+                                        os.makedirs(lock_dir)
+                                    with open(notification_lock, "w") as f:
+                                        f.write("locked")
+                                except Exception as e:
+                                    log_message(f"Main Launcher: Failed to create account lock: {e}", 3)
+
+                                icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
+                                title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
+                                message = "Account loaded. You [B]MUST[/B] press [B]'OK'[/B] in settings menu!"
+                                xbmcgui.Dialog().notification(title, message, icon_info, 1500)
+                        else:
+                            log_message("Main Launcher: Invalid Mullvad account token length or format rejected", 2)
+                            title = "[B]≡ [ WireGuard MANAGER ERROR ] ≡[/B]"
+                            msg = "[COLOR FFFFFF00]Selected file does not contain a valid 16-digit Mullvad account.[/COLOR]"
+                            xbmcgui.Dialog().ok(title, msg)
+                    else:
+                        log_message("Main Launcher: Mullvad account import cancelled by user", 0)
+
         else:
             try:
                 provider = addon_obj.getSettingInt("vpn_provider")

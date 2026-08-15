@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+v1.5.3 (2026-08-15)
+- Integration: Full out-of-the-box support for Mullvad VPN profiles.
+- Core Fix: Resolved case-sensitive parsing issues for ConnMan configuration files.
+- Hardening: Added automated systemd overrides to completely stop Wi-Fi netlink leaks.
+- Stability: Verified stable file descriptor resource baselines across x86_64, Pi 4, and Pi 5.
+
 v1.5.2
 [B]v1.5.2 (2026-08-03)[/B]
 - Fixed: Resolved an exit status 22 argument error on Wi-Fi profile swaps

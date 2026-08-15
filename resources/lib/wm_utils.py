@@ -19,10 +19,7 @@ from state_manager import get_file_path
 
 BASE64_PREFIX = "b64:"
 B64_REGEX = re.compile(r"^b64:([A-Za-z0-9+/=]+)$")
-LAST_RESTART_TIMES = {
-    "connman": 0.0,
-    "connman-vpn": 0.0
-}
+CONNMAN_ALERT_SHOWN = False
 
 
 def get_addon_dir():
@@ -30,7 +27,6 @@ def get_addon_dir():
 
 
 ADDON_DIR = get_addon_dir()
-CONNMAN_ALERT_SHOWN = False
 
 
 def trigger_blackout_ui():
@@ -136,20 +132,35 @@ def safe_decrypt_password(stored_password: str) -> str:
         return html.unescape(stored_password)
 
 
-def flush_connman_sockets(threshold=400) -> bool:
+def flush_connman_sockets() -> bool:
     global CONNMAN_ALERT_SHOWN
     try:
         res = subprocess.run(["pidof", "connmand"], capture_output=True, text=True)
-
         if res.returncode != 0 or not res.stdout.strip():
             return False
 
         pids = sorted([int(x) for x in res.stdout.strip().split()])
         pid = pids[0]
         fd_dir = f"/proc/{pid}/fd"
+        limits_file = f"/proc/{pid}/limits"
 
-        if not os.path.exists(fd_dir):
+        if not os.path.exists(fd_dir) or not os.path.exists(limits_file):
             return False
+
+        max_files = 512
+        try:
+            with open(limits_file, "r") as f:
+                for line in f:
+                    if "Max open files" in line:
+                        digits = re.findall(r'\d+', line)
+                        if digits:
+                            max_files = int(digits[0])
+                        break
+        except Exception as e:
+            log_message(f"Wm Utils: Error parsing proc limits: {e}", 2)
+
+        threshold_restart = int(max_files * 0.80)
+        threshold_alert = int(max_files * 0.90)
 
         try:
             fds = os.listdir(fd_dir)
@@ -157,53 +168,52 @@ def flush_connman_sockets(threshold=400) -> bool:
             return False
 
         current_count = len(fds)
-
-        if current_count < threshold:
+        if current_count < threshold_restart:
+            CONNMAN_ALERT_SHOWN = False
             return False
 
         socket_count = 0
         for fd in fds:
             try:
-                fd_path = f"{fd_dir}/{fd}"
-                link = os.readlink(fd_path)
-                if "socket:" in link:
+                link = os.readlink(f"{fd_dir}/{fd}")
+                if "socket" in link.lower() or "anon_inode" in link.lower():
                     socket_count += 1
             except OSError:
                 continue
 
-        if current_count >= threshold and socket_count > 0:
+        if current_count >= threshold_restart and socket_count > 0:
             vpn_active = os.path.exists("/sys/class/net/wg0")
 
             if vpn_active:
-                msg = (
-                    f"Wm Utils: Connman socket leak detected ({socket_count}/{current_count} FDs). "
-                    f"VPN connection is active. Skipping restart to protect tunnel integrity."
-                )
-                log_message(msg, 1)
-
-                if current_count >= 724 and not CONNMAN_ALERT_SHOWN:
-                    try:
-                        dialog = xbmcgui.Dialog()
-                        dialog.ok(
-                            "WireGuard Manager Alert",
-                            f"ConnMan socket leak has reached dangerous levels!\n"
-                            f"Current Count: {current_count} FDs\n"
-                            "Please cycle your VPN connection to safely clear resources."
-                        )
-                        CONNMAN_ALERT_SHOWN = True
-                    except Exception as e:
-                        log_message(f"Wm Utils: Failed to render Kodi OK dialog: {e}", 2)
+                if current_count >= threshold_alert:
+                    if not CONNMAN_ALERT_SHOWN and HAS_KODI:
+                        try:
+                            dialog = xbmcgui.Dialog()
+                            dialog.ok(
+                                "WireGuard Manager Alert",
+                                f"ConnMan socket leak has reached dangerous levels!\n"
+                                f"Current Count: {current_count} / {max_files} FDs (>=90%)\n"
+                                "Please cycle your VPN connection to safely clear resources."
+                            )
+                            CONNMAN_ALERT_SHOWN = True
+                        except Exception as e:
+                            log_message(f"Wm Utils: Failed to render Kodi OK dialog: {e}", 2)
+                else:
+                    msg = (
+                        f"Wm Utils: Connman socket leak detected ({socket_count}/{current_count} FDs). "
+                        f"Limit is {max_files}. VPN is active. Skipping restart."
+                    )
+                    log_message(msg, 2)
 
                 return False
 
             CONNMAN_ALERT_SHOWN = False
             msg = (
-                f"Wm Utils: Connman socket leak detected ({socket_count}/{current_count} FDs). "
-                f"VPN connection is inactive. Executing safe background network reclamation..."
+                f"Wm Utils: Connman leak at {current_count}/{max_files} FDs (>=80%). "
+                f"VPN is inactive. Executing safe background network reclamation..."
             )
             log_message(msg, 1)
-
-            cmd = "systemctl restart connman && ifconfig eth0 up 2>/dev/null; ifconfig wlan0 up 2>/dev/null"
+            cmd = "systemctl restart connman && sleep 3 && ip link set eth0 up 2>/dev/null; ip link set wlan0 up 2>/dev/null"
             subprocess.Popen(
                 ["nohup", "sh", "-c", cmd],
                 stdout=subprocess.DEVNULL,
@@ -218,4 +228,8 @@ def flush_connman_sockets(threshold=400) -> bool:
         return False
 
     finally:
-        kodi_env.clear_script_globals()
+        try:
+            if current_count >= threshold_restart:
+                kodi_env.clear_script_globals()
+        except Exception:
+            pass

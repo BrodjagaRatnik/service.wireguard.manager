@@ -1,7 +1,11 @@
 """ ./resources/lib/state_manager.py """
 import os
 
-PROFILE_DIR = '/storage/.kodi/userdata/addon_data/service.wireguard.manager'
+try:
+    import xbmcvfs
+    PROFILE_DIR = xbmcvfs.translatePath('special://profile/addon_data/service.wireguard.manager')
+except ImportError:
+    PROFILE_DIR = "/storage/.kodi/userdata/addon_data/service.wireguard.manager"
 
 FILE_MAP = {
     'active': 'vpn_manager_active.txt',
@@ -11,6 +15,7 @@ FILE_MAP = {
     'blackout': 'vpn_blackout_active.lock',
     'pia_map': 'pia_name_map.json',
     'pia_cache': 'pia_token_cache.json',
+    'mullvad_settings': 'mullvad_settings.ini',
     'connector_lock': 'vpn_connector_active.lock',
     'notif_lock': 'vpn_notif_sent.lock',
     'dns_backup': 'vpn_dns_backup.json'
@@ -20,6 +25,11 @@ FILE_MAP = {
 def get_file_path(key):
     if key not in FILE_MAP:
         return None
+    try:
+        if not os.path.exists(PROFILE_DIR):
+            os.makedirs(PROFILE_DIR, exist_ok=True)
+    except Exception:
+        pass
     return os.path.join(PROFILE_DIR, FILE_MAP[key])
 
 

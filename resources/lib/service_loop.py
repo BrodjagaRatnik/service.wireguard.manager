@@ -6,7 +6,7 @@ import xbmcgui
 from logger import log_message
 from vpn_config import WATCHDOG_HEARTBEAT, PROVIDER_MAP, CONNMAN_SETTLE_DELAY
 from state_manager import get_file_path
-from service_matcher import is_nord_match, is_pia_match, is_custom_match
+from service_matcher import is_nord_match, is_pia_match, is_custom_match, is_mullvad_match
 
 
 def execute_monitor_loop(instance):
@@ -20,7 +20,7 @@ def execute_monitor_loop(instance):
     if not active_now:
         try:
             if os.path.exists('/sys/class/net/'):
-                prefixes = ('nord', 'custom', 'pia', 'wireguard', 'wg')
+                prefixes = ('nord', 'custom', 'pia', 'mullvad', 'wireguard', 'wg')
                 wg_ifs = [i for i in os.listdir('/sys/class/net/') if i.startswith(prefixes)]
 
                 if wg_ifs:
@@ -92,6 +92,8 @@ def execute_monitor_loop(instance):
                         is_match = is_nord_match(vpn_target, active_now)
                     elif p_name == "PIA":
                         is_match = is_pia_match(vpn_target, active_now)
+                    elif p_name == "Mullvad":
+                        is_match = is_mullvad_match(vpn_target, active_now)
                     elif p_name == "Custom":
                         is_match = is_custom_match(vpn_target, active_now)
                     else:
@@ -99,6 +101,8 @@ def execute_monitor_loop(instance):
                             is_match = is_nord_match(vpn_target, active_now)
                         elif "pia" in v_low:
                             is_match = is_pia_match(vpn_target, active_now)
+                        elif "mullvad" in v_low:
+                            is_match = is_mullvad_match(vpn_target, active_now)
                         else:
                             is_match = is_custom_match(vpn_target, active_now)
 

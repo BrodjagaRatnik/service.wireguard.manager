@@ -288,6 +288,38 @@ msgctxt "#32070"
 msgid "Zero-leak kernel-level Firewall Killswitch for IPv4 nftables/iptables support. Smart Local Network (LAN) bypass ensuring local media shares (Samba/NFS) stay online when VPN drops."
 msgstr "Zero-leak kernel-level Firewall Killswitch for IPv4 nftables/iptables support. Smart Local Network (LAN) bypass ensuring local media shares (Samba/NFS) stay online when VPN drops."
 
+msgctxt "#32071"
+msgid "Mullvad Account Number"
+msgstr "Mullvad Account Number"
+
+msgctxt "#32072"
+msgid "Only fetch active servers"
+msgstr "Only fetch active servers"
+
+msgctxt "#32073"
+msgid "Enable this to download operational servers only, preventing connection attempts to relays currently offline for maintenance."
+msgstr "Enable this to download operational servers only, preventing connection attempts to relays currently offline for maintenance."
+
+msgctxt "#32074"
+msgid "Only use Mullvad-owned infrastructure"
+msgstr "Only use Mullvad-owned infrastructure"
+
+msgctxt "#32075"
+msgid "Enable this to exclude rented infrastructure, forcing the add-on to only build tunnels with servers owned directly by Mullvad."
+msgstr "Enable this to exclude rented infrastructure, forcing the add-on to only build tunnels with servers owned directly by Mullvad."
+
+msgctxt "#32076"
+msgid "Enter two-letter country codes separated by commas like 'nl,us,gb' to restrict the server list to those regions."
+msgstr "Enter two-letter country codes separated by commas like 'nl,us,gb' to restrict the server list to those regions."
+
+msgctxt "#32077"
+msgid "►Import Mullvad account from File¦ Select a txt file containing your Mullvad account.◄"
+msgstr "►Import Mullvad account from File¦ Select a txt file containing your Mullvad account.◄"
+
+msgctxt "#32078"
+msgid "File Format for Import: ¦ Line 1: Your Mullvad account number ¦ Make sure there are no extra spaces or empty lines in the text file."
+msgstr "File Format for Import: ¦ Line 1: Your Mullvad account number ¦ Make sure there are no extra spaces or empty lines in the text file."
+
 
 
 msgctxt "#32992"

@@ -110,6 +110,43 @@ def is_pia_match(vpn_target, active_now):
     return False
 
 
+def is_mullvad_match(vpn_target, active_now):
+    if vpn_target is None or not vpn_target:
+        return False
+    if active_now is None or not active_now:
+        return False
+
+    v_clean = str(vpn_target).strip().lower().replace("_", "").replace("-", "").replace(" ", "")
+    a_raw = str(active_now).strip().lower()
+
+    parts = a_raw.split()
+    if not parts:
+        return False
+
+    if len(parts) == 1:
+        a_name = a_raw.replace(".config", "").replace(".conf", "")
+    else:
+        service_id = parts[-1]
+        if service_id.startswith("vpn_"):
+            a_name = a_raw[:a_raw.rfind(service_id)].strip()
+        else:
+            a_name = a_raw.replace(service_id, "").strip()
+
+    for flag in ["*", "R", "A", "O", "d"]:
+        if a_name.startswith(flag + " "):
+            a_name = a_name[2:].strip()
+
+    a_clean = a_name.strip().lower().replace("_", "").replace("-", "").replace(" ", "")
+
+    v_mullvad = v_clean.replace("mullvad", "")
+    a_mullvad = a_clean.replace("mullvad", "")
+
+    if v_mullvad == a_mullvad:
+        return True
+
+    return False
+
+
 def is_custom_match(vpn_target, active_now):
     if vpn_target is None:
         return False

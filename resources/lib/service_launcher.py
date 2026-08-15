@@ -60,6 +60,7 @@ if HAS_KODI_MONITOR:
             try:
                 from wm_utils import encrypt_setting_to_base64
                 encrypt_setting_to_base64("pia_pass")
+                encrypt_setting_to_base64("account_number")
 
             except Exception as e:
                 log_err = f"Service Launcher: Settings encryption helper unavailable: {e}"
@@ -77,7 +78,7 @@ if HAS_KODI_MONITOR:
             if (current_time - getattr(self, "last_socket_flush_time", 0.0)) >= 60.0:
                 self.last_socket_flush_time = current_time
                 try:
-                    flush_connman_sockets(threshold=512)
+                    flush_connman_sockets()
                 except Exception as e:
                     log_message(f"Service Launcher: Failed to run socket garbage collector: {e}", 3)
 

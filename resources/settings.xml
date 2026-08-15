@@ -32,6 +32,7 @@
 							<option label="None">-1</option>
 							<option label="NordVPN">0</option>
 							<option label="Private Internet Access (PIA)">1</option>
+							<option label="MullvadVPN">2</option>
 							<option label="Custom (Import .config file)">99</option>
 						</options>
 					</constraints>
@@ -91,6 +92,28 @@
 						<hidden>true</hidden>
 					</control>
 				</setting>
+				<setting id="import_mullvad_account_file" parent="vpn_provider" type="action" label="32077" help="32078">
+					<dependencies>
+						<dependency type="visible" setting="vpn_provider">2</dependency>
+					</dependencies>
+					<level>0</level>
+					<data>RunScript(service.wireguard.manager, mode=import_mullvad)</data>
+					<control type="button" format="action"/>
+				</setting>
+				<setting id="account_number" parent="vpn_provider" type="string" label="32071">
+					<dependencies>
+						<dependency type="visible" setting="vpn_provider">2</dependency>
+					</dependencies>
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<heading>32071</heading>
+						<hidden>true</hidden>
+					</control>
+				</setting>
 				<setting id="import_custom_action" parent="vpn_provider" type="action" label="32042" help="32047">
 					<dependencies>
 						<dependency type="visible" setting="vpn_provider">99</dependency>
@@ -112,6 +135,7 @@
 							<or>
 								<condition setting="vpn_provider" operator="is">0</condition>
 								<condition setting="vpn_provider" operator="is">1</condition>
+								<condition setting="vpn_provider" operator="is">2</condition>
 							</or>
 						</dependency>
 					</dependencies>
@@ -132,6 +156,7 @@
 							<or>
 								<condition setting="vpn_provider" operator="is">0</condition>
 								<condition setting="vpn_provider" operator="is">1</condition>
+								<condition setting="vpn_provider" operator="is">2</condition>
 							</or>
 						</dependency>
 					</dependencies>
@@ -145,7 +170,32 @@
 							<or>
 								<condition setting="vpn_provider" operator="is">0</condition>
 								<condition setting="vpn_provider" operator="is">1</condition>
+								<condition setting="vpn_provider" operator="is">2</condition>
 								<condition setting="vpn_provider" operator="is">99</condition>
+							</or>
+						</dependency>
+					</dependencies>
+					<level>0</level>
+					<default>false</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="wg_active" type="boolean" label="32072" help="32073">
+					<dependencies>
+						<dependency type="visible">
+							<or>
+								<condition setting="vpn_provider" operator="is">2</condition>
+							</or>
+						</dependency>
+					</dependencies>
+					<level>0</level>
+					<default>true</default>
+					<control type="toggle"/>
+				</setting>
+				<setting id="wg_owned" type="boolean" label="32074" help="32075">
+					<dependencies>
+						<dependency type="visible">
+							<or>
+								<condition setting="vpn_provider" operator="is">2</condition>
 							</or>
 						</dependency>
 					</dependencies>
@@ -159,6 +209,7 @@
 							<or>
 								<condition setting="vpn_provider" operator="is">0</condition>
 								<condition setting="vpn_provider" operator="is">1</condition>
+								<condition setting="vpn_provider" operator="is">2</condition>
 								<condition setting="vpn_provider" operator="is">99</condition>
 							</or>
 						</dependency>
@@ -184,6 +235,7 @@
 							<or>
 								<condition setting="vpn_provider" operator="is">0</condition>
 								<condition setting="vpn_provider" operator="is">1</condition>
+								<condition setting="vpn_provider" operator="is">2</condition>
 							</or>
 						</dependency>
 					</dependencies>
@@ -248,6 +300,21 @@
 						<enabled>false</enabled>
 					</control>
 				</setting>
+				<setting id="filter" parent="choose_countries" type="string" label="32051" help="32076">
+					<dependencies>
+						<dependency type="visible">
+							<condition setting="vpn_provider" operator="is">2</condition>
+						</dependency>
+					</dependencies>
+					<level>0</level>
+					<default/>
+					<constraints>
+						<allowempty>true</allowempty>
+					</constraints>
+					<control type="edit" format="string">
+						<enabled>false</enabled>
+					</control>
+				</setting>
 			</group>
 			<group id="13" label="32046">
 				<setting id="regen_configs" type="action" label="32011">
@@ -257,6 +324,7 @@
 							<or>
 								<condition setting="vpn_provider" operator="is">0</condition>
 								<condition setting="vpn_provider" operator="is">1</condition>
+								<condition setting="vpn_provider" operator="is">2</condition>
 							</or>
 						</dependency>
 					</dependencies>
@@ -266,6 +334,7 @@
 								<or>
 									<condition setting="vpn_provider" operator="is">0</condition>
 									<condition setting="vpn_provider" operator="is">1</condition>
+									<condition setting="vpn_provider" operator="is">2</condition>
 								</or>
 							</dependency>
 						</dependencies>
@@ -289,6 +358,7 @@
 							<or>
 								<condition setting="vpn_provider" operator="is">0</condition>
 								<condition setting="vpn_provider" operator="is">1</condition>
+								<condition setting="vpn_provider" operator="is">2</condition>
 								<condition setting="vpn_provider" operator="is">99</condition>
 							</or>
 						</dependency>

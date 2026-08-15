@@ -61,7 +61,7 @@ def clear_script_globals():
                 log_txt = f"kodi_env: LEAK DETECTION: Rogue modules trapped in memory: {leaking_modules}"
                 xbmc.log(log_txt, xbmc.LOGWARNING)
             else:
-                xbmc.log("kodi_env: LEAK DETECTION: System modules trace is completely clean.", xbmc.LOGINFO)
+                xbmc.log("kodi_env: LEAK DETECTION: System modules trace is completely clean.", xbmc.LOGDEBUG)
         except Exception:
             pass
 

@@ -32,13 +32,12 @@ def get_addon_path():
 
 def disconnect_vpn(silent=False, flush_dns=True, reason="disengaged"):
     intentional_path = get_file_path("disconnect")
-
     try:
         fallback_ks = ZeroHardcodeKillSwitch(vpn_server_ip="0.0.0.0")
         fallback_ks.enabled = True
         fallback_ks.disable(reason=reason)
-    except Exception as ks_err:
-        log_message(f"VPN Ops: Killswitch manual disengage wrapper error: {ks_err}", 3)
+    except Exception:
+        log_message("VPN Ops: Killswitch manual disengage wrapper error logged", 3)
 
     try:
         if silent is False and HAS_KODI is True:
@@ -53,14 +52,14 @@ def disconnect_vpn(silent=False, flush_dns=True, reason="disengaged"):
             if os.path.exists(path) is True:
                 try:
                     os.remove(path)
-                except Exception as e:
-                    log_message(f"VPN Ops: Disconnect error removing {path}: {e}", 3)
+                except Exception:
+                    log_message("VPN Ops: Disconnect error removing runtime target file path", 3)
 
         if intentional_path is not None:
             try:
                 open(intentional_path, "w").close()
-            except Exception as e:
-                log_message(f"VPN Ops: Disconnect error creating intentional flag file: {e}", 3)
+            except Exception:
+                log_message("VPN Ops: Disconnect error creating intentional flag file path", 3)
 
         if HAS_KODI is True:
             xbmcgui.Window(10000).setProperty("vpn_intentional_disconnect", "true")
@@ -72,18 +71,15 @@ def disconnect_vpn(silent=False, flush_dns=True, reason="disengaged"):
         try:
             out = subprocess.check_output(["connmanctl", "services"], text=True)
             p_names = "|".join([p["name"] for p in PROVIDER_MAP.values()])
-
             for line in out.splitlines():
                 if (("vpn_" in line or any(p in line for p in p_names.split("|")))
                         and ("* " in line or "R " in line)):
                     subprocess.run(
                         ["connmanctl", "disconnect", line.split()[-1]],
-                        check=False,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL
+                        check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                     )
-        except Exception as e:
-            log_message(f"VPN Ops: Disconnect Error {e}", 3)
+        except Exception:
+            log_message("VPN Ops: Disconnect service interface operational error", 3)
 
         try:
             local_gw = get_default_gateway()
@@ -108,8 +104,8 @@ def disconnect_vpn(silent=False, flush_dns=True, reason="disengaged"):
                                 ["ip", "route", "del", parts[0], "via", local_gw, "dev", local_dev],
                                 check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
                             )
-        except Exception as route_err:
-            log_message(f"VPN Ops: Teardown routing resolution error: {route_err}", 0)
+        except Exception:
+            log_message("VPN Ops: Teardown routing resolution error tracked", 0)
 
         if flush_dns is True:
             flush_connman_dns_cache()
@@ -124,8 +120,8 @@ def disconnect_vpn(silent=False, flush_dns=True, reason="disengaged"):
                 time.sleep(OS_RELEASE_DELAY / 1000.0)
         try:
             enable_connman_ipv6()
-        except Exception as e:
-            log_message(f"VPN Ops: Post-disconnect IPv6 restoration failed: {e}", 3)
+        except Exception:
+            log_message("VPN Ops: Post-disconnect IPv6 restoration failed internally", 3)
 
         if silent is False and HAS_KODI is True:
             addon_path = get_addon_path()
@@ -134,7 +130,26 @@ def disconnect_vpn(silent=False, flush_dns=True, reason="disengaged"):
             msg = "[B]╠══ [COLOR FFDF00FF][ DISCONNECTED ][/COLOR] ══╣[/B]"
             xbmcgui.Dialog().notification(title, msg, icon_dis, 4500)
 
-        gw = get_default_gateway()
+        gw = None
+        try:
+            gw = get_default_gateway()
+        except Exception:
+            pass
+
+        if not gw:
+            try:
+                route_output = subprocess.check_output(["ip", "route", "show"]).decode("utf-8")
+                for route_line in route_output.splitlines():
+                    if "scope link" in route_line and "src" in route_line:
+                        tokens = route_line.split()
+                        raw_ip = tokens[0].split("/")[0]
+                        octets = raw_ip.split(".")
+                        if len(octets) == 4:
+                            gw = f"{octets[0]}.{octets[1]}.{octets[2]}.1"
+                            break
+            except Exception:
+                pass
+
         if gw:
             try:
                 out_route = subprocess.check_output(["ip", "route", "show", "default"], text=True)
@@ -142,21 +157,21 @@ def disconnect_vpn(silent=False, flush_dns=True, reason="disengaged"):
                     target_dev = "eth0" if os.path.exists("/sys/class/net/eth0") else "wlan0"
                     subprocess.run(["ip", "route", "replace", "default", "via", gw, "dev", target_dev], check=False)
                     log_message(f"VPN Ops: Route restored via {gw} on {target_dev}", 0)
-            except Exception as e:
-                log_message(f"VPN Ops: Route Restore Error {e}", 3)
+            except Exception:
+                log_message("VPN Ops: Route Restore Core Error occurred", 3)
 
         if HAS_KODI is True:
             xbmcgui.Window(10000).setProperty("vpn_intentional_disconnect", "")
 
-    except Exception as disconnection_master_fault:
-        log_message(f"VPN Ops: Disconnection core failure: {disconnection_master_fault}", 3)
+    except Exception:
+        log_message("VPN Ops: Disconnection core failure tracked", 3)
 
     finally:
         if intentional_path is not None and os.path.exists(intentional_path) is True:
             try:
                 os.remove(intentional_path)
-            except Exception as e:
-                log_message(f"VPN Ops: Error removing intentional disconnect file: {e}", 3)
+            except Exception:
+                log_message("VPN Ops: Error removing intentional disconnect file resource", 3)
         kodi_env.clear_script_globals()
 
 

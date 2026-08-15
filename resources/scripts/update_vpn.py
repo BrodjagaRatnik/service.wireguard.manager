@@ -1,7 +1,7 @@
 """ ./resources/scripts/update_vpn.py """
-import kodi_env
-import sys
 import os
+import sys
+import kodi_env
 from vpn_config import PROVIDER_MAP
 from logger import log_message
 
@@ -39,11 +39,17 @@ def main():
             provider_module.update(user, pw, countries, config_dir)
 
         elif provider_idx == 2:
-            account = addon_obj.getSetting("mullvad_account")
-            countries = addon_obj.getSetting("mullvad_filter")
-            mtu = addon_obj.getSettingInt("mullvad_mtu")
-            provider_module.generate_mullvad_configs(account, countries, mtu)
-            provider_module.convert_to_connman_configs()
+            import providers.mullvad_utils as m_utils
+            account = addon_obj.getSetting("account_number")
+            countries = addon_obj.getSetting("filter")
+            mtu = addon_obj.getSettingInt("mtu")
+            owned = addon_obj.getSettingBool("wg_owned")
+            m_utils.generate_mullvad_configs(
+                account_id=account,
+                country_filter=countries,
+                mtu_setting=mtu,
+                owned=owned
+            )
 
         elif provider_idx == 99:
             path = addon_obj.getSetting("custom_path")

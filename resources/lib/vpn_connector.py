@@ -117,17 +117,18 @@ def connect_vpn(vpn_name, sid, instance, silent=False):
             setup_vpn_routing(sid, bool(p_data.get("requires_endpoint_route")))
             subprocess.run(["ip", "route", "flush", "cache"], check=False)
             instance.set_active_vpn(vpn_name)
-            set_secure_dns(vpn_name, vpn_active=True)
+
+            try:
+                disable_connman_ipv6()
+            except Exception:
+                pass
 
             if HAS_KODI is True:
                 xbmc.sleep(ROUTE_PROP_DELAY)
             else:
                 time.sleep(ROUTE_PROP_DELAY / 1000.0)
 
-            try:
-                disable_connman_ipv6()
-            except Exception:
-                pass
+            set_secure_dns(vpn_name, vpn_active=True)
 
             if HAS_KODI is True:
                 addon_path = kodi_env.ADDON_DIR

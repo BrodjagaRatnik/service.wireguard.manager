@@ -1,3 +1,7 @@
 [General]
-PreferredTechnologies = ethernet,wifi
-EnableOnlineCheck = false
+PreferredTechnologies = ethernet,wifi,cellular
+OnlineCheckMode = none
+OnlineCheckIPv4URL = 
+OnlineCheckIPv6URL = 
+OnlineCheckInterval = 0
+OnlineCheckURL = 

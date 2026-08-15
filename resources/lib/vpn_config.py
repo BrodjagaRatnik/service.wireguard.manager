@@ -94,10 +94,10 @@ Central Provider Mapping
 ./resources/lib/network_utils.py
 ./resources/lib/vpn_menu.py
 Below need editing if adding new VPN provider!
-./resources/scripts/update_vpn.py (if provider_idx == 0:)
-./resources/lib/country_selector.py (if provider == 0:)
-./resources/lib/vpn_core.py (if provider == 0:)
-./resources/lib/setup_helper.py (prefixes = ("nord_", "pia_", "custom_", "template"))
+./resources/lib/vpn_config.py
+./resources/lib/vpn_core_upd.py
+./resources/scripts/update_vpn.py
+./resources/scripts/country_selector.py
 """
 
 
@@ -167,9 +167,9 @@ PROVIDER_MAP = LProviderMap({
     },
     2: {
         "name": "Mullvad",
-        "api_url": "https://api.mullvad.net/public/relays/wireguard/v1/",
-        "setting": "mullvad_account",
-        "countries_setting": "mullvad_filter",
+        "api_url": "https://api.mullvad.net/public/relays/wireguard/v1",
+        "setting": "account_number",
+        "countries_setting": "filter",
         "prefix": "mullvad_",
         "label": "Mullvad Account",
         "needs_file_check": True,

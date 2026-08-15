@@ -47,6 +47,8 @@ def run_update(direct_token=None, force_provider=None, silent=False):
 
         if provider_idx == 1:
             country_setting = "selected_countries_pia"
+        elif provider_idx == 2:
+            country_setting = "filter"
         else:
             country_setting = "selected_countries"
 
@@ -131,6 +133,44 @@ def run_update(direct_token=None, force_provider=None, silent=False):
             if progress:
                 progress.update(60, f"Registering {provider_name} keys...")
             success = pia.update(user, pw, countries, CONFIG_DIR)
+            if success and progress:
+                progress.update(100, "Update complete!")
+
+        elif provider_idx == 2:
+            account = direct_token if direct_token else addon_obj.getSetting("account_number")
+
+            from wm_utils import safe_decrypt_password
+            account = safe_decrypt_password(account)
+            account = "".join(account.split()).strip()
+
+            if not account or not account.isdigit() or len(account) != 16:
+                if progress:
+                    progress.close()
+                if HAS_KODI_UI:
+                    title = "[B]≡ [ WireGuard Manager ] ≡[/B]"
+                    msg = "[COLOR FFFFFF00]Invalid 16-digit Mullvad account number.[/COLOR]"
+                    xbmcgui.Dialog().ok(title, msg)
+                    log_message("Core Update: Invalid 16-digit Mullvad account number.", 3)
+                return False
+
+            owned_val = addon_obj.getSetting("wg_owned").lower() == "true"
+
+            if progress:
+                progress.update(50, f"Generating dynamic {provider_name} environments...")
+
+            try:
+                import providers.mullvad_utils as m_utils
+                m_utils.generate_mullvad_configs(
+                    account_id=account,
+                    country_filter=countries,
+                    mtu_setting=1380,
+                    owned=owned_val
+                )
+                success = True
+            except Exception as m_err:
+                log_message(f"Core Update: Mullvad generation failed: {m_err}", 3)
+                success = False
+
             if success and progress:
                 progress.update(100, "Update complete!")
 

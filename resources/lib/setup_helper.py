@@ -4,6 +4,7 @@ import os
 import shutil
 import subprocess
 import sys
+import configparser
 from logger import log_message
 from vpn_config import PROVIDER_MAP
 
@@ -124,14 +125,9 @@ def ensure_setup(addon_path, silent=False):
         connman_source = os.path.join(addon_path, 'resources', 'data', 'connman_main.conf.txt')
         cert_source = os.path.join(addon_path, "resources", "data", "ca.rsa.4096.txt")
         cert_dest = os.path.join(addon_path, "resources", "lib", "providers", "ca.rsa.4096.crt")
-        connman_override_dest = '/storage/.config/system.d/connman.service.d/override.conf'
-        connman_override_source = os.path.join(addon_path, 'resources', 'data', 'override.conf.txt')
-
         setup_updated = False
-
         progress = xbmcgui.DialogProgress()
         progress.create("WireGuard Manager", "Starting system check...")
-
         progress.update(15, "Checking Keymaps...")
         if not os.path.exists(keymap_dest):
             try:
@@ -152,21 +148,62 @@ def ensure_setup(addon_path, silent=False):
                 setup_updated = True
             except Exception as e:
                 log_message(f"Setup Helper: Setup Error (Connman): {e}", 3)
+        else:
+            try:
+                src_parser = configparser.ConfigParser(strict=False, empty_lines_in_values=False)
+                dst_parser = configparser.ConfigParser(strict=False, empty_lines_in_values=False)
+                src_parser.read(connman_source)
+                dst_parser.read(connman_dest)
+                changes_made = False
+                for sec in src_parser.sections():
+                    if not dst_parser.has_section(sec):
+                        dst_parser.add_section(sec)
+                        changes_made = True
+                    for opt, val in src_parser.items(sec):
+                        if not dst_parser.has_option(sec, opt) or dst_parser.get(sec, opt) != val:
+                            dst_parser.set(sec, opt, val)
+                            changes_made = True
+                if changes_made:
+                    with open(connman_dest, "w") as config_out:
+                        dst_parser.write(config_out)
+                    subprocess.run(["systemctl", "restart", "connman"], check=False)
+                    log_message("Setup Helper: Connman config merged and updated.", 1)
+                    setup_updated = True
+            except Exception as e:
+                log_message(f"Setup Helper: Setup Error (Connman Update): {e}", 3)
 
-        progress.update(35, "Checking DNS override configuration...")
+        connman_override_dest = '/storage/.config/system.d/connman.service.d/override.conf'
+        progress.update(45, "Checking DNS override configuration...")
         if not os.path.exists(connman_override_dest):
             try:
                 dest_dir = os.path.dirname(connman_override_dest)
                 os.makedirs(dest_dir, exist_ok=True)
-                shutil.copy2(connman_override_source, connman_override_dest)
+
+                config_data = (
+                    "[Service]\n"
+                    "ExecStartPre=\n"
+                    "ExecStart=\n"
+                    "ExecStart=/usr/sbin/connmand -nr "
+                    "--config=/storage/.config/connman_main.conf --nodnsproxy\n"
+                    "ExecStartPost=/bin/sh -c \"sleep 2; "
+                    "if ! grep -q 'Method=manual' "
+                    "/storage/.cache/connman/*/settings 2>/dev/null; "
+                    "then echo -e 'nameserver 1.1.1.1"
+                    "\nnameserver 9.9.9.9' >> /etc/resolv.conf; fi\"\n"
+                    "LimitNOFILE=512\n"
+                    "LogRateLimitIntervalSec=0\n"
+                )
+                with open(connman_override_dest, "w") as f:
+                    f.write(config_data)
+
                 subprocess.run(["systemctl", "daemon-reload"], check=False)
                 subprocess.run(["systemctl", "restart", "connman"], check=False)
-                log_message("Setup Helper: Connman dns override installed.", 1)
+                log_message("Setup Helper: Connman dynamic override installed.", 1)
                 setup_updated = True
             except Exception as e:
                 log_message(f"Setup Helper: Setup Error (Connman dns override): {e}", 3)
 
-        progress.update(45, "Installing VPN Watchdog...")
+        progress.update(60, "Installing VPN Watchdog...")
         if not os.path.exists(service_dest):
             try:
                 os.makedirs(os.path.dirname(service_dest), exist_ok=True)
@@ -179,7 +216,7 @@ def ensure_setup(addon_path, silent=False):
             except Exception as e:
                 log_message(f"Setup Helper: Setup Error (Service): {e}", 3)
 
-        progress.update(60, "Deploying PIA provider certificates...")
+        progress.update(75, "Deploying PIA provider certificates...")
         if not os.path.exists(cert_dest):
             try:
                 os.makedirs(os.path.dirname(cert_dest), exist_ok=True)
@@ -188,7 +225,7 @@ def ensure_setup(addon_path, silent=False):
             except Exception as e:
                 log_message(f"Setup Helper: Setup Error (Certificate Copy): {e}", 3)
 
-        progress.update(80, "Verifying VPN credentials...")
+        progress.update(90, "Verifying VPN credentials...")
         current_p_id = ADDON.getSettingInt("vpn_provider")
         has_creds = False
         if current_p_id == -1:
@@ -214,11 +251,8 @@ def ensure_setup(addon_path, silent=False):
 
             path_fixed = kodi_env.ADDON_DIR
             ICON_INFO = os.path.join(path_fixed, "resources", "media", "icon.png")
-            title = "[B][COLOR FFEEFFEE]≡ [ SETUP SUCCESS ] ≡[/B]"
-            message = (
-                "[COLOR FFE6E6FA]System services installed.[/COLOR]\n"
-                "[COLOR FFFFFF00]WireGuard manager is now active.[/COLOR]"
-            )
+            title = "[B][COLOR FFEEFFEE]≡[ SETUP SUCCESS ]≡[/COLOR][/B]"
+            message = "[COLOR FFFFFF00]WireGuard manager is now active.[/COLOR]"
             xbmcgui.Dialog().notification(title, message, ICON_INFO, 6000)
 
     except Exception as major_err:

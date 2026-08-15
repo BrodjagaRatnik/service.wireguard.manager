@@ -1,9 +1,10 @@
 """ ./resources/lib/network_utils.py """
+import json
 import os
 import re
 import subprocess
 from logger import log_message
-from vpn_config import PROVIDER_MAP
+from state_manager import get_file_path
 
 CONFIG_DIR = "/storage/.config/wireguard/"
 
@@ -43,26 +44,30 @@ def get_dns_from_config(vpn_name):
     dns_list = []
     if not vpn_name:
         return dns_list
-    base_target = vpn_name.lower().replace(' ', '_')
-    for p in PROVIDER_MAP.values():
-        p_name = p.get('name', '').lower()
-        if p_name in base_target:
-            base_target = base_target.replace(p_name, '')
-    base_target = base_target.strip('_')
+
+    search_terms = [w.strip().lower() for w in vpn_name.replace('-', '_').split('_') if len(w.strip()) > 1]
+    if not search_terms:
+        return dns_list
+
     target_path = None
     if os.path.exists(CONFIG_DIR):
         best_match_count = 0
-        search_words = [w for w in base_target.split('_') if len(w) > 1]
         for f_name in os.listdir(CONFIG_DIR):
             f_lower = f_name.lower()
             if f_lower.endswith(('.config', '.conf')):
-                if base_target in f_lower:
-                    target_path = os.path.join(CONFIG_DIR, f_name)
-                    break
-                match_count = sum(1 for w in search_words if w in f_lower)
+                match_count = 0
+                for term in search_terms:
+                    if term in f_lower:
+                        match_count += 1
                 if match_count > best_match_count:
                     best_match_count = match_count
                     target_path = os.path.join(CONFIG_DIR, f_name)
+
+    if not target_path and os.path.exists(CONFIG_DIR):
+        files = [f for f in os.listdir(CONFIG_DIR) if f.lower().endswith(('.config', '.conf'))]
+        if files:
+            target_path = os.path.join(CONFIG_DIR, files[0])
+
     if target_path:
         try:
             with open(target_path, 'r') as f:
@@ -70,34 +75,93 @@ def get_dns_from_config(vpn_name):
                 match = re.search(r"(?:WireGuard\.)?DNS\s*=\s*(.*)", content, re.IGNORECASE)
                 if match:
                     dns_list = [d.strip() for d in match.group(1).split(",")]
+                    log_message(f"Network Utils: Dynamically extracted DNS from resolved path: {target_path}", 0)
         except Exception as e:
-            log_message(f"Network Utils: Error reading DNS from {target_path}: {e}", 3)
+            log_message(f"Network Utils: Error parsing file {target_path}: {e}", 3)
+
     return dns_list
 
 
 def set_secure_dns(vpn_name=None, vpn_active=True):
-    dns_servers = get_dns_from_config(vpn_name) if vpn_active else []
+    backup_path = get_file_path("dns_backup")
     try:
         if vpn_active:
-            disable_connman_ipv6()
+            if backup_path and not os.path.exists(backup_path) and os.path.exists("/etc/resolv.conf"):
+                try:
+                    with open("/etc/resolv.conf", "r") as orig_f:
+                        orig_lines = orig_f.readlines()
+                    with open(backup_path, "w") as backup_f:
+                        json.dump(orig_lines, backup_f)
+                    log_message("Network Utils: Dynamic registry backup completed for resolv.conf", 0)
+                except Exception:
+                    pass
+
+            dns_servers = get_dns_from_config(vpn_name)
             if dns_servers:
                 lines = [f"nameserver {dns_ip}" for dns_ip in dns_servers]
                 with open("/etc/resolv.conf", "w") as f:
                     f.write("\n".join(lines) + "\n")
                 log_message(f"Network Utils: Enforced {len(dns_servers)} VPN DNS servers to resolv.conf", 0)
         else:
-            enable_connman_ipv6()
-            fallback_dns = [
-                "nameserver 1.1.1.1",
-                "nameserver 9.9.9.9",
-                "nameserver 2606:4700:4700::1111",
-                "nameserver 2620:fe::fe"
-            ]
-            with open("/etc/resolv.conf", "w") as f:
-                f.write("\n".join(fallback_dns) + "\n")
-            log_message("Network Utils: Restored clean Cloudflare and Quad9 privacy DNS environments", 0)
-    except Exception as e:
-        log_message(f"Network Utils: Direct resolv.conf synchronization failed: {e}", 3)
+            restored = False
+            if backup_path and os.path.exists(backup_path):
+                try:
+                    with open(backup_path, "r") as backup_f:
+                        orig_lines = json.load(backup_f)
+                    with open("/etc/resolv.conf", "w") as f:
+                        f.writelines(orig_lines)
+                    os.remove(backup_path)
+                    restored = True
+                    log_message("Network Utils: Successfully restored baseline platform DHCP DNS registers", 0)
+                except Exception:
+                    log_message("Network Utils: Dynamic backup recovery pass faulted internally", 2)
+
+            if not restored:
+                fallback_dns = []
+                gateway_ip = None
+                try:
+                    gateway_ip = get_default_gateway()
+                except Exception:
+                    pass
+
+                if not gateway_ip:
+                    try:
+                        route_output = subprocess.check_output(["ip", "route", "show"]).decode("utf-8")
+                        for route_line in route_output.splitlines():
+                            if "scope link" in route_line and "src" in route_line:
+                                tokens = route_line.split()
+                                raw_ip = tokens[0].split("/")[0]
+                                octets = raw_ip.split(".")
+                                if len(octets) == 4:
+                                    gateway_ip = f"{octets[0]}.{octets[1]}.{octets[2]}.1"
+                                    dev_index = tokens.index("dev") + 1
+                                    interface_dev = tokens[dev_index]
+                                    subprocess.call([
+                                        "ip", "route", "add", "default", "via",
+                                        gateway_ip, "dev", interface_dev
+                                    ])
+                                    log_message("Network Utils: Forced recovery of default system route", 1)
+                                    break
+                    except Exception:
+                        pass
+
+                if gateway_ip:
+                    fallback_dns.append("nameserver " + str(gateway_ip).strip())
+
+                try:
+                    if os.path.exists("/etc/resolv.conf"):
+                        with open("/etc/resolv.conf", "r") as current_f:
+                            for current_line in current_f:
+                                if current_line.strip().startswith("search"):
+                                    fallback_dns.append(current_line.strip())
+                except Exception:
+                    pass
+
+                with open("/etc/resolv.conf", "w") as f:
+                    f.write("\n".join(fallback_dns) + "\n")
+                log_message("Network Utils: Restored clean dynamic DHCP gateway fallback environment", 0)
+    except Exception:
+        log_message("Network Utils: Direct resolv.conf synchronization failed catastrophically", 3)
 
 
 def toggle_sysctl_ipv6(disable=True):

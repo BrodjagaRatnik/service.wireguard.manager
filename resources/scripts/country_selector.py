@@ -67,7 +67,7 @@ def run():
 
         setting_id = p_data.get("countries_setting", "selected_countries")
         raw_saved = addon_obj.getSetting(setting_id)
-        saved_ids = [s.strip() for s in raw_saved.split(",") if s.strip()]
+        saved_ids = [s.strip().lower() for s in raw_saved.split(",") if s.strip()]
 
         log_message(f"Country Selector: Targeted setting_id = '{setting_id}'", 0)
         log_message(f"Country Selector: Raw saved string content = '{raw_saved}'", 0)
@@ -103,8 +103,6 @@ def run():
             ids = [str(c["id"]) for c in data]
 
         elif provider == 1:
-            log_message(f"Country Selector: PIA API data structure type = {type(data)}", 0)
-
             if isinstance(data, dict):
                 raw_regions = data.get("regions", [])
             elif isinstance(data, list):
@@ -118,7 +116,6 @@ def run():
             for r in raw_regions:
                 if not isinstance(r, dict):
                     continue
-
                 servers_dict = r.get("servers", {})
                 if isinstance(servers_dict, dict) and ("wg" in servers_dict or "wireguard" in servers_dict):
                     regions.append(r)
@@ -127,29 +124,35 @@ def run():
                 elif isinstance(r, dict) and "id" in r and "name" in r:
                     regions.append(r)
 
-            log_message(f"Country Selector: Validated regions left: {len(regions)}", 0)
-
             regions.sort(key=lambda x: x["name"])
             names = [r["name"] for r in regions]
             ids = [str(r["id"]).strip() for r in regions]
 
         elif provider == 2:
-            log_message("Country Selector: Loaded Mullvad public structural elements", 0)
+            log_message("Country Selector: Parsing Mullvad public v1 countries array with server-range checks", 0)
             mullvad_countries = {}
 
-            if isinstance(data, dict) and "countries" in data:
-                for c in data["countries"]:
-                    if isinstance(c, dict) and "code" in c and "name" in c:
-                        code = str(c["code"]).strip()
-                        name = str(c["name"]).strip()
-                        if code and name and code not in mullvad_countries:
-                            mullvad_countries[code] = name
+            if isinstance(data, list):
+                for relay in data:
+                    if isinstance(relay, dict):
+                        code = str(relay.get("country_code", "")).strip().lower()
+                        name = str(relay.get("country_name", "")).strip()
+                        is_owned = bool(relay.get("owned", False))
+                        if code and name:
+                            if code not in mullvad_countries:
+                                mullvad_countries[code] = {"name": name, "has_owned": is_owned}
+                            elif is_owned:
+                                mullvad_countries[code]["has_owned"] = True
 
-            sorted_mullvad = sorted(mullvad_countries.items(), key=lambda x: x[1])
-            names = [item[1] for item in sorted_mullvad]
-            ids = [item[0] for item in sorted_mullvad]
+            sorted_mullvad = sorted(mullvad_countries.items(), key=lambda x: x[1]["name"])
+            names = []
+            ids = []
+            for code, info in sorted_mullvad:
+                display_suffix = "" if info["has_owned"] else " (not owned)"
+                names.append(f"{info['name']}{display_suffix}")
+                ids.append(str(code))
 
-        cleaned_saved_ids = [str(sid).strip() for sid in saved_ids]
+        cleaned_saved_ids = [str(sid).strip().lower() for sid in saved_ids]
 
         log_message(f"Country Selector: First 5 entries available inside raw API mapping: {ids[:5]}", 0)
         log_message(f"Country Selector: Target key comparison values checklist: {cleaned_saved_ids}", 0)
@@ -164,15 +167,12 @@ def run():
 
         if selected is not None:
             t_start = time.perf_counter()
-
             selected_ids = [ids[i] for i in selected]
             id_string = ",".join(selected_ids)
-
             log_message(f"Country Selector: Selection index tracking map register = {selected}", 0)
             log_message(f"Country Selector: Assembled text configuration entry block = '{id_string}'", 0)
-
             addon_obj.setSetting(setting_id, id_string)
-
+            log_message(f"Country Selector: Dynamic database updated with new countries list = {selected_ids}", 1)
             icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
             title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
             message = (
@@ -183,7 +183,7 @@ def run():
 
             t_elapsed = (time.perf_counter() - t_start) * 1000.0
             log_msg = f"Country Selector: Country selection took {t_elapsed:.2f}ms"
-            log_message(log_msg, 1)
+            log_message(log_msg, 0)
         else:
             log_message("Country Selector: User interaction loop aborted by closing the interface.", 0)
 
