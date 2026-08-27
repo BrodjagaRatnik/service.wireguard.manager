@@ -8,7 +8,7 @@
 ## ✅ Completed (Q3 2026)
 
 ### Core Features
-| Item | Status | Verwijzing |
+| Item | Status | Reference |
 |------|--------|------------|
 | Full Kodi GUI implementation | ✅ Done | Wiki Home |
 | ConnMan FD leak mitigation (systemd + upstream patch) | ✅ Done | [Mitigation Guide](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Upstream-ConnMan-FD-Leak-%26-Automated-Mitigation-Guide) |
@@ -22,8 +22,8 @@
 | Item | Status | Verwijzing |
 |------|--------|------------|
 | ProtonVPN custom mode guide | ✅ Done | [Importing ProtonVPN via Custom Mode](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Importing-ProtonVPN-via-Custom-Mode) |
-| Architecture & hardening documentation | ✅ Done | Discussion #5 |
-| Troubleshooting & cleanup guides | ✅ Done | Wiki |
+| Architecture & hardening documentation | ✅ Done | [Discussion #5](https://github.com/BrodjagaRatnik/service.wireguard.manager/discussions/5#discussioncomment-18096675) |
+| Troubleshooting & cleanup guides | ✅ Done | [Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki) |
 
 ---
 
