@@ -5,7 +5,7 @@
 
 ---
 
-## ✅ Afgerond (Q3 2026)
+## ✅ Completed (Q3 2026)
 
 ### Core Features
 | Item | Status | Verwijzing |
