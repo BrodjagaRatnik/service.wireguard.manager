@@ -15,6 +15,7 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 11, 12, and 1
 - [Roadmap →](roadmap.md) — See planned development and priorities
 - [Discussions →](discussions) — Make suggestions or ask questions
 - [Issues →](issues) — Report bugs
+- [LibreELEC Forum →](https://forum.libreelec.tv/thread/30422-wireguard-vpn-manager/) — Support
 
 ## 📖 Quick Links
 For detailed instructions for this Add-on, please visit our **[Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki)**:
