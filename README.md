@@ -14,7 +14,7 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 11, 12, and 1
 > ### 🐧 Looking for the Linux Version?
 > If you are running a standalone Linux distribution (Debian, Mint, Ubuntu, LMDE), use the dedicated repository here:  
 > 👉 **[service.wireguard.manager.linux](https://github.com/BrodjagaRatnik/service.wireguard.manager.linux)**  
-> *(Note: The standalone Linux edition is currently in an active debugging stage. Distro testers are welcome!)*
+> *(Note: Distro testers are welcome!)*
 
 ## 📖 Quick Links
 For detailed instructions for this Add-on, please visit our **[Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki)**:
