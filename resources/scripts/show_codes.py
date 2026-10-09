@@ -1,16 +1,15 @@
 """ ./resources/scripts/show_codes.py """
+import os
 import sys
 
-try:
-    import xbmcgui
-    HAS_GUI = True
-except ImportError:
-    HAS_GUI = False
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+LIB_PATH = os.path.abspath(os.path.join(CURRENT_DIR, '..', 'lib'))
+if LIB_PATH not in sys.path:
+    sys.path.insert(0, LIB_PATH)
 
 
 def run_viewer(args_str=""):
-    if not HAS_GUI:
-        return
+    from dialog import show_text
 
     region = "europe"
     if "region=americas" in args_str or "americas" in args_str:
@@ -61,7 +60,7 @@ def run_viewer(args_str=""):
             "[CR][I]Note: These regions may have fewer WireGuard servers.[/I]"
         )
 
-    xbmcgui.Dialog().textviewer(title, codes)
+    show_text(title, codes)
 
 
 if __name__ == "__main__":

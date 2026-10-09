@@ -8,9 +8,12 @@ import urllib.request
 import urllib.parse
 import urllib.error
 from logger import log_message
+from state_manager import CONFIG_DIR
 
 
-def execute_basic_auth_handshake(dip_token, server_ip, hostname, config_dir="/storage/.config/wireguard/"):
+def execute_basic_auth_handshake(dip_token, server_ip, hostname, config_dir=None):
+    if config_dir is None:
+        config_dir = CONFIG_DIR
     try:
         pk = subprocess.check_output(["wg", "genkey"]).decode().strip()
         pub = subprocess.check_output(["wg", "pubkey"], input=pk.encode()).decode().strip()
@@ -31,7 +34,9 @@ def execute_basic_auth_handshake(dip_token, server_ip, hostname, config_dir="/st
     return _process_api_handshake(handshake_url, request_headers, pk, server_ip, hostname, config_dir)
 
 
-def execute_url_param_handshake(pia_token, server_ip, hostname, config_dir="/storage/.config/wireguard/"):
+def execute_url_param_handshake(pia_token, server_ip, hostname, config_dir=None):
+    if config_dir is None:
+        config_dir = CONFIG_DIR
     try:
         pk = subprocess.check_output(["wg", "genkey"]).decode().strip()
         pub = subprocess.check_output(["wg", "pubkey"], input=pk.encode()).decode().strip()
@@ -110,7 +115,7 @@ def _process_api_handshake(handshake_url, request_headers, pk, server_ip, hostna
             "WireGuard.PersistentKeepalive = 25\n"
         )
 
-        with open(destination_path, "w") as storage_file:
+        with open(destination_path, "w", encoding="utf-8") as storage_file:
             storage_file.write(blueprint_structure)
 
         log_message("PIA Dedicated: Runtime configuration deployment script compiled successfully to storage", 1)

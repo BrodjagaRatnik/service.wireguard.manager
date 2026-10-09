@@ -9,9 +9,23 @@ import gzip
 import json
 import pathlib
 import sys
+import unicodedata
 import urllib.request
 
 from logger import log_message
+
+
+class InfrastructureFetchError(Exception):
+    pass
+
+
+class MullvadPipelineFailure(Exception):
+    pass
+
+
+def _ascii_fold(value):
+    normalized = unicodedata.normalize("NFKD", str(value))
+    return normalized.encode("ascii", "ignore").decode("ascii")
 
 
 class MullvadApi:
@@ -80,7 +94,7 @@ class MullvadApi:
         url = "https://api.mullvad.net/public/relays/wireguard/v1/"
         req = urllib.request.Request(url)
         req.add_header("Accept", "application/json")
-        req.add_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        req.add_header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
         try:
             with urllib.request.urlopen(req, timeout=10) as response:
                 raw_data = json.loads(response.read().decode("utf-8"))
@@ -107,13 +121,16 @@ class MullvadApi:
                                         flat_relays.append(r)
             return flat_relays
         except Exception as e:
-            log_message(f"Failed to fetch global WireGuard infrastructure lists from Mullvad servers: {e}", 3)
-            raise
+            log_err = f"Failed to fetch global WireGuard infrastructure lists from Mullvad servers: {e}"
+            log_message(log_err, 3)
+            raise InfrastructureFetchError("Mullvad relay infrastructure endpoint is unreachable") from e
 
     @staticmethod
     def wireguard_relays(**kwargs):
         try:
             relays = MullvadApi.all_wireguard_relays()
+        except InfrastructureFetchError:
+            raise
         except Exception:
             return []
 
@@ -208,9 +225,9 @@ class MullvadConfig:
         raw_address = device["ipv4_address"]
         clean_address = raw_address.split("/")[0].strip()
 
-        c_name = str(relay.get("country_name", "VPN")).strip().replace(" ", "")
+        c_name = _ascii_fold(str(relay.get("country_name", "VPN")).strip().replace(" ", ""))
         raw_city = relay.get("city_name", "")
-        city_str = f"-{str(raw_city).strip().replace(' ', '')}" if raw_city else ""
+        city_str = f"-{_ascii_fold(str(raw_city).strip().replace(' ', ''))}" if raw_city else ""
         srv_num = hostname.split("-")[-1] if "-" in hostname else hostname
         display_name = f"Mullvad_{c_name}{city_str}-{srv_num}"
 
@@ -231,7 +248,7 @@ class MullvadConfig:
         ]
 
         try:
-            with file_path.open("w") as target_file:
+            with file_path.open("w", encoding="utf-8") as target_file:
                 target_file.write("\n".join(dest_lines) + "\n")
         except Exception as e:
             log_message(f"Failed writing localized ConnMan profile transformation asset to node {file_path}: {e}", 3)
@@ -290,7 +307,7 @@ class Mullvad:
         try:
             self._settings_file.parent.mkdir(parents=True, exist_ok=True)
             self._settings_file.touch(mode=0o600, exist_ok=True)
-            with self._settings_file.open("w") as _file:
+            with self._settings_file.open("w", encoding="utf-8") as _file:
                 if not self._config.has_section("Interface"):
                     self._config.add_section("Interface")
                 self._config.set("Interface", "privatekey", privatekey)

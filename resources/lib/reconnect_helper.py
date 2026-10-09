@@ -1,10 +1,11 @@
 """ ./resources/lib/reconnect_helper.py """
+import kodi_env
 import os
 import subprocess
 import sys
 import time
 
-ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
+ADDON_DIR = kodi_env.ADDON_DIR
 LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
 
 if ADDON_DIR not in sys.path:
@@ -25,6 +26,7 @@ except ImportError:
     HAS_KODI = False
 
 MAX_RETRIES = 10
+RETRY_PACE_DELAY = 2.0
 
 
 def get_retry_count():
@@ -79,6 +81,7 @@ def run_reconnect():
         vpn_name = xbmcgui.Window(10000).getProperty('vpn_manual_session')
     if not vpn_name or vpn_name.lower() == "true":
         return
+    verified = False
     try:
         while True:
             count = get_retry_count()
@@ -101,14 +104,15 @@ def run_reconnect():
                 continue
             log_message(f"Reconnect Helper: Reconnecting to {vpn_name} (Attempt {count + 1}/{MAX_RETRIES})...", 1)
             try:
-                search_term = vpn_name.replace(' ', '_')
-                search_term_lower = search_term.lower()
+                search_terms = [vpn_name, vpn_name.replace(' ', '_')]
                 out = subprocess.check_output(["connmanctl", "services"], text=True)
                 sid = None
                 for line in out.splitlines():
-                    if search_term in line or search_term_lower in line:
+                    if any(term in line for term in search_terms if term):
                         sid = line.split()[-1]
                         break
+                if sid is None:
+                    log_message(f"Reconnect Helper: Service ID not found in ConnMan listing for {vpn_name}", 2)
             except Exception as e:
                 log_message(f"Reconnect Helper: Failed to find network service ID for {vpn_name}: {e}", 3)
                 sid = None
@@ -125,8 +129,9 @@ def run_reconnect():
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL
                 )
+                if res.returncode != 0:
+                    log_message("Reconnect Helper: ConnMan connect command rejected the service.", 2)
                 if res.returncode == 0:
-                    verified = False
                     for check in range(20):
                         try:
                             with open("/proc/net/dev", "r") as f:
@@ -144,8 +149,12 @@ def run_reconnect():
                         break
             log_message("Reconnect Helper: ConnMan reported failure. Retrying...", 2)
             increment_retry()
+            time.sleep(RETRY_PACE_DELAY)
     finally:
-        log_message("Reconnect Helper: Task finished.", 0)
+        log_message(
+            "Reconnect Helper: Task complete." if verified is True else "Reconnect Helper: Task finished.",
+            0
+        )
 
 
 if __name__ == "__main__":

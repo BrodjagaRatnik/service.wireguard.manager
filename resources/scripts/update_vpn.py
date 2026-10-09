@@ -4,6 +4,7 @@ import sys
 import kodi_env
 from vpn_config import PROVIDER_MAP
 from logger import log_message
+from state_manager import CONFIG_DIR
 
 SCRIPT_PATH = os.path.dirname(__file__)
 LIB_PATH = os.path.normpath(os.path.join(SCRIPT_PATH, "..", "lib"))
@@ -19,7 +20,7 @@ def main():
             return
 
         provider_idx = addon_obj.getSettingInt("vpn_provider")
-        config_dir = "/storage/.config/wireguard/"
+        config_dir = CONFIG_DIR
 
         p_data = PROVIDER_MAP.get(provider_idx)
         if not p_data:
@@ -33,9 +34,13 @@ def main():
             provider_module.update(token, countries, config_dir)
 
         elif provider_idx == 1:
+            from wm_utils import safe_decrypt_password
+
             user = addon_obj.getSetting("pia_user")
-            pw = addon_obj.getSetting("pia_pass")
-            countries = addon_obj.getSetting("selected_countries")
+            raw_pw = addon_obj.getSetting("pia_pass").strip()
+            countries_setting = p_data.get("countries_setting", "selected_countries_pia")
+            countries = addon_obj.getSetting(countries_setting)
+            pw = safe_decrypt_password(raw_pw)
             provider_module.update(user, pw, countries, config_dir)
 
         elif provider_idx == 2:

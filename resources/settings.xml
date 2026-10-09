@@ -613,7 +613,7 @@
 					</control>
 				</setting>
 				<setting id="factory_reset" type="action" label="32015" help="32029">
-					<level>3</level>
+					<level>0</level>
 					<control type="button" format="action">
 						<data>RunScript(service.wireguard.manager, mode=cleanup)</data>
 					</control>

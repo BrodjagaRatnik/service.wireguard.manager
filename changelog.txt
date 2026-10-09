@@ -1,14 +1,34 @@
 CHANGELOG
 =========
 
+v1.5.4 (2026-10-09)
+- Cold boot VPN connect waits past system startup
+- PIA configs are written in one safe step half written files can no longer break connects
+- Mullvad update failures no longer kill the monitor service they retry next cycle
+- Mullvad and NordVPN fail over to another server in the same country with a stop guard after repeated tries
+- A dead server can no longer show as connected traffic is verified first
+- Failover notifications show the server actually used and its exit IP
+- Fixed kill switch false error on every connect the result was passed on wrong
+- Fixed connect loop when opening a mapped addon the monitor sees the connection and stops switching forever
+- Fixed DNS copied from the wrong server after connecting
+- Custom configs import from a whole folder with a progress screen names are kept addon backups accepted too
+- Connect and disconnect notifications show reliably
+- DNS leak test and network reset show progress and can be cancelled
+- All screens use one shared dialog layer for a consistent look
+- Kill switch now detects the local network live from the system
+- All fixed storage paths are gone locations follow the real install
+- Fixed Mullvad servers with special name characters Sweden is back
+- Fixed PIA country selection on menu update passwords handled safe everywhere
+- Fixed server menu names losing letters in rare cases
+- Background PIA notices no longer disturb other addon tasks
+
 v1.5.3 (2026-08-15)
 - Integration: Full out-of-the-box support for Mullvad VPN profiles.
 - Core Fix: Resolved case-sensitive parsing issues for ConnMan configuration files.
 - Hardening: Added automated systemd overrides to completely stop Wi-Fi netlink leaks.
 - Stability: Verified stable file descriptor resource baselines across x86_64, Pi 4, and Pi 5.
 
-v1.5.2
-[B]v1.5.2 (2026-08-03)[/B]
+v1.5.2 (2026-08-03)
 - Fixed: Resolved an exit status 22 argument error on Wi-Fi profile swaps
 - Fixed: Prevented system lockouts and file tracking freezes on slower hardware tiers
 - Optimized: Maintained local subnets and gateway paths to guarantee uninterrupted SSH/Samba access

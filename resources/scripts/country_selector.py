@@ -10,6 +10,7 @@ except ImportError:
     import kodi_env
 
 from logger import log_message
+from dialog import show_ok, notify_custom
 from providers.nord_utils import fetch_nord_url
 from providers.pia_utils import fetch_pia_url
 from providers.mullvad import MullvadApi
@@ -44,7 +45,6 @@ def run():
             log_message(msg, 2)
             return
 
-        addon_path = get_addon_path()
         provider = addon_obj.getSettingInt("vpn_provider")
         log_message(f"Country Selector: Active provider ID = {provider}", 0)
 
@@ -55,7 +55,7 @@ def run():
                 "Provider in settings.\nAnd fill in, import credentials for "
                 "that VPN Provider.[/COLOR]"
             )
-            xbmcgui.Dialog().ok(title, msg)
+            show_ok(title, msg)
             return
 
         p_data = PROVIDER_MAP.get(provider)
@@ -91,7 +91,7 @@ def run():
                 "[COLOR FFFFFF00]Could not fetch server list for [/COLOR]"
                 f"[COLOR FFE6E6FA]{p_data['name']}[/COLOR]"
             )
-            xbmcgui.Dialog().ok(title, msg)
+            show_ok(title, msg)
             return
 
         names = []
@@ -173,13 +173,12 @@ def run():
             log_message(f"Country Selector: Assembled text configuration entry block = '{id_string}'", 0)
             addon_obj.setSetting(setting_id, id_string)
             log_message(f"Country Selector: Dynamic database updated with new countries list = {selected_ids}", 1)
-            icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
             title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
             message = (
                 "Selection cached. You [B]MUST[/B] press [B]'OK'[/B] in the "
                 "main settings menu to apply changes!"
             )
-            xbmcgui.Dialog().notification(title, message, icon_info, 2500)
+            notify_custom(title, message, "icon.png", 2500)
 
             t_elapsed = (time.perf_counter() - t_start) * 1000.0
             log_msg = f"Country Selector: Country selection took {t_elapsed:.2f}ms"

@@ -4,13 +4,15 @@ import base64
 import json
 import os
 import re
-import sys
 import ssl
 import threading
 import urllib.parse
 import urllib.request
 from logger import log_message
 from providers import pia
+from dialog import show_ok, notify_custom
+from state_manager import CONFIG_DIR
+from io_atomic import atomic_write_text
 
 try:
     import xbmc
@@ -82,16 +84,16 @@ def fetch_pia_url(url, token=None, user=None, password=None, post_data=None):
 
 
 def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
-    ui_module = sys.modules.get('xbmcgui')
     from wm_utils import safe_decrypt_password
     from providers.pia_config import PiaHandshakeEngine
 
     engine = PiaHandshakeEngine()
+
     is_blocked, remaining_time = engine.check_rate_limit()
 
     if is_blocked:
         log_message(f"PIA Utils: Request blocked due to active cooldown. Remaining: {remaining_time}s", 2)
-        if has_kodi and ui_module:
+        if has_kodi:
             rem_m = int(float(remaining_time)) // 60
             rem_s = int(float(remaining_time)) % 60
             title = "[B]≡ [ COOL DOWN MECHANISM ] ≡[/B]"
@@ -100,7 +102,7 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
                 "This node is in cool-down to protect against upstream API locks.\n"
                 f"[COLOR ffffff00]SOLUTION:[/COLOR] Please wait [B]{rem_m}m {rem_s}s[/B] before retrying connection."
             )
-            ui_module.Dialog().ok(title, msg)
+            show_ok(title, msg)
 
         return False
 
@@ -110,7 +112,7 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
         pw = safe_decrypt_password(raw_pw)
         config_path = None
         region_id = None
-        conf_dir = "/storage/.config/wireguard/"
+        conf_dir = CONFIG_DIR
         target_suffix = sid.replace("vpn_provider_wireguard_pia_", "").replace("vpn_pia_", "")
 
         pure_ip = target_suffix.replace("vpn_", "").replace("_", ".")
@@ -174,6 +176,7 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
         raw_cn_str = ",".join(pool_cns)
         skipping_handshake = False
         live_cfg = None
+        config_written = False
 
         for current_cn in pool_cns:
             clean_cn = current_cn.strip().lower()
@@ -188,21 +191,20 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
                 break
 
             if live_cfg and "[provider_wireguard]" in live_cfg:
-                with open(config_path, "w") as f:
-                    f.write(live_cfg)
-                    if has_kodi:
-                        xbmc.sleep(500)
+                config_written = atomic_write_text(config_path, live_cfg)
+                if config_written and has_kodi:
+                    xbmc.sleep(500)
                 break
 
         if skipping_handshake:
             log_message("PIA Utils: Handshake cached (<55m). Using current config file.", 1)
             return True
 
-        if live_cfg and "[provider_wireguard]" in live_cfg:
+        if live_cfg and "[provider_wireguard]" in live_cfg and config_written:
             log_message("PIA Utils: Handshake OK! Configuration saved.", 1)
             return True
         else:
-            raise Exception("PIA Utils: Handshake declined by all upstream target API nodes.", 3)
+            raise Exception("PIA Utils: Handshake declined by all upstream target API nodes.")
 
     except Exception as e:
         err_str = str(e)
@@ -216,9 +218,9 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
                 "Your IP address has been temporarily rate-limited.\n"
                 "[COLOR ffffff00]SOLUTION:[/COLOR] Please wait [B]15 minutes[/B] before starting to connect again."
             )
-            if has_kodi and ui_module:
+            if has_kodi:
                 xbmc.executebuiltin("ActivateWindow(home)")
-                ui_module.Dialog().ok(title, msg)
+                show_ok(title, msg)
         elif "accepted handshake but rejected network data" in err_str.lower():
             title = "[B]≡ [ PIA SERVER DOWN ] ≡[/B]"
             msg = (
@@ -226,9 +228,9 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
                 "The tunnel connected successfully but no internet data can flow.\n"
                 "[COLOR ffffff00]SOLUTION:[/COLOR] This node is dead. Please update regions or choose another country."
             )
-            if has_kodi and ui_module:
+            if has_kodi:
                 xbmc.executebuiltin("ActivateWindow(home)")
-                ui_module.Dialog().ok(title, msg)
+                show_ok(title, msg)
         else:
             engine.enforce_cooldown(600.0)
             threading.Thread(target=launch_async_cooldown_notifier, args=(600.0,), daemon=True).start()
@@ -245,9 +247,9 @@ def setup_pia_handshake(sid, provider_data, addon_obj, has_kodi):
                     "Your username or password credentials are invalid.\n"
                     "[COLOR ffffff00]SOLUTION:[/COLOR] PIA locked this node for [B]10 minutes[/B]. Fix credentials."
                 )
-            if has_kodi and ui_module:
+            if has_kodi:
                 xbmc.executebuiltin("ActivateWindow(home)")
-                ui_module.Dialog().ok(title, msg)
+                show_ok(title, msg)
                 log_message("PIA 10 minutes Connection Background Cooldown initialized successfully.", 2)
         return False
 
@@ -258,15 +260,8 @@ def launch_async_cooldown_notifier(seconds):
         monitor = xbmc.Monitor()
         if monitor.waitForAbort(int(seconds)):
             return
-        ui_module = sys.modules.get('xbmcgui')
-        if ui_module:
-            addon_path = kodi_env.ADDON_DIR
-            icon_info = os.path.join(addon_path, 'resources', 'media', 'icon.png')
-            title = "[B][COLOR FFE6E6FA]≡ [ WG MANAGER ] ≡[/COLOR][/B]"
-            msg = "[COLOR FFFFFF00]PIA API Blockade over you can connect to PIA again.[/COLOR]"
-            ui_module.Dialog().notification(title, msg, icon_info, 5000)
-    except Exception:
-        pass
-
-    finally:
-        kodi_env.clear_script_globals()
+        title = "[B][COLOR FFE6E6FA]≡ [ WG MANAGER ] ≡[/COLOR][/B]"
+        msg = "[COLOR FFFFFF00]PIA API Blockade over you can connect to PIA again.[/COLOR]"
+        notify_custom(title, msg, "icon.png", 5000)
+    except Exception as notifier_fault:
+        log_message(f"PIA Utils: Async cooldown notifier failed: {notifier_fault}", 2)

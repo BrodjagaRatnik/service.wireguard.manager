@@ -3,15 +3,14 @@ import kodi_env
 import os
 from logger import log_message
 from vpn_config import PROVIDER_MAP
+import dialog
+from state_manager import CONFIG_DIR
 
 try:
     import xbmc
-    import xbmcgui
     HAS_KODI_UI = True
 except ImportError:
     HAS_KODI_UI = False
-
-CONFIG_DIR = "/storage/.config/wireguard"
 
 
 def get_addon_path():
@@ -55,8 +54,7 @@ def run_update(direct_token=None, force_provider=None, silent=False):
         countries = addon_obj.getSetting(country_setting)
 
         if silent is False and HAS_KODI_UI:
-            progress = xbmcgui.DialogProgress()
-            progress.create("WG Manager", f"Updating {provider_name}...")
+            progress = dialog.TaskProgress("WG Manager", f"Updating {provider_name}...", enabled=True)
 
         if provider_idx == 0:
             token = direct_token if direct_token else addon_obj.getSetting("vpn_token")
@@ -68,7 +66,7 @@ def run_update(direct_token=None, force_provider=None, silent=False):
                 if HAS_KODI_UI:
                     title = "[B]≡ [ WireGuard Manager ] ≡[/B]"
                     msg = "[COLOR FFFFFF00]Invalid Token. Please check settings.[/COLOR]"
-                    xbmcgui.Dialog().ok(title, msg)
+                    dialog.show_ok(title, msg)
                 return False
 
             if progress:
@@ -127,7 +125,7 @@ def run_update(direct_token=None, force_provider=None, silent=False):
                         "[COLOR FFFFFF00]Please enter your complete PIA credentials inside the "
                         "configuration menu, click 'OK' to save them, and try connecting again.[/COLOR]"
                     )
-                    xbmcgui.Dialog().ok(title, msg)
+                    dialog.show_ok(title, msg)
                 return False
 
             if progress:
@@ -149,7 +147,7 @@ def run_update(direct_token=None, force_provider=None, silent=False):
                 if HAS_KODI_UI:
                     title = "[B]≡ [ WireGuard Manager ] ≡[/B]"
                     msg = "[COLOR FFFFFF00]Invalid 16-digit Mullvad account number.[/COLOR]"
-                    xbmcgui.Dialog().ok(title, msg)
+                    dialog.show_ok(title, msg)
                     log_message("Core Update: Invalid 16-digit Mullvad account number.", 3)
                 return False
 
@@ -182,7 +180,7 @@ def run_update(direct_token=None, force_provider=None, silent=False):
                 if HAS_KODI_UI:
                     title = "[B]≡ [ WireGuard Manager ] ≡[/B]"
                     msg = "[COLOR FFFFFF00]Select a valid .config file.[/COLOR]"
-                    xbmcgui.Dialog().ok(title, msg)
+                    dialog.show_ok(title, msg)
                 return False
 
             if progress:
@@ -203,7 +201,7 @@ def run_update(direct_token=None, force_provider=None, silent=False):
         if HAS_KODI_UI:
             title = "[B]≡ [ WireGuard Manager ] ≡[/B]"
             msg = f"[COLOR FFFFFF00]Error. Failed to update {provider_name}.[/COLOR]"
-            xbmcgui.Dialog().ok(title, msg)
+            dialog.show_ok(title, msg)
         return False
 
     except Exception as e:

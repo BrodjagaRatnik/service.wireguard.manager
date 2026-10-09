@@ -8,7 +8,8 @@ from logger import log_message
 from providers import custom
 from vpn_config import PROVIDER_MAP
 from vpn_core import run_update, install_service
-from state_manager import get_file_path
+from state_manager import get_file_path, CONFIG_DIR, SYSTEMD_DIR
+import dialog
 
 try:
     import xbmcgui
@@ -18,6 +19,57 @@ except ImportError:
     HAS_GUI_IMPORTS = False
 
 builtins.log_event = log_message
+
+_ACTION_REQUIRED_TITLE = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
+_ACTION_REQUIRED_MESSAGE = "Selection cached. You [B]MUST[/B] press [B]'OK'[/B] in settings menu!"
+
+
+def _write_notification_lock():
+    notification_lock = get_file_path("notif_lock")
+    if notification_lock is None or os.path.exists(notification_lock):
+        return False
+    try:
+        lock_dir = os.path.dirname(notification_lock)
+        if not os.path.exists(lock_dir):
+            os.makedirs(lock_dir)
+        with open(notification_lock, "w") as f:
+            f.write("locked")
+        return True
+    except Exception as e:
+        log_message(f"Main Launcher: Failed to create notification lock: {e}", 3)
+        return False
+
+
+def _run_custom_directory_import(addon_obj, source_dir):
+    if not source_dir:
+        log_message("Main Launcher: Custom directory import cancelled by user", 0)
+        return
+
+    progress = dialog.TaskProgress("Custom Import", "Scanning folder for WireGuard profiles...")
+
+    def _batch_progress(position, total_profiles, profile_label):
+        percent_value = 5 + int((position / total_profiles) * 90) if total_profiles else 95
+        progress.update(percent_value, f"Importing {position}/{total_profiles}: {profile_label}...")
+
+    try:
+        summary = custom.update_directory(source_dir, CONFIG_DIR, progress_callback=_batch_progress)
+        progress.update(100, "Import complete")
+    finally:
+        progress.close()
+
+    addon_obj.setSetting("custom_path", source_dir)
+
+    if summary["imported"] > 0:
+        title = "[B]≡ [ WireGuard Manager ] ≡[/B]"
+        msg = f"[COLOR FFFFFF00]Imported {summary['imported']} profiles.[/COLOR]\n"
+        if summary["skipped"] > 0:
+            msg += f"Skipped {summary['skipped']} invalid or duplicate files."
+        dialog.show_ok(title, msg)
+        dialog.notify_custom(_ACTION_REQUIRED_TITLE, _ACTION_REQUIRED_MESSAGE, "icon.png", 1500)
+    else:
+        title = "[B]≡ [ WireGuard MANAGER ERROR ] ≡[/B]"
+        msg = "[COLOR FFFFFF00]No valid WireGuard profiles found in the selected folder.[/COLOR]"
+        dialog.show_ok(title, msg)
 
 
 def run(argv):
@@ -31,7 +83,6 @@ def run(argv):
         addon_path = kodi_env.ADDON_DIR
         lib_path = os.path.join(addon_path, "resources", "lib")
         media_path = os.path.join(addon_path, "resources", "media")
-        icon_update_ok = os.path.join(addon_path, "resources", "media", "update_ok.png")
 
         if lib_path not in sys.path:
             sys.path.insert(0, lib_path)
@@ -39,11 +90,13 @@ def run(argv):
         args_str = "|".join(argv).lower()
 
         commands = [
-            "status", "restart", "clear", "reinstall", "regen",
+            "status", "restart", "clear", "regen",
             "choose_countries", "mode=country_selector", "mode=list_assets",
             "mode=dnsleaktest", "cleanup", "mode=tos", "mode=disclaimer",
             "mode=import_token", "mode=import_creds", "mode=import_custom_browser",
-            "mode=show_codes", "mode=net_reset", "mode=import_mullvad"
+            "mode=import_custom_dir",
+            "show_codes", "mode=net_reset", "mode=import_mullvad",
+            "blackout"
         ]
 
         if any(cmd in args_str for cmd in commands):
@@ -62,7 +115,7 @@ def run(argv):
 
             if "reinstall" in args_str:
                 src_svc = os.path.join(addon_path, "resources", "data", "vpn-watchdog.service.txt")
-                dst_svc = os.path.join("/storage/.config/system.d/", "vpn-watchdog.service")
+                dst_svc = os.path.join(SYSTEMD_DIR, "vpn-watchdog.service")
                 install_service(src_svc, dst_svc, "vpn-watchdog.service", media_path)
 
             elif any(cmd in args_str for cmd in ["status", "restart", "clear"]):
@@ -73,7 +126,7 @@ def run(argv):
                 if run_update() is True:
                     title = "[B][COLOR FFE6E6FA]≡ [ WireGuard Manager ] ≡[/COLOR][/B]"
                     msg = "[COLOR FFFFFF00]Server countries updated.[/COLOR]"
-                    xbmcgui.Dialog().notification(title, msg, icon_update_ok, 3000)
+                    dialog.notify_custom(title, msg, "update_ok.png", 3000)
 
             elif any(cmd in args_str for cmd in ["choose_countries", "mode=country_selector"]):
                 scripts_path = os.path.join(addon_path, "resources", "scripts")
@@ -97,10 +150,11 @@ def run(argv):
                         time.sleep(0.1)
                     except Exception as e:
                         log_message(f"Main Launcher: Token import pause failure: {e}", 3)
-                    icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
-                    title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
-                    message = "Selection cached. You MUST press 'OK' in the main settings menu to apply changes!"
-                    xbmcgui.Dialog().notification(title, message, icon_info, 1500)
+                    dialog.notify_custom(
+                        _ACTION_REQUIRED_TITLE,
+                        "Selection cached. You MUST press 'OK' in the main settings menu to apply changes!",
+                        "icon.png", 1500
+                    )
                 else:
                     token_file = xbmcgui.Dialog().browse(1, "Select Token", "local", ".txt|.key")
                     if token_file:
@@ -116,20 +170,8 @@ def run(argv):
                         log_message("Imported Token", 0)
                         run_update(direct_token=content)
 
-                        notification_lock = get_file_path("notif_lock")
-                        if notification_lock is not None and (not os.path.exists(notification_lock)):
-                            try:
-                                lock_dir = os.path.dirname(notification_lock)
-                                if not os.path.exists(lock_dir):
-                                    os.makedirs(lock_dir)
-                                with open(notification_lock, "w") as f:
-                                    f.write("locked")
-                            except Exception as e:
-                                log_message(f"Main Launcher: Failed to create token lock: {e}", 3)
-                            icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
-                            title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
-                            message = "Selection cached. You [B]MUST[/B] press [B]'OK'[/B] in settings menu!"
-                            xbmcgui.Dialog().notification(title, message, icon_info, 1500)
+                        if _write_notification_lock():
+                            dialog.notify_custom(_ACTION_REQUIRED_TITLE, _ACTION_REQUIRED_MESSAGE, "icon.png", 1500)
                     else:
                         log_message("Main Launcher: Token import cancelled by user", 0)
 
@@ -170,34 +212,45 @@ def run(argv):
 
                         run_update(direct_token=encoded_pwd)
 
-                        icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
-                        title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
-                        message = "Selection cached. You [B]MUST[/B] press [B]'OK'[/B] in settings menu!"
-                        xbmcgui.Dialog().notification(title, message, icon_info, 1500)
+                        dialog.notify_custom(_ACTION_REQUIRED_TITLE, _ACTION_REQUIRED_MESSAGE, "icon.png", 1500)
                     else:
-                        title = "[B]≡ ERROR ≡[/B]"
-                        msg = "File must have 2 lines:\nUser and Pass"
-                        xbmcgui.Dialog().ok(title, msg)
+                        dialog.show_ok("[B]≡ ERROR ≡[/B]", "File must have 2 lines:\nUser and Pass")
                 else:
                     log_message("Main Launcher: Import cancelled by user", 0)
 
             elif "import_custom_browser" in args_str:
-                source_path = xbmcgui.Dialog().browse(1, "Select WireGuard Config", "local", ".conf|.config")
-                if source_path:
-                    if custom.update(source_path, "/storage/.config/wireguard") is True:
-                        country = os.path.basename(source_path).lower().replace(".config", "")
-                        country = country.replace(".conf", "").replace("custom_", "").capitalize()
-                        addon_obj.setSetting("custom_path", source_path)
-                        addon_obj.setSetting("vpn_token", country)
+                opts = [
+                    "[B]Import Single File (.conf/.config)[/B]",
+                    "[B]Import Whole Folder (Bulk Import)[/B]"
+                ]
+                choice = xbmcgui.Dialog().select("Import Type", opts)
 
-                        title = "[B]≡ [ WireGuard Manager ] ≡[/B]"
-                        msg = "Please Save Settings before you continue...\n\nImported: {country}."
-                        xbmcgui.Dialog().ok(title, msg)
+                if choice == 0:
+                    source_path = xbmcgui.Dialog().browse(
+                        1, "Select WireGuard Config", "local", ".conf|.config"
+                    )
+                    if source_path:
+                        if custom.update(source_path, CONFIG_DIR) is True:
+                            country = os.path.basename(source_path).lower().replace(".config", "")
+                            country = country.replace(".conf", "").replace("custom_", "").capitalize()
+                            addon_obj.setSetting("custom_path", source_path)
+                            addon_obj.setSetting("vpn_token", country)
 
-                        icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
-                        title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
-                        message = "Selection cached. You [B]MUST[/B] press [B]'OK'[/B] in settings menu!"
-                        xbmcgui.Dialog().notification(title, message, icon_info, 1500)
+                            title = "[B]≡ [ WireGuard Manager ] ≡[/B]"
+                            msg = f"Please Save Settings before you continue...\n\nImported: {country}."
+                            dialog.show_ok(title, msg)
+
+                            dialog.notify_custom(
+                                _ACTION_REQUIRED_TITLE, _ACTION_REQUIRED_MESSAGE, "icon.png", 1500
+                            )
+
+                elif choice == 1:
+                    source_dir = xbmcgui.Dialog().browse(0, "Select WireGuard Config Folder", "local")
+                    _run_custom_directory_import(addon_obj, source_dir)
+
+            elif "import_custom_dir" in args_str:
+                source_dir = xbmcgui.Dialog().browse(0, "Select WireGuard Config Folder", "local")
+                _run_custom_directory_import(addon_obj, source_dir)
 
             elif "mode=dnsleaktest" in args_str:
                 scripts_path = os.path.join(addon_path, "resources", "scripts")
@@ -242,10 +295,11 @@ def run(argv):
                 p_data = PROVIDER_MAP.get(2)
 
                 if not p_data or "setting" not in p_data:
-                    icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
-                    title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
-                    message = "Selection cached. You MUST press 'OK' in the main settings menu to apply changes!"
-                    xbmcgui.Dialog().notification(title, message, icon_info, 1500)
+                    dialog.notify_custom(
+                        _ACTION_REQUIRED_TITLE,
+                        "Selection cached. You MUST press 'OK' in the main settings menu to apply changes!",
+                        "icon.png", 1500
+                    )
                 else:
                     account_file = xbmcgui.Dialog().browse(1, "Select Account File", "local", ".txt")
                     if account_file:
@@ -260,7 +314,9 @@ def run(argv):
 
                         if clean_account.isdigit() and len(clean_account) == 16:
                             addon_obj.setSetting(p_data["setting"], clean_account)
-                            log_message(f"Imported Mullvad Account to dynamic target setting: {p_data['setting']}", 0)
+                            log_message(
+                                f"Imported Mullvad Account to dynamic target setting: {p_data['setting']}", 0
+                            )
 
                             owned_val = addon_obj.getSetting("wg_owned").lower() == "true"
 
@@ -272,28 +328,22 @@ def run(argv):
                                 owned=owned_val
                             )
 
-                            notification_lock = get_file_path("notif_lock")
-                            if notification_lock is not None and (not os.path.exists(notification_lock)):
-                                try:
-                                    lock_dir = os.path.dirname(notification_lock)
-                                    if not os.path.exists(lock_dir):
-                                        os.makedirs(lock_dir)
-                                    with open(notification_lock, "w") as f:
-                                        f.write("locked")
-                                except Exception as e:
-                                    log_message(f"Main Launcher: Failed to create account lock: {e}", 3)
-
-                                icon_info = os.path.join(addon_path, "resources", "media", "icon.png")
-                                title = "[B][COLOR ffffff00]ACTION REQUIRED!!![/COLOR][/B]"
-                                message = "Account loaded. You [B]MUST[/B] press [B]'OK'[/B] in settings menu!"
-                                xbmcgui.Dialog().notification(title, message, icon_info, 1500)
+                            if _write_notification_lock():
+                                dialog.notify_custom(
+                                    _ACTION_REQUIRED_TITLE, _ACTION_REQUIRED_MESSAGE, "icon.png", 1500
+                                )
                         else:
                             log_message("Main Launcher: Invalid Mullvad account token length or format rejected", 2)
-                            title = "[B]≡ [ WireGuard MANAGER ERROR ] ≡[/B]"
-                            msg = "[COLOR FFFFFF00]Selected file does not contain a valid 16-digit Mullvad account.[/COLOR]"
-                            xbmcgui.Dialog().ok(title, msg)
+                            dialog.show_ok(
+                                "[B]≡ [ WireGuard MANAGER ERROR ] ≡[/B]",
+                                "[COLOR FFFFFF00]Selected file does not contain a valid 16-digit Mullvad account.[/COLOR]"
+                            )
                     else:
                         log_message("Main Launcher: Mullvad account import cancelled by user", 0)
+
+            elif "blackout" in args_str:
+                import wm_utils
+                wm_utils.show_blackout_ui_in_kodi()
 
         else:
             try:

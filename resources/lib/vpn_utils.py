@@ -127,16 +127,34 @@ def check_interface_status():
         return False, False
 
 
-def fetch_vpn_metadata():
+def fetch_vpn_metadata(interface_name="wg0"):
     t_stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
+    if interface_name:
+        try:
+            probe_res = subprocess.run(
+                ["ping", "-c", "1", "-W", "2", "-I", interface_name, "1.1.1.1"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=3.0
+            )
+            if probe_res.returncode != 0:
+                log_message(
+                    f"VPN_Utils: Data path probe failed on {interface_name}. "
+                    "Skipping metadata lookups.", 1
+                )
+                return None, None
+        except Exception:
+            return None, None
 
     try:
         res = subprocess.check_output(
             [
                 "curl", "-s", "-k",
-                "--interface", "wg0",
-                "--connect-timeout", "4.0",
-                "--max-time", "6.0",
+                "--interface", interface_name,
+                "--connect-timeout", "2.0",
+                "--max-time", "3.0",
                 "https://1.1.1.1/cdn-cgi/trace"
             ],
             text=True
@@ -157,8 +175,8 @@ def fetch_vpn_metadata():
     try:
         res = subprocess.check_output(
             [
-                "curl", "-s", "--interface", "wg0",
-                "--connect-timeout", "4.0", "--max-time", "6.0",
+                "curl", "-s", "--interface", interface_name,
+                "--connect-timeout", "2.0", "--max-time", "3.0",
                 "https://ipinfo.io"
             ],
             text=True
@@ -174,8 +192,8 @@ def fetch_vpn_metadata():
     try:
         res = subprocess.check_output(
             [
-                "curl", "-s", "--interface", "wg0",
-                "--connect-timeout", "4.0", "--max-time", "6.0",
+                "curl", "-s", "--interface", interface_name,
+                "--connect-timeout", "2.0", "--max-time", "3.0",
                 "https://geojs.io"
             ],
             text=True
@@ -187,15 +205,6 @@ def fetch_vpn_metadata():
                 return data.get("ip", "Unknown"), data.get("country", "??")
     except Exception as e:
         log_message(f"VPN_Utils: All metadata fallbacks failed at {t_stamp}: {e}", 2)
-
-    if HAS_KODI:
-        try:
-            import xbmcgui
-            title = "[B][COLOR FFFF0000]VPN Connection Error[/COLOR][/B]"
-            msg = "[COLOR FFE6E6FA]Data path blocked. Please update configs or choose another country/region.[/COLOR]"
-            xbmcgui.Dialog().ok(title, msg)
-        except Exception:
-            pass
 
     return None, None
 

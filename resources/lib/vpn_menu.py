@@ -41,6 +41,10 @@ def show_menu(media_path, provider_index):
         menu_items = []
         mapping = []
 
+        p_data = PROVIDER_MAP.get(int(provider_index))
+        title = f"{p_data['name']} Manager" if p_data else "VPN Manager"
+        is_custom_provider = p_data is not None and "custom" in str(p_data.get("name", "")).lower()
+
         if active_name:
             label_dis = f"[B][COLOR white]DISCONNECT[/COLOR] [COLOR yellow]({active_name})[/COLOR][/B]"
             item_reset = xbmcgui.ListItem(label_dis)
@@ -53,7 +57,10 @@ def show_menu(media_path, provider_index):
         for s in lines:
             if any(p in s for p in valid_prefixes):
                 sid = s.split()[-1]
-                name = s.replace(sid, "").strip("* Rd").strip().replace("_", " ")
+                name_tokens = s.replace(sid, "").split()
+                while name_tokens and name_tokens[0].startswith("*"):
+                    name_tokens = name_tokens[1:]
+                name = " ".join(name_tokens).replace("_", " ")
                 is_active = (name == active_name)
 
                 if is_active is True:
@@ -73,14 +80,11 @@ def show_menu(media_path, provider_index):
                         menu_items.append(item)
                         mapping.append((name, sid))
 
-        if not active_name:
+        if not active_name and not is_custom_provider:
             item_update = xbmcgui.ListItem("[B]Update, Regenerate [COLOR yellow]VPN Configs[/B][/COLOR]")
             item_update.setArt({"icon": os.path.join(media_path, "update.png")})
             menu_items.append(item_update)
             mapping.append("REGEN")
-
-        p_data = PROVIDER_MAP.get(int(provider_index))
-        title = f"{p_data['name']} Manager" if p_data else "VPN Manager"
 
         choice = xbmcgui.Dialog().select(title, menu_items, useDetails=True)
         if choice >= 0:

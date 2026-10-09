@@ -4,7 +4,7 @@ import os
 import time
 import threading
 from logger import log_message
-from vpn_config import PI2, PI3, PI4, PI5, WATCHDOG_HEARTBEAT
+from vpn_config import PI2, PI3, PI4, PI5, COLD_BOOT_CONNECT_DELAY, WATCHDOG_HEARTBEAT
 import vpn_ops
 from service_updater import handle_settings_update
 from service_resolver import resolve_service_id
@@ -13,10 +13,11 @@ from vpn_core import check_for_updates
 from wm_utils import flush_connman_sockets
 from vpn_utils import is_interface_active
 from tunnel_checker import run_tunnel_sanity_check
+from state_manager import get_file_path
+import dialog
 
 try:
     import xbmc
-    import xbmcgui
     import subprocess
     HAS_KODI_MONITOR = True
 except ImportError:
@@ -39,6 +40,7 @@ if HAS_KODI_MONITOR:
             self.last_socket_flush_time = 0
             self.cleanup_count = 0
             self.last_tunnel_check_time = time.time()
+            self.blackout_gate_logged = False
 
             if PI5:
                 hardware = "Raspberry Pi 5"
@@ -70,6 +72,16 @@ if HAS_KODI_MONITOR:
             return resolve_service_id(self._ADDON, name)
 
         def run_loop(self):
+            blackout_path = get_file_path("blackout")
+            if blackout_path is not None and os.path.exists(blackout_path) is True:
+                if self.blackout_gate_logged is False:
+                    log_message("Service Launcher: Blackout lock present. Pausing monitor loop.", 1)
+                    self.blackout_gate_logged = True
+                return
+            if self.blackout_gate_logged is True:
+                log_message("Service Launcher: Blackout cleared. Resuming monitor loop.", 1)
+                self.blackout_gate_logged = False
+
             execute_monitor_loop(self)
             current_time = time.time()
             addon_path = kodi_env.ADDON_DIR
@@ -113,6 +125,7 @@ def start():
         return
 
     path = kodi_env.ADDON_DIR
+    service_started_at = time.monotonic()
 
     if addon_obj.getSettingBool("first_run") is False:
         if ensure_setup(path, silent=True) is True:
@@ -128,9 +141,9 @@ def start():
     disconnect_on_start = addon_obj.getSettingBool("disconnect_on_start")
 
     boot_target = None
-    state_file = '/storage/.kodi/userdata/addon_data/service.wireguard.manager/vpn_manager_active.txt'
+    state_file = get_file_path("active")
 
-    if os.path.exists(state_file) is True:
+    if state_file is not None and os.path.exists(state_file) is True:
         try:
             with open(state_file, 'r') as f:
                 boot_target = f.read().strip() or None
@@ -156,21 +169,7 @@ def start():
             try:
                 from vpn_utils import fetch_vpn_metadata
                 ip, country = fetch_vpn_metadata()
-                title = "[B][COLOR FF00FFFF]▄■ [ SYSTEM RESTARTED ] ■▄[/COLOR][/B]"
-                icon_path = os.path.join(path, 'resources', 'media', 'icon.png')
-                if ip and ip != "Unknown":
-                    msg = (
-                        f" [B]═≡═ [COLOR FFFFFF00]Tunnel Restored[/COLOR] ═≡═[/B]\n"
-                        f"[B][COLOR FF32CD32]{boot_target}[/COLOR] • ({country}) •[/B]"
-                    )
-                else:
-                    msg = (
-                        f" [B]═≡═ [COLOR FFFFFF00]Tunnel Restored"
-                        f"[/COLOR] ═≡═[/B]\n[B] • "
-                        f"[COLOR FF32CD32]{boot_target}[/COLOR] •[/B]"
-                    )
-                dialog = xbmcgui.Dialog()
-                dialog.notification(title, msg, icon_path, 4500)
+                dialog.notify_tunnel_restored(boot_target, country if ip and ip != "Unknown" else None)
                 log_message(f"Service Launcher: Profile [{boot_target}] connected safely. Tunnel restored after restart", 1)
             except Exception:
                 pass
@@ -191,23 +190,35 @@ def start():
                 time.sleep(1.0)
 
             if network_ready is True:
-                sid = None
-                try:
-                    connman_clean_name = boot_target.replace(' ', '_')
-                    sid = resolve_service_id(addon_obj, connman_clean_name)
-                    if not sid:
-                        sid = resolve_service_id(addon_obj, boot_target)
-                except Exception:
-                    pass
+                elapsed_ms = (time.monotonic() - service_started_at) * 1000.0
+                remaining_ms = COLD_BOOT_CONNECT_DELAY - elapsed_ms
+                gate_aborted = False
+                if remaining_ms > 0:
+                    gate_log = f"Service Launcher: Cold boot connect gate holding for {remaining_ms:.0f} ms."
+                    log_message(gate_log, 0)
+                    gate_aborted = monitor.waitForAbort(remaining_ms / 1000.0)
+                    if gate_aborted:
+                        log_message("Service Launcher: Abort during connect gate. Skipping cold boot connect.", 2)
 
-                if sid:
+                if gate_aborted is False:
+                    sid = None
                     try:
-                        vpn_ops.connect_vpn(str(boot_target), str(sid), silent=True)
-                        log_message(f"Service Launcher: Connecting profile [{boot_target}] safely after cold boot.", 1)
+                        connman_clean_name = boot_target.replace(' ', '_')
+                        sid = resolve_service_id(addon_obj, connman_clean_name)
+                        if not sid:
+                            sid = resolve_service_id(addon_obj, boot_target)
                     except Exception:
                         pass
-                else:
-                    log_message(f"Service Launcher: Service ID lookup dropped for {boot_target}", 3)
+
+                    if sid:
+                        try:
+                            vpn_ops.connect_vpn(str(boot_target), str(sid), silent=True)
+                            log_msg = f"Service Launcher: Connecting profile [{boot_target}] safely after cold boot."
+                            log_message(log_msg, 1)
+                        except Exception:
+                            pass
+                    else:
+                        log_message(f"Service Launcher: Service ID lookup dropped for {boot_target}", 3)
             else:
                 log_message("Service Launcher: Verification loop aborted. Network target down.", 3)
 

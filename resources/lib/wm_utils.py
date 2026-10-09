@@ -9,13 +9,13 @@ import subprocess
 
 try:
     import xbmc
-    import xbmcgui
     HAS_KODI = True
 except ImportError:
     HAS_KODI = False
 
 from logger import log_message
 from state_manager import get_file_path
+import dialog
 
 BASE64_PREFIX = "b64:"
 B64_REGEX = re.compile(r"^b64:([A-Za-z0-9+/=]+)$")
@@ -27,6 +27,47 @@ def get_addon_dir():
 
 
 ADDON_DIR = get_addon_dir()
+
+
+def _build_blackout_assets():
+    addon_dir = get_addon_dir()
+    icon = os.path.join(addon_dir, "resources", "media", "router-network-error-alert.png")
+    sound = os.path.join(addon_dir, "resources", "media", "networkerror.wav")
+    title = "[B][COLOR ffff0000]▀■▄ NO NETWORK DETECTED! ▄■▀[/COLOR][/B]"
+    msg = "[COLOR fffffff00]Check Wifi|Wire|Modem|Telecom provider.[/COLOR]"
+    return title, msg, icon, sound
+
+
+def show_blackout_ui_in_kodi():
+    if not HAS_KODI:
+        log_message("Wm Utils: show_blackout_ui_in_kodi() called outside Kodi runtime, aborting.", 3)
+        return
+
+    title, msg, icon, sound = _build_blackout_assets()
+    try:
+        xbmc.executebuiltin("PlayerControl(Stop)")
+        xbmc.executebuiltin("Action(Stop)")
+        try:
+            player = xbmc.Player()
+            if player.isPlaying():
+                player.stop()
+                log_message("Wm Utils: Blackout forced active playback stop via Player API.", 0)
+        except Exception:
+            pass
+        xbmc.executebuiltin("Dialog.Close(all,true)")
+        log_message("Wm Utils: Blackout stop and close actions dispatched.", 0)
+        dialog.notify_custom(title, msg, "router-network-error-alert.png", 14000, sound=False)
+        log_message("Wm Utils: Blackout notification dispatched.", 0)
+        if os.path.exists(sound) is True:
+            try:
+                xbmc.Player().play(sound)
+                log_message("Wm Utils: Blackout alert sound started via player preemption.", 0)
+            except Exception:
+                xbmc.executebuiltin(f"PlayMedia({sound},1)")
+        else:
+            xbmc.executebuiltin("PlayAction(rightclick)")
+    except Exception as blackout_fault:
+        log_message(f"Wm Utils: Blackout UI execution failed in Kodi context: {blackout_fault}", 3)
 
 
 def trigger_blackout_ui():
@@ -42,41 +83,22 @@ def trigger_blackout_ui():
     except Exception:
         pass
 
-    addon_dir = get_addon_dir()
-    icon = os.path.join(addon_dir, "resources", "media", "router-network-error-alert.png")
-    sound = os.path.join(addon_dir, "resources", "media", "networkerror.wav")
-    title = "[B][COLOR ffff0000]▀■▄ NO NETWORK DETECTED! ▄■▀[/COLOR][/B]"
-    msg = "[COLOR fffffff00]Check Wifi|Wire|Modem|Telecom provider.[/COLOR]"
+    real_kodi = getattr(kodi_env, "HAS_KODI_IMPORTS", False) is True
 
-    try:
-        xbmc.executebuiltin("PlayerControl(Stop)")
-        xbmc.executebuiltin("Action(Stop)")
-        xbmc.executebuiltin("Dialog.Close(all,true)")
-        xbmcgui.Dialog().notification(title, msg, icon, 14000, False)
-        if os.path.exists(sound) is True:
-            xbmc.executebuiltin(f"PlayMedia({sound},1)")
-        else:
-            xbmc.executebuiltin("PlayAction(rightclick)")
-    except (ImportError, Exception):
+    if real_kodi is True:
         try:
-            subprocess.run(
-                ["kodi-send", "--action=PlayerControl(Stop);Action(Stop);Dialog.Close(all,true)"],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            escaped_title = title.replace('"', '\\"')
-            escaped_msg = msg.replace('"', '\\"')
-            notify_action = f'Notification("{escaped_title}","{escaped_msg}",14000,"{icon}")'
-            subprocess.run(
-                ["kodi-send", f"--action={notify_action}"],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            if os.path.exists(sound) is True:
-                subprocess.run(
-                    ["kodi-send", f'--action=PlayMedia("{sound}",1)'],
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                )
+            show_blackout_ui_in_kodi()
+            return
         except Exception:
             pass
+
+    try:
+        subprocess.run(
+            ["kodi-send", "--action=RunScript(service.wireguard.manager,blackout)"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+    except Exception:
+        log_message("Wm Utils: Blackout UI dispatch to Kodi runtime failed.", 3)
 
 
 def get_ip_from_host(hostname):
@@ -186,18 +208,14 @@ def flush_connman_sockets() -> bool:
 
             if vpn_active:
                 if current_count >= threshold_alert:
-                    if not CONNMAN_ALERT_SHOWN and HAS_KODI:
-                        try:
-                            dialog = xbmcgui.Dialog()
-                            dialog.ok(
-                                "WireGuard Manager Alert",
-                                f"ConnMan socket leak has reached dangerous levels!\n"
-                                f"Current Count: {current_count} / {max_files} FDs (>=90%)\n"
-                                "Please cycle your VPN connection to safely clear resources."
-                            )
-                            CONNMAN_ALERT_SHOWN = True
-                        except Exception as e:
-                            log_message(f"Wm Utils: Failed to render Kodi OK dialog: {e}", 2)
+                    if not CONNMAN_ALERT_SHOWN:
+                        dialog.show_ok(
+                            "WireGuard Manager Alert",
+                            f"ConnMan socket leak has reached dangerous levels!\n"
+                            f"Current Count: {current_count} / {max_files} FDs (>=90%)\n"
+                            "Please cycle your VPN connection to safely clear resources."
+                        )
+                        CONNMAN_ALERT_SHOWN = True
                 else:
                     msg = (
                         f"Wm Utils: Connman socket leak detected ({socket_count}/{current_count} FDs). "

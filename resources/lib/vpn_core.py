@@ -8,15 +8,15 @@ from logger import log_message
 from vpn_core_upd import run_update as execute_vpn_update
 from vpn_config import PROVIDER_MAP
 from vpn_utils import is_interface_active
+import dialog
+from state_manager import CONFIG_DIR
 
 try:
     import xbmc
-    import xbmcgui
     HAS_KODI = True
 except ImportError:
     HAS_KODI = False
 
-CONFIG_DIR = "/storage/.config/wireguard/"
 LAST_RUN_TIMESTAMP = 0
 
 
@@ -36,11 +36,9 @@ def install_service(source, dest, name, media_path):
         subprocess.run(["systemctl", "restart", name], check=False)
 
         if kodi_env.HAS_KODI_IMPORTS and HAS_KODI:
-            addon_path = get_addon_path()
-            icon_update_ok = os.path.join(addon_path, "resources", "media", "update_ok.png")
             title = "[B][COLOR FFBF00FF]╠══ [ WG Manager ] ══╣[/COLOR][/B]"
             msg = "[B][COLOR FFFFFF00]Watchdog Installed.[/COLOR][/B]"
-            xbmcgui.Dialog().notification(title, msg, icon_update_ok, 4000)
+            dialog.notify_custom(title, msg, "update_ok.png", 4000)
 
         return True
 

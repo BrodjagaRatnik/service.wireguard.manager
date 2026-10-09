@@ -17,6 +17,7 @@ from network_utils import (
 from vpn_utils import flush_connman_dns_cache
 from state_manager import get_file_path, set_active_vpn
 from resources.scripts.killswitch import ZeroHardcodeKillSwitch
+import dialog
 
 try:
     import xbmc
@@ -123,12 +124,8 @@ def disconnect_vpn(silent=False, flush_dns=True, reason="disengaged"):
         except Exception:
             log_message("VPN Ops: Post-disconnect IPv6 restoration failed internally", 3)
 
-        if silent is False and HAS_KODI is True:
-            addon_path = get_addon_path()
-            icon_dis = os.path.join(addon_path, "resources", "media", "vpn_disconnected.png")
-            title = "[B][COLOR FFDF00FF]▄■ [ VPN Network ] ■▄[/COLOR][/B]"
-            msg = "[B]╠══ [COLOR FFDF00FF][ DISCONNECTED ][/COLOR] ══╣[/B]"
-            xbmcgui.Dialog().notification(title, msg, icon_dis, 4500)
+        if silent is False:
+            dialog.notify_disconnected()
 
         gw = None
         try:

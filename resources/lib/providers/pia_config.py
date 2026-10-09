@@ -1,14 +1,17 @@
 """ ./resources/lib/providers/pia_config.py """
 import os
 import time
+import kodi_env
 from logger import log_message
+from state_manager import get_file_path
 
 MAX_LATENCY = 0.05
 
 
 class PiaHandshakeEngine:
     def __init__(self):
-        self.cooldown_dir = "/storage/.kodi/userdata/addon_data/service.wireguard.manager"
+        anchor_path = get_file_path("pia_cache")
+        self.cooldown_dir = os.path.dirname(anchor_path) if anchor_path else kodi_env.ADDON_DIR
         self.cooldown_file = os.path.join(self.cooldown_dir, ".pia_cooldown")
         self.history_file = os.path.join(self.cooldown_dir, ".pia_sync_history")
 

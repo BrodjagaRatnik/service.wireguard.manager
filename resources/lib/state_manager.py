@@ -1,11 +1,20 @@
 """ ./resources/lib/state_manager.py """
+import json
 import os
 
 try:
     import xbmcvfs
     PROFILE_DIR = xbmcvfs.translatePath('special://profile/addon_data/service.wireguard.manager')
 except ImportError:
-    PROFILE_DIR = "/storage/.kodi/userdata/addon_data/service.wireguard.manager"
+    _ADDON_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir))
+    _USERDATA_ROOT = os.path.join(os.path.dirname(_ADDON_ROOT), "userdata")
+    PROFILE_DIR = os.path.join(_USERDATA_ROOT, "addon_data", "service.wireguard.manager")
+
+_STORAGE_ROOT = os.path.abspath(
+    os.path.join(PROFILE_DIR, os.pardir, os.pardir, os.pardir, os.pardir)
+)
+CONFIG_DIR = os.path.join(_STORAGE_ROOT, ".config", "wireguard")
+SYSTEMD_DIR = os.path.join(_STORAGE_ROOT, ".config", "system.d")
 
 FILE_MAP = {
     'active': 'vpn_manager_active.txt',
@@ -18,7 +27,9 @@ FILE_MAP = {
     'mullvad_settings': 'mullvad_settings.ini',
     'connector_lock': 'vpn_connector_active.lock',
     'notif_lock': 'vpn_notif_sent.lock',
-    'dns_backup': 'vpn_dns_backup.json'
+    'dns_backup': 'vpn_dns_backup.json',
+    'cycle_fail_state': 'vpn_cycle_fail_state.json',
+    'slots': 'vpn_slot_map.json'
 }
 
 
@@ -90,3 +101,36 @@ def set_active_vpn(name):
             os.remove(path)
     except Exception:
         pass
+
+
+def get_slot_assignments():
+    raw = read_state('slots')
+    if raw is None:
+        return {}
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict):
+            return parsed
+    except (ValueError, TypeError):
+        pass
+    return {}
+
+
+def get_slot_assignment(slot_id):
+    slot_entry = get_slot_assignments().get(str(slot_id))
+    if isinstance(slot_entry, dict):
+        return slot_entry.get('vpn_name'), slot_entry.get('addon_id')
+    return None, None
+
+
+def save_slot_assignment(slot_id, vpn_name, addon_id):
+    assignments = get_slot_assignments()
+    assignments[str(slot_id)] = {'vpn_name': vpn_name, 'addon_id': addon_id}
+    return write_state('slots', json.dumps(assignments))
+
+
+def clear_slot_assignment(slot_id):
+    assignments = get_slot_assignments()
+    if str(slot_id) in assignments:
+        del assignments[str(slot_id)]
+    return write_state('slots', json.dumps(assignments))

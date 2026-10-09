@@ -1,6 +1,5 @@
 """ ./resources/lib/tunnel_checker.py """
 import kodi_env
-import os
 import subprocess
 import time
 
@@ -20,6 +19,7 @@ from logger import log_message
 from vpn_utils import is_interface_active, get_active_interface, fetch_vpn_metadata
 from state_manager import get_active_vpn, write_state
 from vpn_config import SANITY_POLL_INTERVAL, SANITY_SETTLE_DELAY
+import dialog
 
 
 def run_tunnel_sanity_check():
@@ -37,9 +37,6 @@ def run_tunnel_sanity_check():
         if is_playing_stream:
             log_message("Tunnel Check: Active stream detected. Postponing health check.", 0)
             return
-
-        addon_path = kodi_env.ADDON_DIR
-        icon_con = os.path.join(addon_path, "resources", "media", "vpn_connected.png")
 
         if not is_interface_active("wg0"):
             return
@@ -148,9 +145,7 @@ def run_tunnel_sanity_check():
 
                     if HAS_GUI:
                         ip, country = fetch_vpn_metadata()
-                        title = "[B][COLOR FF00FF00]▄■ [ TUNNEL RESTORED ] ■▄[/COLOR][/B]"
-                        msg = f"[B][COLOR FF32CD32]{boot_target}[/COLOR] • ({country})[/B]"
-                        xbmcgui.Dialog().notification(title, msg, icon_con, 4500)
+                        dialog.notify_tunnel_restored(boot_target, country)
                 else:
                     log_message(f"Tunnel Check: Service ID lookup dropped for {boot_target}", 3)
             else:

@@ -5,7 +5,7 @@ import xbmc
 import xbmcgui
 from logger import log_message
 from vpn_config import WATCHDOG_HEARTBEAT, PROVIDER_MAP, CONNMAN_SETTLE_DELAY
-from state_manager import get_file_path
+from state_manager import get_file_path, CONFIG_DIR
 from service_matcher import is_nord_match, is_pia_match, is_custom_match, is_mullvad_match
 
 
@@ -34,7 +34,7 @@ def execute_monitor_loop(instance):
                             pass
 
                     if active_ifs:
-                        config_dir = '/storage/.config/wireguard/'
+                        config_dir = CONFIG_DIR
                         if os.path.exists(config_dir):
                             configs = [
                                 c.replace('.config', '').replace('.conf', '')

@@ -3,7 +3,7 @@ import kodi_env
 import os
 import sys
 from logger import log_message
-from state_manager import get_file_path
+from state_manager import get_file_path, CONFIG_DIR
 
 
 def inject_lib_path():
@@ -28,7 +28,7 @@ def handle_settings_update(addon):
             return
 
         provider_id = addon.getSettingInt("vpn_provider")
-        config_dir = "/storage/.config/wireguard/"
+        config_dir = CONFIG_DIR
         if provider_id < 0:
             return
 

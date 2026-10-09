@@ -5,11 +5,11 @@ import subprocess
 import sys
 from logger import log_message
 from vpn_config import PROVIDER_MAP, SYSTEMD_POLL_DELAY
-from state_manager import get_file_path
+from state_manager import get_file_path, CONFIG_DIR, SYSTEMD_DIR
+import dialog
 
 try:
     import xbmc
-    import xbmcgui
     HAS_KODI_UI = True
 except ImportError:
     HAS_KODI_UI = False
@@ -18,11 +18,6 @@ except ImportError:
 def control_service():
     service_name = "vpn-watchdog.service"
     raw_args = "|".join(sys.argv).lower()
-
-    addon_path = kodi_env.ADDON_DIR
-    media_path = os.path.join(addon_path, "resources", "media")
-    icon_ok = os.path.join(media_path, "update_ok.png")
-    icon_err = os.path.join(media_path, "error.png")
 
     if "restart" in raw_args:
         action = "restart"
@@ -38,10 +33,10 @@ def control_service():
             if kodi_env.HAS_KODI_IMPORTS and HAS_KODI_UI:
                 title = "[B][COLOR FFBF00FF]≡ [ WATCHDOG ] ≡[/COLOR][/B]"
                 msg = "[COLOR FFFFFF00]Service Restarted[/COLOR]"
-                xbmcgui.Dialog().notification(title, msg, icon_ok, 3000)
+                dialog.notify_custom(title, msg, "update_ok.png", 3000)
 
         elif action == "status":
-            if not os.path.exists(f"/storage/.config/system.d/{service_name}"):
+            if not os.path.exists(os.path.join(SYSTEMD_DIR, service_name)):
                 real_status = "Not Installed"
             else:
                 real_status = "unknown"
@@ -62,14 +57,13 @@ def control_service():
 
             log_message(f"Service Control: Watchdog service {real_status}", 0)
             if kodi_env.HAS_KODI_IMPORTS and HAS_KODI_UI:
-                icon_path = os.path.join(addon_path, "resources", "media", "icon.png")
                 title = "[B][COLOR FFBF00FF]≡ [ WATCHDOG ] ≡[/COLOR][/B]"
                 msg = f"[COLOR FFFFFF00]Status: [/COLOR][COLOR FFE6E6FA]{real_status}[/COLOR]"
-                xbmcgui.Dialog().notification(title, msg, icon_path, 3000)
+                dialog.notify_custom(title, msg, "icon.png", 3000)
 
         elif action == "clear":
             if kodi_env.HAS_KODI_IMPORTS and HAS_KODI_UI:
-                confirmed = xbmcgui.Dialog().yesno("Confirm Reset", "Delete all VPN configurations?")
+                confirmed = dialog.confirm_yes_no("Confirm Reset", "Delete all VPN configurations?")
                 if not confirmed:
                     return
 
@@ -82,7 +76,8 @@ def control_service():
                 "awk '{{print $NF}}' | xargs -I {{}} connmanctl disconnect {{}}"
             )
             subprocess.run(disconnect_cmd, shell=True)
-            subprocess.run("rm -f /storage/.config/wireguard/*.config", shell=True)
+            remove_pattern = os.path.join(CONFIG_DIR, "*.config")
+            subprocess.run(f"rm -f {remove_pattern}", shell=True)
 
             keys_to_remove = ["active", "disconnect", "manual", "reconnect"]
 
@@ -99,7 +94,7 @@ def control_service():
             if kodi_env.HAS_KODI_IMPORTS and HAS_KODI_UI:
                 title = "[B][COLOR FFBF00FF]≡ [ WG MANAGER ] ≡[/COLOR][/B]"
                 message = "[COLOR FFFFFF00]All configs cleared[/COLOR]"
-                xbmcgui.Dialog().notification(title, message, icon_ok, 4000)
+                dialog.notify_custom(title, message, "update_ok.png", 4000)
                 xbmc.executebuiltin("Container.Refresh")
 
     except Exception as e:
@@ -107,7 +102,7 @@ def control_service():
         if kodi_env.HAS_KODI_IMPORTS and HAS_KODI_UI:
             title = "[B][COLOR FFBF00FF]≡ ERROR ≡[/COLOR][/B]"
             message = f"[COLOR FFFFFF00]{action.capitalize()} failed[/COLOR]"
-            xbmcgui.Dialog().notification(title, message, icon_err, 5000)
+            dialog.notify_custom(title, message, "error.png", 5000)
 
     finally:
         kodi_env.clear_script_globals()

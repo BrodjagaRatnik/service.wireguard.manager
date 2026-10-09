@@ -6,15 +6,22 @@ import subprocess
 import sys
 import configparser
 from logger import log_message
+from dialog import show_ok, notify_custom, TaskProgress
+from state_manager import CONFIG_DIR, FILE_MAP, get_file_path
 from vpn_config import PROVIDER_MAP
 
 try:
     import xbmc
-    import xbmcgui
     import xbmcvfs
     HAS_KODI = True
 except ImportError:
     HAS_KODI = False
+
+_STORAGE_CONFIG_ROOT = os.path.dirname(CONFIG_DIR)
+_SYSTEM_D_DIR = os.path.join(_STORAGE_CONFIG_ROOT, "system.d")
+_CONNMAN_MAIN_CONF = os.path.join(_STORAGE_CONFIG_ROOT, "connman_main.conf")
+_CONNMAN_OVERRIDE_DIR = os.path.join(_SYSTEM_D_DIR, "connman.service.d")
+_WATCHDOG_SERVICE = os.path.join(_SYSTEM_D_DIR, "vpn-watchdog.service")
 
 
 def _setup_paths():
@@ -34,40 +41,36 @@ _setup_paths()
 
 def perform_cleanup(silent=False):
     addon = kodi_env.get_addon_instance()
-    wg_config_path = "/storage/.config/wireguard/"
-    connman_override_dir = "/storage/.config/system.d/connman.service.d"
-    connman_main_conf = "/storage/.config/connman_main.conf"
 
     try:
         log_message("Setup Helper: Cleanup Starting factory reset...", 1)
 
-        service_file = "/storage/.config/system.d/vpn-watchdog.service"
-        if os.path.exists(service_file) is True:
+        if os.path.exists(_WATCHDOG_SERVICE) is True:
             subprocess.run(["systemctl", "stop", "vpn-watchdog.service"], check=False)
             subprocess.run(["systemctl", "disable", "vpn-watchdog.service"], check=False)
-            os.remove(service_file)
+            os.remove(_WATCHDOG_SERVICE)
             subprocess.run(["systemctl", "daemon-reload"], check=False)
 
-        if os.path.exists(connman_override_dir) is True:
+        if os.path.exists(_CONNMAN_OVERRIDE_DIR) is True:
             try:
-                shutil.rmtree(connman_override_dir)
+                shutil.rmtree(_CONNMAN_OVERRIDE_DIR)
                 log_message("Setup Helper: Cleanup Connman DNS override configuration removed.", 1)
             except Exception as ce:
                 log_message(f"Setup Helper: Cleanup Error removing Connman override folder: {ce}", 3)
 
-        if os.path.exists(connman_main_conf) is True:
+        if os.path.exists(_CONNMAN_MAIN_CONF) is True:
             try:
-                os.remove(connman_main_conf)
+                os.remove(_CONNMAN_MAIN_CONF)
                 log_message("Setup Helper: Cleanup Global connman_main.conf removed.", 1)
             except Exception as me:
                 log_message(f"Setup Helper: Cleanup Error removing connman_main.conf: {me}", 3)
 
-        if os.path.exists(connman_override_dir) is True or os.path.exists(connman_main_conf) is True:
+        if os.path.exists(_CONNMAN_OVERRIDE_DIR) is True or os.path.exists(_CONNMAN_MAIN_CONF) is True:
             subprocess.run(["systemctl", "daemon-reload"], check=False)
             subprocess.run(["systemctl", "restart", "connman"], check=False)
 
-        if os.path.exists(wg_config_path) is True:
-            cmd = "rm -f /storage/.config/wireguard/*_*.config"
+        if os.path.exists(CONFIG_DIR) is True:
+            cmd = f'rm -f "{CONFIG_DIR}"/*_*.config'
             subprocess.run(cmd, shell=True, check=False)
             log_message("Setup Helper: Cleanup WireGuard configs wiped via shell.", 1)
 
@@ -80,7 +83,6 @@ def perform_cleanup(silent=False):
         if os.path.exists(keymap_file) is True:
             os.remove(keymap_file)
 
-        from state_manager import FILE_MAP, get_file_path
         for key in FILE_MAP:
             tf = get_file_path(key)
             if tf is not None and os.path.exists(tf) is True:
@@ -99,7 +101,7 @@ def perform_cleanup(silent=False):
             )
             xbmc.executebuiltin("Dialog.Close(all, true)")
             xbmc.sleep(200)
-            xbmcgui.Dialog().ok(title, msg)
+            show_ok(title, msg)
 
     except Exception as e:
         log_message(f"Setup Helper: Cleanup Error: {e}", 3)
@@ -118,16 +120,16 @@ def ensure_setup(addon_path, silent=False):
 
         keymap_dest = xbmcvfs.translatePath("special://userdata/keymaps/wireguard_manager_key.xml")
         keymap_source = os.path.join(addon_path, "resources", "keymaps", "wireguard_manager_key.xml")
-        wg_config_path = "/storage/.config/wireguard/"
-        service_dest = "/storage/.config/system.d/vpn-watchdog.service"
+        service_dest = _WATCHDOG_SERVICE
         service_source = os.path.join(addon_path, "resources", "data", "vpn-watchdog.service.txt")
-        connman_dest = '/storage/.config/connman_main.conf'
+        connman_dest = _CONNMAN_MAIN_CONF
         connman_source = os.path.join(addon_path, 'resources', 'data', 'connman_main.conf.txt')
+        connman_override_dest = os.path.join(_CONNMAN_OVERRIDE_DIR, 'override.conf')
         cert_source = os.path.join(addon_path, "resources", "data", "ca.rsa.4096.txt")
         cert_dest = os.path.join(addon_path, "resources", "lib", "providers", "ca.rsa.4096.crt")
         setup_updated = False
-        progress = xbmcgui.DialogProgress()
-        progress.create("WireGuard Manager", "Starting system check...")
+
+        progress = TaskProgress("WireGuard Manager", "Starting system check...")
         progress.update(15, "Checking Keymaps...")
         if not os.path.exists(keymap_dest):
             try:
@@ -172,22 +174,23 @@ def ensure_setup(addon_path, silent=False):
             except Exception as e:
                 log_message(f"Setup Helper: Setup Error (Connman Update): {e}", 3)
 
-        connman_override_dest = '/storage/.config/system.d/connman.service.d/override.conf'
         progress.update(45, "Checking DNS override configuration...")
         if not os.path.exists(connman_override_dest):
             try:
                 dest_dir = os.path.dirname(connman_override_dest)
                 os.makedirs(dest_dir, exist_ok=True)
 
+                override_path = os.path.join(_STORAGE_CONFIG_ROOT, "connman_main.conf")
+                cache_root = os.path.join(os.path.dirname(_STORAGE_CONFIG_ROOT), ".cache", "connman")
                 config_data = (
                     "[Service]\n"
                     "ExecStartPre=\n"
                     "ExecStart=\n"
                     "ExecStart=/usr/sbin/connmand -nr "
-                    "--config=/storage/.config/connman_main.conf --nodnsproxy\n"
+                    f"--config={override_path} --nodnsproxy\n"
                     "ExecStartPost=/bin/sh -c \"sleep 2; "
                     "if ! grep -q 'Method=manual' "
-                    "/storage/.cache/connman/*/settings 2>/dev/null; "
+                    f"'{cache_root}'/*/settings 2>/dev/null; "
                     "then echo -e 'nameserver 1.1.1.1"
                     "\nnameserver 9.9.9.9' >> /etc/resolv.conf; fi\"\n"
                     "LimitNOFILE=512\n"
@@ -237,23 +240,22 @@ def ensure_setup(addon_path, silent=False):
                 has_creds = bool(ADDON.getSetting(token_setting).strip())
             if current_p_id == 99 or not has_creds:
                 prefix = p_data["prefix"]
-                if os.path.exists(wg_config_path):
-                    has_files = any(f.startswith((prefix, "custom_")) for f in os.listdir(wg_config_path))
+                if os.path.exists(CONFIG_DIR):
+                    has_files = any(f.startswith((prefix, "custom_")) for f in os.listdir(CONFIG_DIR))
                     has_creds = has_creds or has_files
 
         progress.update(100, "Setup Complete.")
+
         if setup_updated:
             log_message("Setup Helper: All system checks completed successfully.", 0)
+
         progress.close()
 
         if setup_updated:
             log_message("Setup Helper: Success! System services installed. WireGuard manager active.", 1)
-
-            path_fixed = kodi_env.ADDON_DIR
-            ICON_INFO = os.path.join(path_fixed, "resources", "media", "icon.png")
             title = "[B][COLOR FFEEFFEE]≡[ SETUP SUCCESS ]≡[/COLOR][/B]"
             message = "[COLOR FFFFFF00]WireGuard manager is now active.[/COLOR]"
-            xbmcgui.Dialog().notification(title, message, ICON_INFO, 6000)
+            notify_custom(title, message, "icon.png", 6000)
 
     except Exception as major_err:
         log_message(f"Setup Helper: Orchestration master failure: {major_err}", 3)

@@ -1,9 +1,10 @@
 """ resources/lib/vpn_config.py """
 import os
 import sys
+import kodi_env
 from logger import log_message
 
-ADDON_DIR = '/storage/.kodi/addons/service.wireguard.manager'
+ADDON_DIR = kodi_env.ADDON_DIR
 LIB_PATH = os.path.join(ADDON_DIR, 'resources', 'lib')
 
 if ADDON_DIR not in sys.path:
@@ -39,7 +40,6 @@ DHCP_RECOVERY_DELAY = 10 if PI5 else (15 if PI4 else (25 if (PI3 or PI2) else 10
 VPN_CONNECTION_TIMEOUT = 500 if PI5 else (500 if PI4 else (500 if (PI3 or PI2) else 500))
 WATCHDOG_HEARTBEAT = 1000 if PI5 else (1500 if PI4 else (1200 if (PI3 or PI2) else 500))
 WATCHDOG_SETTLE_DELAY = 5000 if PI5 else (6000 if PI4 else (5000 if (PI3 or PI2) else 2500))
-WATCHDOG_RECOVERY_DELAY = 2000 if PI5 else (2500 if PI4 else (2000 if (PI3 or PI2) else 1000))
 HELPER_MAX_WAIT = 4000 if PI5 else (5000 if PI4 else (4500 if (PI3 or PI2) else 2500))
 SHIELD_SLEEP_DELAY = 5000 if PI5 else (5000 if PI4 else (5000 if (PI3 or PI2) else 2500))
 SYSTEMD_POLL_DELAY = 300 if PI5 else (400 if PI4 else (300 if (PI3 or PI2) else 150))
@@ -49,19 +49,19 @@ CONNMAN_RESTART_DELAY = 100 if PI5 else (150 if PI4 else (100 if (PI3 or PI2) el
 SANITY_POLL_INTERVAL = 500 if PI5 else (1000 if PI4 else (1500 if PI3 or PI2 else 1000))
 SANITY_SETTLE_DELAY = 500 if PI5 else (1000 if PI4 else (1500 if PI3 or PI2 else 1000))
 CONNMAN_SETTLE_DELAY = 100 if PI5 else (100 if PI4 else (100 if (PI3 or PI2) else 400))
+COLD_BOOT_CONNECT_DELAY = 5000 if PI5 else (6000 if PI4 else (8000 if (PI3 or PI2) else 5000))
 
 """
 PROP_SYNC_DELAY = Stops Kodi from getting confused if two updates happen at once
 OS_RELEASE_DELAY = Gives the system time to completely kill the old VPN tunnel
 CONN_POLL_INTERVAL = Fast-check to catch the exact second the VPN connects
 ROUTE_PROP_DELAY = Waiting for the internet path to be ready for use
-DHCP_RECOVERY_DELAY = When the Pi is "awake" but it doesn't have an IP address yet.
+DHCP_RECOVERY_DELAY = When the RPI is "awake" but it doesn't have an IP address yet.
 This constant tells the script how long to wait for Router to assign a local IP (DHCP)
 before it tries to restart the VPN.
 VPN_CONNECTION_TIMEOUT = The maximum time (ms) the progress bar waits for a successful connection.
 WATCHDOG_HEARTBEAT = The heartbeat that checks if your internet cable is plugged in
 WATCHDOG_SETTLE_DELAY = Stops the script from restarting the VPN too fast during a network crash.
-WATCHDOG_RECOVERY_DELAY = Prevents a restart if the VPN tunnel just blips for a second
 HELPER_MAX_WAIT = Max seconds to wait for wg0 before giving up on an attempt
 SHIELD_SLEEP_DELAY = How long the Watchdog waits when the Reconnect Helper is working.
 SYSTEMD_POLL_DELAY = Wait for Linux to finish the Start/Stop command
@@ -152,7 +152,8 @@ PROVIDER_MAP = LProviderMap({
         "prefix": "nord_",
         "label": "Nord Token",
         "needs_file_check": True,
-        "requires_endpoint_route": False
+        "requires_endpoint_route": False,
+        "supports_failover": True
     },
     1: {
         "name": "PIA",
@@ -173,7 +174,8 @@ PROVIDER_MAP = LProviderMap({
         "prefix": "mullvad_",
         "label": "Mullvad Account",
         "needs_file_check": True,
-        "requires_endpoint_route": False
+        "requires_endpoint_route": False,
+        "supports_failover": True
     },
     99: {
         "name": "Custom",

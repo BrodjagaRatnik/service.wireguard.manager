@@ -4,9 +4,7 @@ import os
 import re
 import subprocess
 from logger import log_message
-from state_manager import get_file_path
-
-CONFIG_DIR = "/storage/.config/wireguard/"
+from state_manager import get_file_path, CONFIG_DIR
 
 
 def get_default_gateway():
@@ -40,33 +38,85 @@ def resolve_server_ip(sid):
     return None
 
 
-def get_dns_from_config(vpn_name):
-    dns_list = []
-    if not vpn_name:
-        return dns_list
+def _resolve_config_by_sid(sid):
+    if not sid or not os.path.isdir(CONFIG_DIR):
+        return None
+
+    direct_path = os.path.join(CONFIG_DIR, f"{sid}.config")
+    if os.path.exists(direct_path):
+        return direct_path
+    direct_path_alt = os.path.join(CONFIG_DIR, f"{sid}.conf")
+    if os.path.exists(direct_path_alt):
+        return direct_path_alt
+
+    server_ip = resolve_server_ip(sid)
+    if server_ip:
+        try:
+            host_pattern = re.compile(r"^\s*Host\s*=\s*(.+)$", re.IGNORECASE)
+            for f_name in sorted(os.listdir(CONFIG_DIR)):
+                if not f_name.lower().endswith(('.config', '.conf')):
+                    continue
+                candidate_path = os.path.join(CONFIG_DIR, f_name)
+                try:
+                    with open(candidate_path, "r") as f:
+                        for line in f:
+                            host_match = host_pattern.match(line)
+                            if host_match:
+                                if host_match.group(1).strip() == server_ip:
+                                    return candidate_path
+                                break
+                except Exception:
+                    continue
+        except Exception as host_scan_fault:
+            log_message(f"Network Utils: Host-based profile resolution failed: {host_scan_fault}", 2)
+    return None
+
+
+def _resolve_config_by_terms(vpn_name):
+    if not vpn_name or not os.path.isdir(CONFIG_DIR):
+        return None
 
     search_terms = [w.strip().lower() for w in vpn_name.replace('-', '_').split('_') if len(w.strip()) > 1]
     if not search_terms:
-        return dns_list
+        return None
 
+    best_match_count = 0
     target_path = None
-    if os.path.exists(CONFIG_DIR):
-        best_match_count = 0
-        for f_name in os.listdir(CONFIG_DIR):
-            f_lower = f_name.lower()
-            if f_lower.endswith(('.config', '.conf')):
-                match_count = 0
-                for term in search_terms:
-                    if term in f_lower:
-                        match_count += 1
-                if match_count > best_match_count:
-                    best_match_count = match_count
-                    target_path = os.path.join(CONFIG_DIR, f_name)
+    for f_name in sorted(os.listdir(CONFIG_DIR)):
+        f_lower = f_name.lower()
+        if f_lower.endswith(('.config', '.conf')):
+            match_count = 0
+            for term in search_terms:
+                if term in f_lower:
+                    match_count += 1
+            if match_count > best_match_count:
+                best_match_count = match_count
+                target_path = os.path.join(CONFIG_DIR, f_name)
+    if target_path is not None and best_match_count > 0:
+        return target_path
+    return None
 
-    if not target_path and os.path.exists(CONFIG_DIR):
-        files = [f for f in os.listdir(CONFIG_DIR) if f.lower().endswith(('.config', '.conf'))]
+
+def _resolve_first_config_file():
+    if not os.path.isdir(CONFIG_DIR):
+        return None
+    try:
+        files = sorted(f for f in os.listdir(CONFIG_DIR) if f.lower().endswith(('.config', '.conf')))
         if files:
-            target_path = os.path.join(CONFIG_DIR, files[0])
+            return os.path.join(CONFIG_DIR, files[0])
+    except Exception:
+        pass
+    return None
+
+
+def get_dns_from_config(vpn_name, sid=None):
+    dns_list = []
+    target_path = _resolve_config_by_sid(sid)
+
+    if target_path is None:
+        target_path = _resolve_config_by_terms(vpn_name)
+    if target_path is None:
+        target_path = _resolve_first_config_file()
 
     if target_path:
         try:
@@ -82,7 +132,7 @@ def get_dns_from_config(vpn_name):
     return dns_list
 
 
-def set_secure_dns(vpn_name=None, vpn_active=True):
+def set_secure_dns(vpn_name=None, vpn_active=True, sid=None):
     backup_path = get_file_path("dns_backup")
     try:
         if vpn_active:
@@ -96,7 +146,7 @@ def set_secure_dns(vpn_name=None, vpn_active=True):
                 except Exception:
                     pass
 
-            dns_servers = get_dns_from_config(vpn_name)
+            dns_servers = get_dns_from_config(vpn_name, sid=sid)
             if dns_servers:
                 lines = [f"nameserver {dns_ip}" for dns_ip in dns_servers]
                 with open("/etc/resolv.conf", "w") as f:
@@ -269,7 +319,7 @@ def is_physically_connected(interface):
 
 def get_profile_allowed_ips(sid):
     try:
-        config_path = f"/storage/.config/wireguard/{sid}.config"
+        config_path = os.path.join(CONFIG_DIR, f"{sid}.config")
         if os.path.exists(config_path):
             with open(config_path, "r") as f:
                 for line in f:

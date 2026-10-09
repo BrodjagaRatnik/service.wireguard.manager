@@ -15,6 +15,7 @@ import urllib.request
 from logger import log_message
 from providers import routing
 from providers import pia_config
+from io_atomic import atomic_write_text
 
 SERVER_LIST_URL = "https://serverlist.piaservers.net/vpninfo/servers/v6"
 
@@ -138,16 +139,17 @@ def update(user, password, country_ids, config_dir):
 
             os.makedirs(config_dir, exist_ok=True)
             file_path = os.path.join(config_dir, f"pia_{rid}.config")
-            with open(file_path, 'w') as f:
-                f.write("[provider_wireguard]\nType = WireGuard\n")
-                f.write(f"Name = PIA_{clean_region_name.replace(' ', '_')}\n")
-                f.write(f"Host = {server_ips[0]}\n")
-                f.write(f"WireGuard.Pool = {','.join(server_ips)}\n")
-                f.write(f"WireGuard.CN_Pool = {','.join(server_cns)}\n")
-                f.write("WireGuard.MTU = 1380\n")
-                f.write("WireGuard.PublicKey = placeholder\n")
-                f.write("WireGuard.Address = 10.0.0.1/32\n")
-
+            config_template = (
+                "[provider_wireguard]\nType = WireGuard\n"
+                f"Name = PIA_{clean_region_name.replace(' ', '_')}\n"
+                f"Host = {server_ips[0]}\n"
+                f"WireGuard.Pool = {','.join(server_ips)}\n"
+                f"WireGuard.CN_Pool = {','.join(server_cns)}\n"
+                "WireGuard.MTU = 1380\n"
+                "WireGuard.PublicKey = placeholder\n"
+                "WireGuard.Address = 10.0.0.1/32\n"
+            )
+            atomic_write_text(file_path, config_template)
             compiled_files_count += 1
             total_nodes_count += len(server_ips)
 
