@@ -1,4 +1,4 @@
-""" ./resources/lib/service_loop.py """
+""" LibreELEC ./resources/lib/service_loop.py """
 import os
 import sys
 import xbmc

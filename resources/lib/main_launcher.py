@@ -1,4 +1,4 @@
-""" ./resources/lib/main_launcher.py """
+""" LibreELEC ./resources/lib/main_launcher.py """
 import kodi_env
 import builtins
 import os

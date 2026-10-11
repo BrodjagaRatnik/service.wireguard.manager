@@ -1,4 +1,4 @@
-""" ./resources/lib/tunnel_checker.py """
+""" LibreELEC ./resources/lib/tunnel_checker.py """
 import kodi_env
 import subprocess
 import time

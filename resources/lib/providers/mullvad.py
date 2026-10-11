@@ -1,4 +1,4 @@
-""" From: https://github.com/mullvad/wg-tools
+""" LibreELEC From: https://github.com/mullvad/wg-tools
 
 HOST = 'https://api.mullvad.net'
         url = "https://api.mullvad.net/public/relays/wireguard/v1/"
@@ -26,6 +26,14 @@ class MullvadPipelineFailure(Exception):
 def _ascii_fold(value):
     normalized = unicodedata.normalize("NFKD", str(value))
     return normalized.encode("ascii", "ignore").decode("ascii")
+
+
+def _report_progress(progress_callback, percent, message):
+    if progress_callback is not None:
+        try:
+            progress_callback(int(percent), str(message))
+        except Exception as cb_fault:
+            log_message(f"Mullvad Provider: Progress callback fault bypassed: {cb_fault}", 2)
 
 
 class MullvadApi:
@@ -178,7 +186,7 @@ class MullvadConfig:
         self.wg_relay_port = wg_relay_port
         self.mtu = mtu
 
-    def create_wg_configs(self, relays, device, privatekey, dns_str, multihop_server) -> None:
+    def create_wg_configs(self, relays, device, privatekey, dns_str, multihop_server, progress_callback=None) -> None:
         try:
             output_dir = pathlib.Path(self.output_dir).expanduser()
             output_dir.mkdir(exist_ok=True, parents=True)
@@ -192,7 +200,15 @@ class MullvadConfig:
         except Exception as clean_err:
             log_message(f"Failed to purge existing Mullvad platform assets from target layout: {clean_err}", 2)
 
-        for relay in relays:
+        _report_progress(progress_callback, 55, "Purging stale Mullvad profiles...")
+
+        total_relays = max(len(relays), 1)
+        for position, relay in enumerate(relays, start=1):
+            _report_progress(
+                progress_callback,
+                55 + int(40 * (position / total_relays)),
+                f"Writing profile {position}/{len(relays)}: {relay.get('hostname')}"
+            )
             try:
                 self.create_connman_config(output_dir, relay, device, privatekey, dns_str, multihop_server)
             except Exception as e:
@@ -256,11 +272,12 @@ class MullvadConfig:
 
 
 class Mullvad:
-    def __init__(self, args):
+    def __init__(self, args, progress_callback=None):
         from wm_utils import safe_decrypt_password
         clean_account = safe_decrypt_password(args.account_number)
         self.mullvad_api = MullvadApi(clean_account)
         self.mullvad_config = MullvadConfig(args.output_dir, args.wg_dns, args.wg_relay_port, args.mtu)
+        self._progress_callback = progress_callback
 
         self._settings_file = args.settings_file
         self._wg_multihop_server = args.wg_multihop_server
@@ -276,9 +293,16 @@ class Mullvad:
 
     def run(self):
         try:
+            _report_progress(self._progress_callback, 15, "Resolving multihop topology...")
             multihop_server = self.get_multihop_server()
+
+            _report_progress(self._progress_callback, 25, "Fetching and filtering relay directory...")
             relays = self.get_relays()
+
+            _report_progress(self._progress_callback, 40, "Deriving device key pair...")
             private_key, public_key = self.get_key_pair()
+
+            _report_progress(self._progress_callback, 50, "Registering device with Mullvad...")
             device = self.get_device(public_key) or self.create_device(public_key)
 
             if self.mullvad_config.wg_dns:
@@ -287,7 +311,11 @@ class Mullvad:
                 dns_str = "100.64.0.63, 100.64.0.7"
 
             if device:
-                self.mullvad_config.create_wg_configs(relays, device, private_key, dns_str, multihop_server)
+                self.mullvad_config.create_wg_configs(
+                    relays, device, private_key, dns_str, multihop_server,
+                    progress_callback=self._progress_callback
+                )
+                _report_progress(self._progress_callback, 96, "Finalizing profile database...")
         except Exception as e:
             log_message(f"Execution runtime failed within the main processing execution block: {e}", 3)
             sys.exit(1)

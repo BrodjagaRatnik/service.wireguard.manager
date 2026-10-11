@@ -1,4 +1,4 @@
-""" ./resources/lib/wm_utils.py """
+""" LibreELEC ./resources/lib/wm_utils.py """
 import kodi_env
 import base64
 import html

@@ -1,4 +1,4 @@
-""" ./resources/lib/service_launcher.py """
+""" LibreELEC ./resources/lib/service_launcher.py """
 import kodi_env
 import os
 import time

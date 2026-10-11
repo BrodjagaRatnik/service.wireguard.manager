@@ -1,4 +1,4 @@
-""" ./resources/lib/service_resolver.py """
+""" LibreELEC ./resources/lib/service_resolver.py """
 import kodi_env
 import os
 import re

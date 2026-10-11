@@ -1,4 +1,4 @@
-""" ./resources/lib/service.py """
+""" LibreELEC ./resources/lib/service.py """
 import kodi_env
 import os
 import subprocess

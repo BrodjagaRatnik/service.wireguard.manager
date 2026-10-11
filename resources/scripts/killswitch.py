@@ -1,4 +1,4 @@
-""" ./resources/scripts/killswitch.py """
+""" LibreELEC ./resources/scripts/killswitch.py """
 import ipaddress
 import subprocess
 from logger import log_message

@@ -1,4 +1,4 @@
-""" .resources/lib/providers/nordvpn.py
+""" LibreELEC .resources/lib/providers/nordvpn.py
 
     user_data = fetch_nord_url("https://api.nordvpn.com/v1/users/services/credentials", token=token)
 
@@ -24,7 +24,15 @@ import dialog
 NORD_DNS = "103.86.96.100, 103.86.99.100"
 
 
-def update(token, country_ids, config_dir):
+def _emit_progress(progress_callback, percent, message):
+    if progress_callback is not None:
+        try:
+            progress_callback(int(percent), str(message))
+        except Exception as cb_fault:
+            log_message(f"NordVPN: Progress callback fault bypassed: {cb_fault}", 2)
+
+
+def update(token, country_ids, config_dir, progress_callback=None):
     addon_obj = kodi_env.get_addon_instance()
     if not addon_obj:
         return False
@@ -35,7 +43,18 @@ def update(token, country_ids, config_dir):
     if lib_path not in sys.path:
         sys.path.insert(0, lib_path)
 
-    progress = dialog.TaskProgress("NordVPN Profile Update", "Retrieving credentials...", enabled=True)
+    dialog_progress = None
+    if progress_callback is None:
+        dialog_progress = dialog.TaskProgress(
+            "NordVPN Profile Update", "Retrieving credentials...", enabled=True
+        )
+
+    def advance(percent, message):
+        _emit_progress(progress_callback, percent, message)
+        if dialog_progress is not None:
+            dialog_progress.update(int(percent), str(message))
+
+    advance(5, "Retrieving credentials...")
 
     log_message("NordVPN: Starting update process.", 0)
     active_vpn_name = get_active_vpn()
@@ -47,7 +66,8 @@ def update(token, country_ids, config_dir):
 
     if not user_data or "nordlynx_private_key" not in user_data:
         log_message(f"NordVPN: Private Key fetch failed. Response {user_data}", 3)
-        progress.close()
+        if dialog_progress is not None:
+            dialog_progress.close()
         return False
 
     priv_key = user_data["nordlynx_private_key"]
@@ -59,12 +79,12 @@ def update(token, country_ids, config_dir):
     cancelled = False
 
     for c_pos, c_id in enumerate(ids, start=1):
-        if progress.iscanceled():
+        if dialog_progress is not None and dialog_progress.iscanceled():
             log_message("NordVPN: Update cancelled by user.", 2)
             cancelled = True
             break
 
-        progress.update(
+        advance(
             int(((c_pos - 1) * 100) / total_ids),
             f"Country {c_pos}/{total_ids}: fetching recommendations"
         )
@@ -92,7 +112,7 @@ def update(token, country_ids, config_dir):
                 hostname = data.get("hostname", "")
                 log_message(f"NordVPN: Processing candidate {idx}/{len(servers)} ({hostname})", 0)
 
-                progress.update(
+                advance(
                     int((((c_pos - 1) * 5 + idx) * 100) / (total_ids * 5)),
                     f"Country {c_pos}/{total_ids} - server {idx}/{len(servers)}: {hostname}"
                 )
@@ -170,7 +190,8 @@ def update(token, country_ids, config_dir):
         if config_written_for_country == 0:
             log_message(f"NordVPN: All {len(servers)} candidate servers failed for Country ID {c_id}", 3)
 
-    progress.close()
+    if dialog_progress is not None:
+        dialog_progress.close()
 
     if success_count > 0:
         log_message(f"NordVPN: Finalizing {success_count} configs.", 0)

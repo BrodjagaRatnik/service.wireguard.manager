@@ -1,4 +1,4 @@
-""" ./resources/lib/service_updater.py """
+""" LibreELEC ./resources/lib/service_updater.py """
 import kodi_env
 import os
 import sys

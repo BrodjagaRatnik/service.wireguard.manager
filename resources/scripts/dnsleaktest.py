@@ -1,4 +1,4 @@
-""" ./resources/scripts/dnsleaktest.py """
+""" LibreELEC ./resources/scripts/dnsleaktest.py """
 import json
 import os
 import socket

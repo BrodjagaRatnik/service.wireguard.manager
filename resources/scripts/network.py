@@ -1,4 +1,4 @@
-""" ./resources/scripts/network.py """
+""" LibreELEC ./resources/scripts/network.py """
 import os
 import subprocess
 import sys

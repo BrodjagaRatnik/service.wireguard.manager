@@ -1,4 +1,4 @@
-""" ./resources/lib/setup_helper.py """
+""" LibreELEC ./resources/lib/setup_helper.py """
 import kodi_env
 import os
 import shutil

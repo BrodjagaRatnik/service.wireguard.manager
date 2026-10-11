@@ -1,4 +1,4 @@
-""" ./resources/scripts/update_vpn.py """
+""" LibreELEC ./resources/scripts/update_vpn.py """
 import os
 import sys
 import kodi_env

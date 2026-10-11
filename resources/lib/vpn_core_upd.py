@@ -1,4 +1,4 @@
-""" ./resources/lib/vpn_core_upd.py """
+""" LibreELEC ./resources/lib/vpn_core_upd.py """
 import kodi_env
 import os
 from logger import log_message
@@ -56,6 +56,10 @@ def run_update(direct_token=None, force_provider=None, silent=False):
         if silent is False and HAS_KODI_UI:
             progress = dialog.TaskProgress("WG Manager", f"Updating {provider_name}...", enabled=True)
 
+        def bridge_callback(percent, message):
+            if progress is not None:
+                progress.update(int(percent), str(message))
+
         if provider_idx == 0:
             token = direct_token if direct_token else addon_obj.getSetting("vpn_token")
             token = token.strip().replace('"', '').replace("'", "")
@@ -71,7 +75,9 @@ def run_update(direct_token=None, force_provider=None, silent=False):
 
             if progress:
                 progress.update(30, f"Fetching {provider_name} servers...")
-            success = provider_module.update(token, countries, CONFIG_DIR)
+            success = provider_module.update(
+                token, countries, CONFIG_DIR, progress_callback=bridge_callback
+            )
             if success and progress:
                 progress.update(100, "Update complete!")
 
@@ -129,8 +135,8 @@ def run_update(direct_token=None, force_provider=None, silent=False):
                 return False
 
             if progress:
-                progress.update(60, f"Registering {provider_name} keys...")
-            success = pia.update(user, pw, countries, CONFIG_DIR)
+                progress.update(10, f"Registering {provider_name} keys...")
+            success = pia.update(user, pw, countries, CONFIG_DIR, progress_callback=bridge_callback)
             if success and progress:
                 progress.update(100, "Update complete!")
 
@@ -154,7 +160,7 @@ def run_update(direct_token=None, force_provider=None, silent=False):
             owned_val = addon_obj.getSetting("wg_owned").lower() == "true"
 
             if progress:
-                progress.update(50, f"Generating dynamic {provider_name} environments...")
+                progress.update(10, f"Preparing {provider_name} pipeline...")
 
             try:
                 import providers.mullvad_utils as m_utils
@@ -162,7 +168,8 @@ def run_update(direct_token=None, force_provider=None, silent=False):
                     account_id=account,
                     country_filter=countries,
                     mtu_setting=1380,
-                    owned=owned_val
+                    owned=owned_val,
+                    progress_callback=bridge_callback
                 )
                 success = True
             except Exception as m_err:

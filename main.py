@@ -1,4 +1,4 @@
-""" ./main.py """
+""" LibreELEC ./main.py """
 import os
 import sys
 

@@ -1,4 +1,4 @@
-''' .resources/lib/providers/custom.py '''
+""" LibreELEC .resources/lib/providers/custom.py """
 import os
 import sys
 

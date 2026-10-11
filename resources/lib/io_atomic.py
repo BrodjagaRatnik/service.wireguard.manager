@@ -1,4 +1,4 @@
-""" ./resources/lib/io_atomic.py """
+""" LibreELEC ./resources/lib/io_atomic.py """
 import os
 import tempfile
 from logger import log_message

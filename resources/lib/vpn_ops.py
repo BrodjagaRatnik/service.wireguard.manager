@@ -1,4 +1,4 @@
-""" ./resources/lib/vpn_ops.py """
+""" LibreELEC ./resources/lib/vpn_ops.py """
 import kodi_env
 import os
 import subprocess

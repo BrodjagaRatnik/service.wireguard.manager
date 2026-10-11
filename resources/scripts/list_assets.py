@@ -1,4 +1,4 @@
-""" ./resources/scripts/list_assets.py """
+""" LibreELEC ./resources/scripts/list_assets.py """
 import json
 import os
 import subprocess

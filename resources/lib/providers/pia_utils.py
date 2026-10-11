@@ -1,4 +1,4 @@
-""" ./resources/lib/providers/pia_utils.py """
+""" LibreELEC ./resources/lib/providers/pia_utils.py """
 import kodi_env
 import base64
 import json

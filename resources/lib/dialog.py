@@ -1,4 +1,4 @@
-""" ./resources/lib/dialog.py """
+""" LibreELEC ./resources/lib/dialog.py """
 import os
 import kodi_env
 from logger import log_message

@@ -1,4 +1,4 @@
-""" ./resources/lib/kodi_env.py """
+""" LibreELEC ./resources/lib/kodi_env.py """
 import os
 import sys
 

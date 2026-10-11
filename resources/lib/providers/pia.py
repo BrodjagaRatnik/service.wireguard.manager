@@ -1,4 +1,4 @@
-""" .resources/lib/providers/pia.py
+""" LibreELEC .resources/lib/providers/pia.py
 https://github.com/pia-foss/manual-connections/
 GLOBAL ENDPOINT CONSTANTS
 CERT_URL = "https://raw.githubusercontent.com/pia-foss/manual-connections/master/ca.rsa.4096.crt"
@@ -199,8 +199,8 @@ def get_live_config(token, server_ip, server_cn, region_id, region_name=None, ra
     return None
 
 
-def update(user, password, country_ids, config_dir):
-    return real_update(user, password, country_ids, config_dir)
+def update(user, password, country_ids, config_dir, progress_callback=None):
+    return real_update(user, password, country_ids, config_dir, progress_callback=progress_callback)
 
 
 def build_final_config(wg_data, pk, server_ip, region_id, region_name=None, raw_cn_str="", allowed_ips_mode=1):

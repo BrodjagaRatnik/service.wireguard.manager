@@ -1,4 +1,4 @@
-""" ./resources/scripts/show_disclaimer.py """
+""" LibreELEC ./resources/scripts/show_disclaimer.py """
 import os
 import sys
 

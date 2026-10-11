@@ -1,4 +1,4 @@
-""" resources/lib/providers/pia_dedicated.py """
+""" LibreELEC resources/lib/providers/pia_dedicated.py """
 import os
 import ssl
 import json

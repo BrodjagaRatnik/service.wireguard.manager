@@ -1,4 +1,4 @@
-""" From: https://github.com/mullvad/wg-tools .resources/lib/providers/mullvad_utils.py """
+""" LibreELEC From: https://github.com/mullvad/wg-tools .resources/lib/providers/mullvad_utils.py """
 import collections
 import ipaddress
 import os
@@ -77,13 +77,25 @@ def find_siblings_by_country(profile_id):
     return sibling_sids
 
 
-def generate_mullvad_configs(account_id, country_filter, mtu_setting=1380, multihop=None, owned=False, speed=0):
+def _report_progress(progress_callback, percent, message):
+    if progress_callback is not None:
+        try:
+            progress_callback(int(percent), str(message))
+        except Exception as cb_fault:
+            log_message(f"Mullvad Utils: Progress callback fault bypassed: {cb_fault}", 2)
+
+
+def generate_mullvad_configs(
+    account_id, country_filter, mtu_setting=1380, multihop=None, owned=False, speed=0, progress_callback=None
+):
     output_dir = CONFIG_DIR
     settings_file = get_file_path("mullvad_settings")
 
     if not settings_file:
         log_message("Unable to resolve centralized storage path for Mullvad state configuration registries", 3)
         raise MullvadPipelineFailure("Centralized Mullvad settings registry path could not be resolved")
+
+    _report_progress(progress_callback, 5, "State registry resolved.")
 
     dns_servers = [
         ipaddress.ip_address("10.64.0.1")
@@ -103,9 +115,12 @@ def generate_mullvad_configs(account_id, country_filter, mtu_setting=1380, multi
         wg_min_network_port_speed=int(speed)
     )
 
+    _report_progress(progress_callback, 10, f"Relay pipeline prepared for filter: {country_filter}")
+
     try:
-        mullvad = Mullvad(args)
+        mullvad = Mullvad(args, progress_callback=progress_callback)
         mullvad.run()
+        _report_progress(progress_callback, 100, "Generation complete.")
     except SystemExit as exit_signal:
         log_err = f"Mullvad pipeline exit request intercepted and converted to controlled failure: {exit_signal.code}"
         log_message(log_err, 2)

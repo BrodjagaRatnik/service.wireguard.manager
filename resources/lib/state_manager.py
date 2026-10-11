@@ -1,4 +1,4 @@
-""" ./resources/lib/state_manager.py """
+""" LibreELEC ./resources/lib/state_manager.py """
 import json
 import os
 

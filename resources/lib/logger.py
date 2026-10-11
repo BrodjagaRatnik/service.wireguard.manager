@@ -1,4 +1,4 @@
-""" ./resources/lib/logger.py """
+""" LibreELEC ./resources/lib/logger.py """
 import kodi_env
 import builtins
 import os

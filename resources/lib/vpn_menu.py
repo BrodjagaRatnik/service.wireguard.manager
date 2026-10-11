@@ -1,4 +1,4 @@
-""" ./resources/lib/vpn_menu.py """
+""" LibreELEC ./resources/lib/vpn_menu.py """
 import kodi_env
 import os
 import sys

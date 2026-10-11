@@ -1,4 +1,4 @@
-""" ./resources/lib/vpn_core.py """
+""" LibreELEC ./resources/lib/vpn_core.py """
 import kodi_env
 import os
 import shutil

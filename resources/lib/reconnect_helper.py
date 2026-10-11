@@ -1,4 +1,4 @@
-""" ./resources/lib/reconnect_helper.py """
+""" LibreELEC ./resources/lib/reconnect_helper.py """
 import kodi_env
 import os
 import subprocess

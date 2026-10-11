@@ -1,4 +1,4 @@
-""" ./resources/scripts/show_codes.py """
+""" LibreELEC ./resources/scripts/show_codes.py """
 import os
 import sys
 

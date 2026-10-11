@@ -1,4 +1,4 @@
-""" resources/lib/vpn_config.py """
+""" LibreELEC resources/lib/vpn_config.py """
 import os
 import sys
 import kodi_env

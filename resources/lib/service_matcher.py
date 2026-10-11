@@ -1,4 +1,4 @@
-""" ./resources/lib/service_matcher.py """
+""" LibreELEC ./resources/lib/service_matcher.py """
 import os
 import json
 import re

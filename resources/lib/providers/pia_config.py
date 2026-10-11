@@ -1,4 +1,4 @@
-""" ./resources/lib/providers/pia_config.py """
+""" LibreELEC ./resources/lib/providers/pia_config.py """
 import os
 import time
 import kodi_env

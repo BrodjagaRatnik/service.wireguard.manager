@@ -1,4 +1,4 @@
-""" ./service_startup.py """
+""" LibreELEC ./service_startup.py """
 import os
 import sys
 

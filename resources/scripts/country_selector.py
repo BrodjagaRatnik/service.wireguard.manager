@@ -1,4 +1,4 @@
-""" ./resources/scripts/country_selector.py """
+""" LibreELEC ./resources/scripts/country_selector.py """
 import os
 import sys
 import time

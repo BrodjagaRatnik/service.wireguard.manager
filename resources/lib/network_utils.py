@@ -1,4 +1,4 @@
-""" ./resources/lib/network_utils.py """
+""" LibreELEC ./resources/lib/network_utils.py """
 import json
 import os
 import re

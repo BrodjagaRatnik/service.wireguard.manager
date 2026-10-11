@@ -1,4 +1,4 @@
-""" ./resources/scripts/show_terms_of_service.py """
+""" LibreELEC ./resources/scripts/show_terms_of_service.py """
 import os
 import sys
 
