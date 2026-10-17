@@ -45,31 +45,49 @@ def resolve_service_id(addon, name):
 
         strip_tokens = _provider_search_tokens(p_data)
 
-        if name and profile_prefixes:
+        if name and profile_prefixes and os.path.exists(CONFIG_DIR):
             clean_target = _clean_label(name, strip_tokens)
 
-            if os.path.exists(CONFIG_DIR):
-                for filename in os.listdir(CONFIG_DIR):
-                    if (filename.startswith(tuple(profile_prefixes))
-                            and filename.endswith((".config", ".conf"))):
-                        full_path = os.path.join(CONFIG_DIR, filename)
+            for filename in os.listdir(CONFIG_DIR):
+                if (filename.startswith(tuple(profile_prefixes))
+                        and filename.endswith((".config", ".conf"))):
+                    full_path = os.path.join(CONFIG_DIR, filename)
 
+                    try:
+                        with open(full_path, 'r', encoding='utf-8') as f:
+                            content = f.read()
+
+                        name_match = re.search(r'^\s*Name\s*=\s*(.*)', content, re.MULTILINE)
+                        if name_match:
+                            actual_config_name = name_match.group(1).strip()
+                            clean_config_name = _clean_label(actual_config_name, strip_tokens)
+
+                            if (clean_target == clean_config_name
+                                    or clean_config_name in clean_target
+                                    or clean_target in clean_config_name):
+                                search_name = actual_config_name
+                                break
+                    except Exception:
+                        pass
+
+            if search_name == name:
+                from service_matcher import find_profile_for_target
+                fallback_profile = find_profile_for_target(p_data.get("name"), name)
+                if fallback_profile:
+                    fallback_path = os.path.join(CONFIG_DIR, f"{fallback_profile}.config")
+                    if os.path.exists(fallback_path):
                         try:
-                            with open(full_path, 'r', encoding='utf-8') as f:
-                                content = f.read()
-
-                            name_match = re.search(r'^\s*Name\s*=\s*(.*)', content, re.MULTILINE)
-                            if name_match:
-                                actual_config_name = name_match.group(1).strip()
-                                clean_config_name = _clean_label(actual_config_name, strip_tokens)
-
-                                if (clean_target == clean_config_name
-                                        or clean_config_name in clean_target
-                                        or clean_target in clean_config_name):
-                                    search_name = actual_config_name
-                                    break
+                            with open(fallback_path, 'r', encoding='utf-8') as f:
+                                fallback_content = f.read()
+                            fallback_match = re.search(
+                                r'^\s*Name\s*=\s*(.*)', fallback_content, re.MULTILINE
+                            )
+                            if fallback_match:
+                                search_name = fallback_match.group(1).strip()
+                            else:
+                                search_name = fallback_profile
                         except Exception:
-                            pass
+                            search_name = fallback_profile
 
         out = subprocess.check_output(["connmanctl", "services"], text=True)
         for line in out.splitlines():

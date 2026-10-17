@@ -2,6 +2,8 @@
 import os
 import re
 import subprocess
+import socket
+import time
 from logger import log_message
 from network_utils import get_default_gateway
 
@@ -111,3 +113,141 @@ def setup_vpn_routing(sid: str, requires_endpoint_route: bool) -> None:
             )
         except Exception:
             pass
+
+
+def get_system_nameservers() -> list:
+    nameservers = []
+    try:
+        if os.path.exists("/etc/resolv.conf") is True:
+            with open("/etc/resolv.conf", "r") as f:
+                for line in f:
+                    stripped = line.strip()
+                    if stripped.startswith("nameserver") is True and len(stripped.split()) > 1:
+                        candidate = stripped.split()[1]
+                        if candidate not in nameservers:
+                            nameservers.append(candidate)
+    except Exception as resolver_err:
+        log_message(f"Routing: System resolver read failure: {resolver_err}", 2)
+    return nameservers
+
+
+def probe_tcp_latency(target_host: str, target_port: int, timeout_seconds: float) -> float:
+    latency_ms = None
+    try:
+        start_t = time.perf_counter()
+        probe_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        probe_socket.settimeout(timeout_seconds)
+        probe_socket.connect((target_host, target_port))
+        probe_socket.close()
+        latency_ms = (time.perf_counter() - start_t) * 1000.0
+    except Exception:
+        latency_ms = None
+    return latency_ms
+
+
+def probe_icmp_latency(target_host: str, timeout_seconds: float) -> float:
+    latency_ms = None
+    try:
+        wait_seconds = max(1, int(timeout_seconds))
+        out_ping = subprocess.check_output(
+            ["ping", "-c", "1", "-W", str(wait_seconds), target_host],
+            text=True, stderr=subprocess.DEVNULL, timeout=wait_seconds + 1
+        )
+        for line in out_ping.splitlines():
+            if "time=" in line:
+                latency_ms = float(line.split("time=")[-1].split()[0])
+                break
+    except Exception:
+        latency_ms = None
+    return latency_ms
+
+
+def probe_endpoint_latency(
+    target_host: str,
+    target_port: int,
+    timeout_seconds: float,
+    require_tls_style_tcp: bool = False
+) -> float:
+    if require_tls_style_tcp is False:
+        icmp_result = probe_icmp_latency(target_host, timeout_seconds)
+        if icmp_result is not None:
+            return icmp_result
+    tcp_result = probe_tcp_latency(target_host, target_port, timeout_seconds)
+    if tcp_result is not None:
+        return tcp_result
+    if require_tls_style_tcp is True:
+        return probe_icmp_latency(target_host, timeout_seconds)
+    return None
+
+
+def check_internet_infrastructure(
+    latency_threshold_ms: float = 250.0,
+    probe_timeout_seconds: float = 2.0
+) -> dict:
+    report = {
+        "gateway_ok": False,
+        "gateway": None,
+        "interface_ok": False,
+        "interface": None,
+        "mtu_readable": False,
+        "physical_mtu": None,
+        "nameservers": [],
+        "best_latency_ms": None,
+        "infrastructure_ok": False,
+    }
+
+    local_gateway = get_default_gateway()
+    if local_gateway is not None and str(local_gateway).strip() != "":
+        report["gateway_ok"] = True
+        report["gateway"] = str(local_gateway)
+
+    target_iface = None
+    try:
+        from vpn_utils import get_active_interface
+        target_iface = get_active_interface()
+        if not target_iface:
+            out_route = subprocess.check_output(["ip", "route", "show", "default"], text=True)
+            for line in out_route.splitlines():
+                if "dev" in line and "wg" not in line:
+                    parts = line.split()
+                    idx = parts.index("dev")
+                    if idx + 1 < len(parts):
+                        target_iface = parts[idx + 1]
+                        break
+    except Exception as iface_err:
+        log_message(f"Routing: Infrastructure interface discovery failure: {iface_err}", 2)
+
+    if target_iface:
+        report["interface"] = str(target_iface)
+        try:
+            mtu_path = f"/sys/class/net/{target_iface}/mtu"
+            if os.path.exists(mtu_path) is True:
+                with open(mtu_path, "r") as f:
+                    report["physical_mtu"] = int(f.read().strip())
+                report["mtu_readable"] = True
+            report["interface_ok"] = True
+        except Exception as mtu_read_err:
+            log_message(f"Routing: Infrastructure MTU read failure: {mtu_read_err}", 2)
+
+    report["nameservers"] = get_system_nameservers()
+
+    for ns_host in report["nameservers"]:
+        ns_latency = probe_tcp_latency(ns_host, 53, probe_timeout_seconds)
+        if ns_latency is not None:
+            if report["best_latency_ms"] is None or ns_latency < report["best_latency_ms"]:
+                report["best_latency_ms"] = ns_latency
+
+    latency_ok = False
+    if report["best_latency_ms"] is not None:
+        if report["best_latency_ms"] <= latency_threshold_ms:
+            latency_ok = True
+
+    report["infrastructure_ok"] = report["gateway_ok"] and report["interface_ok"] and latency_ok
+
+    log_message(
+        f"Routing: Infrastructure check gateway={report['gateway']} iface={report['interface']} "
+        f"mtu={report['physical_mtu']} dns={len(report['nameservers'])} "
+        f"best_latency_ms={report['best_latency_ms']} verdict={report['infrastructure_ok']}",
+        0
+    )
+    return report

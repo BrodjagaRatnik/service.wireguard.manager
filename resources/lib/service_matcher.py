@@ -2,7 +2,7 @@
 import os
 import json
 import re
-from state_manager import get_file_path
+from state_manager import get_file_path, CONFIG_DIR
 
 
 def _active_name_forms(active_now):
@@ -26,13 +26,64 @@ def _underscore_form(value):
     return str(value).strip().lower().replace(" ", "_").replace("-", "_")
 
 
-def _mullvad_country_token(value):
-    cleaned = str(value).strip().lower().replace(".config", "").replace(".conf", "")
-    parts = [p for p in re.split(r"[\s_\-]+", cleaned) if p]
-    for index, token in enumerate(parts):
-        if token == "mullvad" and index + 1 < len(parts):
-            return parts[index + 1]
+def _load_nord_country_map():
+    map_path = get_file_path('nord_map')
+    if map_path is None or os.path.exists(map_path) is not True:
+        return {}
+    try:
+        with open(map_path, "r") as f:
+            loaded_map = json.load(f)
+        if isinstance(loaded_map, dict):
+            return {k.lower(): v.lower() for k, v in loaded_map.items()}
+    except Exception:
+        pass
+    return {}
+
+
+def _extract_country_code_from_nord_filename(filename):
+    base = str(filename).strip().lower().replace(".config", "").replace(".conf", "")
+    match = re.match(r"^nord_([a-z]{2})\d+$", base)
+    if match:
+        return match.group(1)
     return None
+
+
+def _find_matching_country_name(target_name):
+    nord_map = _load_nord_country_map()
+    if not nord_map:
+        return None
+
+    squeezed_target = _squeeze_form(target_name)
+    if not squeezed_target:
+        return None
+
+    sorted_keys = sorted(nord_map.keys(), key=len, reverse=True)
+    for country_name in sorted_keys:
+        squeezed_key = _squeeze_form(country_name)
+        if squeezed_key and squeezed_key in squeezed_target:
+            return country_name
+
+    return None
+
+
+def _country_code_for_label(label):
+    if label is None or not label:
+        return None
+
+    base = str(label).strip().lower().replace(".config", "").replace(".conf", "")
+    basename_match = re.match(r"^nord_([a-z]{2})\d+$", base)
+    if basename_match:
+        return basename_match.group(1)
+
+    country_name = _find_matching_country_name(base)
+    if not country_name:
+        return None
+
+    nord_map = _load_nord_country_map()
+    resolved_code = nord_map.get(country_name, "")
+    if not resolved_code:
+        return None
+    return str(resolved_code).lower()
 
 
 def is_nord_match(vpn_target, active_now):
@@ -41,16 +92,41 @@ def is_nord_match(vpn_target, active_now):
     if active_now is None or not active_now:
         return False
 
-    v_nord = _squeeze_form(vpn_target).replace("nordvpn", "").replace("nord", "")
-    if not v_nord:
+    target_code = _country_code_for_label(vpn_target)
+    active_code = _country_code_for_label(active_now)
+
+    if not target_code or not active_code:
         return False
 
-    for form_tokens in _active_name_forms(active_now):
-        a_nord = _squeeze_form(" ".join(form_tokens)).replace("nordvpn", "").replace("nord", "")
-        if v_nord == a_nord:
-            return True
+    return target_code == active_code
 
-    return False
+
+def find_nord_profile_for_target(vpn_target):
+    if vpn_target is None or not vpn_target:
+        return None
+
+    country_name = _find_matching_country_name(vpn_target)
+    if not country_name:
+        return None
+
+    nord_map = _load_nord_country_map()
+    expected_code = nord_map.get(country_name, "").lower()
+    if not expected_code:
+        return None
+
+    try:
+        candidates = [
+            entry for entry in os.listdir(CONFIG_DIR)
+            if entry.startswith(f"nord_{expected_code}") and entry.endswith(".config")
+        ]
+    except Exception:
+        return None
+
+    if not candidates:
+        return None
+
+    candidates.sort()
+    return candidates[0].replace(".config", "")
 
 
 def is_pia_match(vpn_target, active_now):
@@ -116,6 +192,15 @@ def is_mullvad_match(vpn_target, active_now):
     return False
 
 
+def _mullvad_country_token(value):
+    cleaned = str(value).strip().lower().replace(".config", "").replace(".conf", "")
+    parts = [p for p in re.split(r"[\s_\-]+", cleaned) if p]
+    for index, token in enumerate(parts):
+        if token == "mullvad" and index + 1 < len(parts):
+            return parts[index + 1]
+    return None
+
+
 def is_custom_match(vpn_target, active_now):
     if vpn_target is None or not vpn_target:
         return False
@@ -132,3 +217,18 @@ def is_custom_match(vpn_target, active_now):
             return True
 
     return False
+
+
+_PROVIDER_PROFILE_RESOLVERS = {
+    "nordvpn": find_nord_profile_for_target,
+}
+
+
+def find_profile_for_target(provider_name, vpn_target):
+    if provider_name is None or not provider_name:
+        return None
+
+    resolver = _PROVIDER_PROFILE_RESOLVERS.get(str(provider_name).lower())
+    if resolver is None:
+        return None
+    return resolver(vpn_target)

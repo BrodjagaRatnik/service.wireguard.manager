@@ -13,6 +13,7 @@ import unicodedata
 import urllib.request
 
 from logger import log_message
+from providers.routing import probe_endpoint_latency
 
 
 class InfrastructureFetchError(Exception):
@@ -200,21 +201,69 @@ class MullvadConfig:
         except Exception as clean_err:
             log_message(f"Failed to purge existing Mullvad platform assets from target layout: {clean_err}", 2)
 
-        _report_progress(progress_callback, 55, "Purging stale Mullvad profiles...")
+        _report_progress(progress_callback, 60, "Measuring relay endpoint latency...")
+        candidates_with_latency = []
+        total_relays = len(relays) if relays else 0
 
-        total_relays = max(len(relays), 1)
-        for position, relay in enumerate(relays, start=1):
-            _report_progress(
-                progress_callback,
-                55 + int(40 * (position / total_relays)),
-                f"Writing profile {position}/{len(relays)}: {relay.get('hostname')}"
-            )
+        for pos, relay in enumerate(relays, start=1):
+            if total_relays > 0:
+                pct = 60 + int((pos / total_relays) * 25)
+                hostname = relay.get("hostname", "")
+                _report_progress(progress_callback, pct, f"Probing relay {pos}/{total_relays}: {hostname}")
             try:
-                self.create_connman_config(output_dir, relay, device, privatekey, dns_str, multihop_server)
+                host = relay["ipv4_addr_in"]
+                port = self.wg_relay_port
+
+                endpoint_latency = probe_endpoint_latency(host, port, 2.0)
+
+                if endpoint_latency is not None:
+                    log_message(f"Mullvad: Endpoint latency {relay['hostname']} = {endpoint_latency:.0f}ms", 0)
+                else:
+                    log_message(f"Mullvad: Latency probe failed for {relay['hostname']}", 2)
+
+                candidates_with_latency.append({
+                    "relay": relay,
+                    "latency_ms": endpoint_latency,
+                    "priority": int(endpoint_latency) if endpoint_latency is not None else 999999
+                })
+            except Exception as e:
+                log_message(f"Mullvad: Latency measurement failure: {e}", 2)
+                candidates_with_latency.append({
+                    "relay": relay,
+                    "latency_ms": None,
+                    "priority": 999999
+                })
+
+        if not candidates_with_latency:
+            log_message("Mullvad: Candidate relay pool is empty after latency ranking pass.", 3)
+            return
+
+        candidates_with_latency.sort(key=lambda x: x["priority"])
+
+        fastest = candidates_with_latency[0]
+        fastest_ms = "N/A" if fastest["latency_ms"] is None else f"{fastest['latency_ms']:.0f}ms"
+        log_message(
+            f"Mullvad: Ranked {len(candidates_with_latency)} relays. "
+            f"Fastest: {fastest['relay'].get('hostname')} ({fastest_ms})",
+            0
+        )
+
+        _report_progress(progress_callback, 88, "Writing ranked relay configurations...")
+
+        for rank, cand in enumerate(candidates_with_latency, start=1):
+            try:
+                self.create_connman_config(
+                    output_dir,
+                    cand["relay"],
+                    device,
+                    privatekey,
+                    dns_str,
+                    multihop_server
+                )
             except Exception as e:
                 log_message(
                     f"Skipping corrupt configuration block rendering pass for target host "
-                    f"{relay.get('hostname')}: {e}", 2
+                    f"{cand['relay'].get('hostname')}: {e}", 2
                 )
 
     def create_connman_config(self, output_dir, relay, device, privatekey, dns_str, multihop_server=None) -> None:

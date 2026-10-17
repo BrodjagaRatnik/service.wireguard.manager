@@ -5,7 +5,7 @@
         url = (
             "https://api.nordvpn.com/v1/servers/recommendations"
             f"?filters[servers_technologies][identifier]=wireguard_udp"
-            f"&filters[country_id]={c_id.strip()}&limit=1"
+            f"&filters[country_id]={c_id.strip()}&limit=5"
         )
 
 """
@@ -16,12 +16,16 @@ import socket
 import subprocess
 import sys
 import time
+import json
 from logger import log_message
 from providers.nord_utils import fetch_nord_url
+from providers.routing import probe_endpoint_latency
 from state_manager import get_active_vpn, write_state
 import dialog
 
 NORD_DNS = "103.86.96.100, 103.86.99.100"
+LATENCY_BUDGET_MS = 500.0
+PROBE_TIMEOUT_S = 2.0
 
 
 def _emit_progress(progress_callback, percent, message):
@@ -72,7 +76,7 @@ def update(token, country_ids, config_dir, progress_callback=None):
 
     priv_key = user_data["nordlynx_private_key"]
     log_message("NordVPN: Private key successfully retrieved.", 0)
-
+    nord_country_map = {}
     ids = [i.strip() for i in country_ids.split(",")]
     total_ids = len(ids)
     success_count = 0
@@ -105,7 +109,7 @@ def update(token, country_ids, config_dir, progress_callback=None):
             log_message(f"NordVPN: No servers found for Country ID {c_id}", 2)
             continue
 
-        config_written_for_country = 0
+        candidate_pool = []
 
         for idx, data in enumerate(servers, start=1):
             try:
@@ -130,6 +134,11 @@ def update(token, country_ids, config_dir, progress_callback=None):
                 city_raw = data["locations"][0]["country"]["city"]["name"]
                 server_num = "".join(filter(str.isdigit, hostname))
                 friendly_name = f"NordVPN {country_raw} {city_raw} {server_num}"
+
+                code_match = re.match(r"^([a-zA-Z]+)", hostname)
+                country_code = code_match.group(1).lower() if code_match else country_raw[:3].lower()
+                nord_country_map[str(country_raw).strip().lower()] = country_code
+
                 wg_tech = None
                 for t in data.get("technologies", []):
                     if t.get("identifier") == "wireguard_udp":
@@ -148,6 +157,18 @@ def update(token, country_ids, config_dir, progress_callback=None):
                     log_message(f"NordVPN: Public Key missing in metadata for {hostname}", 2)
                     continue
 
+                endpoint_latency = probe_endpoint_latency(ip, int(port), PROBE_TIMEOUT_S)
+
+                if endpoint_latency is not None:
+                    log_message(
+                        f"NordVPN: Endpoint latency {hostname} = {endpoint_latency:.0f}ms", 0
+                    )
+                    if endpoint_latency > LATENCY_BUDGET_MS:
+                        log_message(
+                            f"NordVPN: Server {hostname} exceeds latency budget ({endpoint_latency:.0f}ms), "
+                            f"marked as deferred candidate", 2
+                        )
+
                 config = (
                     "[provider_wireguard]\n"
                     "Type = WireGuard\n"
@@ -164,9 +185,6 @@ def update(token, country_ids, config_dir, progress_callback=None):
                     "WireGuard.PersistentKeepalive = 25\n"
                 )
 
-                code_match = re.match(r"^([a-zA-Z]+)", hostname)
-                country_code = code_match.group(1).lower() if code_match else country_raw[:3].lower()
-
                 base_name = f"nord_{country_code}{idx:02d}"
                 if len(base_name) > 15:
                     log_message(
@@ -175,26 +193,54 @@ def update(token, country_ids, config_dir, progress_callback=None):
                     )
                     base_name = base_name[:15]
 
-                file_path = os.path.join(config_dir, f"{base_name}.config")
-                with open(file_path, "w") as f:
-                    f.write(config)
-
-                log_message(f"NordVPN: Saved candidate {file_path} (host: {hostname})", 0)
-                success_count += 1
-                config_written_for_country += 1
+                candidate_pool.append({
+                    "file_path": os.path.join(config_dir, f"{base_name}.config"),
+                    "config": config,
+                    "hostname": hostname,
+                    "latency_ms": endpoint_latency,
+                    "priority": int(endpoint_latency) if endpoint_latency is not None else 999999
+                })
 
             except Exception as e:
                 log_message(f"NordVPN: Candidate {idx} failed: {e}", 2)
                 continue
 
+        if len(candidate_pool) == 0:
+            log_message(f"NordVPN: No valid candidates for Country ID {c_id}", 3)
+            continue
+
+        candidate_pool.sort(key=lambda x: x["priority"])
+        log_message(
+            f"NordVPN: Ranked {len(candidate_pool)} candidates for country {c_id}. "
+            f"Fastest: {candidate_pool[0]['hostname']} "
+            f"({candidate_pool[0]['latency_ms']:.0f}ms)", 0
+        )
+
+        config_written_for_country = 0
+        for rank, cand in enumerate(candidate_pool, start=1):
+            with open(cand["file_path"], "w") as f:
+                f.write(cand["config"])
+            log_message(f"NordVPN: Saved ranked #{rank} {cand['file_path']} (host: {cand['hostname']})", 0)
+            success_count += 1
+            config_written_for_country += 1
+
         if config_written_for_country == 0:
-            log_message(f"NordVPN: All {len(servers)} candidate servers failed for Country ID {c_id}", 3)
+            log_message(f"NordVPN: All candidates for Country ID {c_id} rejected", 3)
 
     if dialog_progress is not None:
         dialog_progress.close()
 
     if success_count > 0:
         log_message(f"NordVPN: Finalizing {success_count} configs.", 0)
+        from state_manager import get_file_path
+        nord_map_path = get_file_path('nord_map')
+        if nord_map_path is not None:
+            try:
+                with open(nord_map_path, 'w') as nmf:
+                    json.dump(nord_country_map, nmf)
+            except Exception as map_err:
+                log_message(f"NordVPN: Country map persistence failed: {map_err}", 2)
+
         finalize_configs(config_dir)
 
         if os.path.exists('/sys/class/net/wg0') is True and active_vpn_name:

@@ -1,4 +1,4 @@
-""" LibreELEC ./resources/lib/providers/pia_updater.py
+""" ./resources/lib/providers/pia_updater.py
 https://github.com/pia-foss/manual-connections/
     dns_str = "10.0.0.243, 10.0.0.241, 1.1.1.1, 9.9.9.9"
 
@@ -15,12 +15,13 @@ import urllib.request
 from logger import log_message
 from providers import routing
 from providers import pia_config
+from providers.routing import probe_tcp_latency
 from io_atomic import atomic_write_text
 
 SERVER_LIST_URL = "https://serverlist.piaservers.net/vpninfo/servers/v6"
 
 
-def _report_progress(progress_callback, percent, message):
+def _emit_progress(progress_callback, percent, message):
     if progress_callback is not None:
         try:
             progress_callback(int(percent), str(message))
@@ -33,12 +34,7 @@ def update(user, password, country_ids, config_dir, progress_callback=None):
 
     from state_manager import get_active_vpn
 
-    total_regions = max(len(selected_list), 1)
-    region_span = 70 / total_regions
-    tier_step = region_span / 5
-
     if os.path.exists(config_dir) is True:
-        _report_progress(progress_callback, 5, "Removing stale profiles...")
         for filename in os.listdir(config_dir):
             if filename.startswith("pia_") and filename.endswith(".config"):
                 file_id = filename.replace("pia_", "").replace(".config", "")
@@ -48,9 +44,9 @@ def update(user, password, country_ids, config_dir, progress_callback=None):
                     except Exception as r_err:
                         log_message(f"PIA Updater: Server array tracking error skipped {r_err}", 3)
 
+    _emit_progress(progress_callback, 5, "Fetching PIA server list...")
     raw_data = None
     for attempt in range(3):
-        _report_progress(progress_callback, 8 + attempt, f"Downloading server list (attempt {attempt + 1}/3)...")
         try:
             ctx = ssl._create_unverified_context()
             req = urllib.request.Request(SERVER_LIST_URL, headers={'User-Agent': 'PIA-VPN/3.5.0 (Linux)'})
@@ -76,6 +72,7 @@ def update(user, password, country_ids, config_dir, progress_callback=None):
     if raw_data is None:
         return False
 
+    _emit_progress(progress_callback, 20, "Parsing server data...")
     try:
         data = json.loads(raw_data)
         name_mapping = {}
@@ -85,13 +82,7 @@ def update(user, password, country_ids, config_dir, progress_callback=None):
         config_latency = getattr(pia_config, "MAX_LATENCY", 0.05)
         latency_tiers = [config_latency, 0.15, 0.30, 0.60, 1.00]
 
-        for r_pos, rid in enumerate(selected_list, start=1):
-            region_base = 15 + int(region_span * (r_pos - 1))
-            _report_progress(
-                progress_callback, min(region_base, 85),
-                f"Region {r_pos}/{len(selected_list)}: {rid}"
-            )
-
+        for rid in selected_list:
             region_node = None
             for r in data.get('regions', []):
                 if r['id'].lower() == rid:
@@ -120,23 +111,14 @@ def update(user, password, country_ids, config_dir, progress_callback=None):
             log_message(f"PIA Speed Profiler: Evaluating nodes for region profile ID: {rid}", 0)
             verified_servers = []
 
-            for t_idx, max_latency in enumerate(latency_tiers, start=1):
-                _report_progress(
-                    progress_callback,
-                    min(int(region_base + tier_step * t_idx), 88),
-                    f"Region {r_pos}/{len(selected_list)}: {rid} latency tier {t_idx}/{len(latency_tiers)}"
-                )
+            for max_latency in latency_tiers:
                 log_message(f"PIA Speed Profiler: Scanning nodes under threshold tier: {max_latency * 1000:.0f}ms", 0)
                 for srv in valid_candidates:
                     srv_ip = str(srv.get('ip'))
-                    start_t = time.time()
                     try:
-                        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                        s.settimeout(max_latency)
-                        s.connect((srv_ip, 443))
-                        s.close()
-                        elapsed = time.time() - start_t
-                        verified_servers.append((elapsed, srv))
+                        latency_ms = probe_tcp_latency(srv_ip, 443, max_latency)
+                        if latency_ms is not None:
+                            verified_servers.append((latency_ms, srv))
                     except (socket.timeout, ConnectionRefusedError, OSError):
                         continue
                 if verified_servers:
@@ -145,9 +127,15 @@ def update(user, password, country_ids, config_dir, progress_callback=None):
             if verified_servers:
                 verified_servers.sort(key=lambda x: x[0])
                 final_servers = [item[1] for item in verified_servers]
-                fastest_ms = float(verified_servers[0][0]) * 1000.0
+                fastest_ms = float(verified_servers[0][0])
                 log_message(f"PIA Speed Profiler: Fastest server discovered responding in {fastest_ms:.1f}ms", 0)
                 log_message("PIA Speed Profiler: Sorting array. Placing optimal node at index zero.", 0)
+
+                ranked_log = ", ".join([
+                    f"{srv['ip']}:{float(latency):.0f}ms"
+                    for latency, srv in verified_servers[:5]
+                ])
+                log_message(f"PIA Speed Profiler: Top 5 ranked IPs: [{ranked_log}]", 0)
             else:
                 log_message("PIA Speed Profiler: No targets cleared latency ceiling. Using raw payload metrics.", 2)
                 final_servers = valid_candidates
@@ -162,6 +150,8 @@ def update(user, password, country_ids, config_dir, progress_callback=None):
             v_temp = region_name.replace('Optimized', 'Optimize')
             clean_region_name = v_temp.replace('optimized', 'Optimize')
 
+            region_pct = int(compiled_files_count * 100 / max(len(selected_list), 1))
+            _emit_progress(progress_callback, region_pct, f"Writing config: {region_name}")
             os.makedirs(config_dir, exist_ok=True)
             file_path = os.path.join(config_dir, f"pia_{rid}.config")
             config_template = (
@@ -177,14 +167,6 @@ def update(user, password, country_ids, config_dir, progress_callback=None):
             atomic_write_text(file_path, config_template)
             compiled_files_count += 1
             total_nodes_count += len(server_ips)
-
-            _report_progress(
-                progress_callback,
-                min(int(15 + region_span * r_pos), 85),
-                f"Profile written for {rid} ({len(server_ips)} nodes)"
-            )
-
-        _report_progress(progress_callback, 90, "Writing region index...")
 
         from state_manager import get_file_path
         map_path = get_file_path('pia_map')
@@ -202,7 +184,7 @@ def update(user, password, country_ids, config_dir, progress_callback=None):
             if boot_target:
                 write_state('reconnect', str(boot_target))
 
-        _report_progress(progress_callback, 100, "Update complete.")
+        _emit_progress(progress_callback, 100, "PIA profiles updated.")
         return True
 
     except Exception as e:

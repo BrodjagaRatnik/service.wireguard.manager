@@ -23,6 +23,7 @@ FILE_MAP = {
     'disconnect': 'vpn_intentional_disconnect.txt',
     'blackout': 'vpn_blackout_active.lock',
     'pia_map': 'pia_name_map.json',
+    'nord_map': 'nord_country_map.json',
     'pia_cache': 'pia_token_cache.json',
     'mullvad_settings': 'mullvad_settings.ini',
     'connector_lock': 'vpn_connector_active.lock',

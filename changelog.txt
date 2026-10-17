@@ -1,6 +1,20 @@
 CHANGELOG
 =========
 
+v1.5.6 (17-10-2026)
+- Added generic internet infrastructure pre-flight check (gateway, physical interface, kernel MTU, system nameservers) usable by all VPN providers
+- Added universal TCP/ICMP latency probe shared across providers in providers/routing.py
+- NordVPN: per-server latency ranking, fastest endpoint written first so failover chain tries optimal nodes first
+- NordVPN: slow endpoints deferred in ranking order instead of being silently dropped, guaranteeing no data loss on degraded regions
+- NordVPN: country name map persisted between sessions for profile matching without hardcoded values
+- PIA: speed profiler now uses shared ICMP probe for consistent measurements across all providers
+- PIA: top ranked node IPs logged for diagnostics, optimal node remains pinned at pool index zero
+- PIA: graceful fallback when probe times out, slow servers rank lower instead of crashing pipeline
+- Mullvad: relays ranked by measured endpoint latency before config generation
+- Mullvad: unreachable relays sorted to back of candidate list instead of blocking pipeline
+- Failover chain (sibling retry logic) automatically traverses ranked candidates from fastest to slowest
+- Infrastructure check is purely diagnostic: updates succeed even on degraded networks, ranking adapts gracefully
+
 v1.5.5 (11-10-2026)
 - UPDATE PROGRESS: All VPN providers now show detailed progress bar during server updates
 - NORDVPN: Per country + per server updates (existing functionality preserved)
