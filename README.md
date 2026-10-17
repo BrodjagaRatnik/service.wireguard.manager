@@ -20,7 +20,7 @@ A lightweight, high-performance Kodi service addon for **LibreELEC 11, 12, and 1
 
 All documentation lives on the **[Wiki](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki)** — installation, setup, provider tokens, custom VPN providers import, settings, diagnostics, and troubleshooting.
 
-Popular starting points: **[Installation & Setup](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Installation-&-Setup)** · **[Features](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Features)**
+Popular starting points: **[Installation & Setup](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Installation-&-Setup)** · **[Features](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Features)** · **[Settings Explained](https://github.com/BrodjagaRatnik/service.wireguard.manager/wiki/Settings-Explained)**
 
 ## 📥 Fast Installation (via Doemela Repo)
 If you already know what you're doing, grab the repository installer here:  
