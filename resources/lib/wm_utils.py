@@ -59,11 +59,8 @@ def show_blackout_ui_in_kodi():
         dialog.notify_custom(title, msg, "router-network-error-alert.png", 14000, sound=False)
         log_message("Wm Utils: Blackout notification dispatched.", 0)
         if os.path.exists(sound) is True:
-            try:
-                xbmc.Player().play(sound)
-                log_message("Wm Utils: Blackout alert sound started via player preemption.", 0)
-            except Exception:
-                xbmc.executebuiltin(f"PlayMedia({sound},1)")
+            xbmc.executebuiltin(f"PlayMedia({sound},1)")
+            log_message("Wm Utils: Blackout alert sound played via PlayMedia.", 0)
         else:
             xbmc.executebuiltin("PlayAction(rightclick)")
     except Exception as blackout_fault:

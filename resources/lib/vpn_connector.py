@@ -39,6 +39,7 @@ MAX_CONNECT_ATTEMPTS = 3
 CYCLE_FAIL_LIMIT = MAX_CONNECT_ATTEMPTS * 2
 CYCLE_FAIL_STALE_S = 3600
 _CYCLE_STATE_NAME = "cycle_fail_state"
+_PULSE_CONTEXTS = (None, "tunnel_checker", "service_launcher")
 
 
 def _cycle_state_path():
@@ -193,7 +194,8 @@ def _display_name_from_sid(candidate_sid):
     return None
 
 
-def connect_vpn(vpn_name, sid, instance, silent=False, tried_profiles=None, display_name=None):
+def connect_vpn(vpn_name, sid, instance, silent=False, tried_profiles=None,
+                display_name=None, context=None):
     tried_profiles = tried_profiles if tried_profiles is not None else set()
     lock_path = get_file_path("connector_lock")
     killswitch = None
@@ -255,8 +257,8 @@ def connect_vpn(vpn_name, sid, instance, silent=False, tried_profiles=None, disp
                 return False
 
         log_message(f"VPN Connector: Connecting to {vpn_name}", 0)
-        if silent is True:
-            dialog.notify_tunnelling(vpn_name, duration_ms=4000)
+        if silent is True and context in _PULSE_CONTEXTS:
+            dialog.notify_tunnelling(vpn_name, duration_ms=500)
 
         tried_profiles.add(sid)
 
@@ -354,9 +356,14 @@ def connect_vpn(vpn_name, sid, instance, silent=False, tried_profiles=None, disp
 
                 if ip and ip != "Unknown":
                     toast_name = display_name if display_name else vpn_name
-                    context = _detect_silent_context() if silent is True else "normal"
+                    if context:
+                        toast_context = context
+                    elif silent is True:
+                        toast_context = _detect_silent_context()
+                    else:
+                        toast_context = "normal"
                     log_message(f"VPN Connector: Dispatching connected toast for {toast_name} ({ip})", 0)
-                    dialog.notify_connected(toast_name, ip, country, context=context)
+                    dialog.notify_connected(toast_name, ip, country, context=toast_context)
                     log_message("VPN Connector: Connected toast dispatch returned", 0)
                     _reset_cycle_state()
                     return True
@@ -386,7 +393,8 @@ def connect_vpn(vpn_name, sid, instance, silent=False, tried_profiles=None, disp
                     return connect_vpn(
                         vpn_name, next_profile, instance, silent=silent,
                         tried_profiles=tried_profiles,
-                        display_name=_display_name_from_sid(next_profile) or display_name
+                        display_name=_display_name_from_sid(next_profile) or display_name,
+                        context=context
                     )
 
                 if silent is True:
@@ -404,7 +412,6 @@ def connect_vpn(vpn_name, sid, instance, silent=False, tried_profiles=None, disp
                         "VPN Connector: Tunnel up but not passing traffic. Retrying... (%d/%d)"
                         % (fail_count, CYCLE_FAIL_LIMIT), 1
                     )
-                    dialog.notify_tunnelling(vpn_name, duration_ms=4000)
                 else:
                     dialog.notify_connection_failed(vpn_name)
 
@@ -430,7 +437,10 @@ def connect_vpn(vpn_name, sid, instance, silent=False, tried_profiles=None, disp
                 f"VPN Connector: {sid} failed to connect, trying alternate candidate "
                 f"{next_profile} (attempt {len(tried_profiles) + 1}/{MAX_CONNECT_ATTEMPTS})", 2
             )
-            return connect_vpn(vpn_name, next_profile, instance, silent=silent, tried_profiles=tried_profiles)
+            return connect_vpn(
+                vpn_name, next_profile, instance, silent=silent,
+                tried_profiles=tried_profiles, context=context
+            )
 
         err_msg = "Internet lost."
         if get_default_gateway():
@@ -451,7 +461,6 @@ def connect_vpn(vpn_name, sid, instance, silent=False, tried_profiles=None, disp
                 "VPN Connector: Routing profile transition in progress. Retrying step... (%d/%d)"
                 % (fail_count, CYCLE_FAIL_LIMIT), 1
             )
-            dialog.notify_tunnelling(vpn_name, duration_ms=4000)
         else:
             log_message(f"VPN Connector: {err_msg}", 3)
             dialog.notify_vpn_failure(err_msg)

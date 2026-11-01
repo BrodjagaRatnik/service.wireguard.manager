@@ -212,7 +212,7 @@ def start():
 
                     if sid:
                         try:
-                            vpn_ops.connect_vpn(str(boot_target), str(sid), silent=True)
+                            vpn_ops.connect_vpn(str(boot_target), str(sid), silent=True, context="service_launcher")
                             log_msg = f"Service Launcher: Connecting profile [{boot_target}] safely after cold boot."
                             log_message(log_msg, 1)
                         except Exception:

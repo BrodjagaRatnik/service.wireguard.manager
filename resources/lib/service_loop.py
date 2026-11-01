@@ -134,7 +134,7 @@ def execute_monitor_loop(instance):
 
                 sid = instance.get_service_id_by_name(vpn_target)
                 if sid:
-                    instance.vpn_ops.connect_vpn(str(vpn_target), str(sid), silent=True)
+                    instance.vpn_ops.connect_vpn(str(vpn_target), str(sid), silent=True, context="service_loop")
                     match_found = True
                 else:
                     err_msg = f"Service Loop: Target ID for profile {vpn_target} not found."

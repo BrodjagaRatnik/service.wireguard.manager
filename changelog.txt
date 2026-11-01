@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+v1.5.8 (01-11-2026)
+- Removed redundant 4000ms retry notifications during silent reconnect cycles (retry state now log-only)
+- Suppressed tunnelling pulse toast during location mapping: mapped connects now show only the final MAPPED CONNECT notification
+- Replaced stack-frame context sniffing with an explicit context parameter routed through vpn_ops to the connector
+- Dispatch context now propagates through sibling retry chains for consistent toast behaviour
+
 v1.5.7 (27-10-2026)
 - Custom import now auto-converts standard WireGuard profiles ([Interface]/[Peer]) to the ConnMan layout, so configs from ProtonVPN, Mullvad, IVPN and other providers work without manual reformatting.
 - Endpoint splitting: IPv4 and IPv6 endpoints are separated into Host and WireGuard.EndpointPort automatically.

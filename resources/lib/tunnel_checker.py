@@ -140,7 +140,7 @@ def run_tunnel_sanity_check():
                     if HAS_GUI:
                         xbmcgui.Window(10000).setProperty('vpn_manual_session', 'true')
 
-                    vpn_ops.connect_vpn(str(boot_target), str(sid), silent=True)
+                    vpn_ops.connect_vpn(str(boot_target), str(sid), silent=True, context="tunnel_checker")
                     log_message(f"Tunnel Check: Profile link [{boot_target}] successfully re-established.", 1)
 
                     if HAS_GUI:

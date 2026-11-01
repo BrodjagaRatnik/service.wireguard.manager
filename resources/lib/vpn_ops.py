@@ -172,7 +172,7 @@ def disconnect_vpn(silent=False, flush_dns=True, reason="disengaged"):
         kodi_env.clear_script_globals()
 
 
-def connect_vpn(vpn_name, sid, silent=False):
+def connect_vpn(vpn_name, sid, silent=False, context=None):
     if not HAS_KODI:
         try:
             log_message(f"VPN Ops: Daemon connecting sequence initiated for {vpn_name}", 1)
@@ -192,6 +192,6 @@ def connect_vpn(vpn_name, sid, silent=False):
     import sys
     instance = sys.modules[__name__]
     try:
-        return vpn_connector.connect_vpn(vpn_name, sid, instance, silent=silent)
+        return vpn_connector.connect_vpn(vpn_name, sid, instance, silent=silent, context=context)
     finally:
         pass
