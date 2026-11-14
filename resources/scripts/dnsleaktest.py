@@ -21,6 +21,11 @@ def main():
     progress = TaskProgress("DNS Leak Test", "Preparing DNS leak test...")
     log_message("DNS Leak Test: Initializing connectivity check", 0)
 
+    def abort(message):
+        log_message(f"DNS Leak Test: {message}", 3)
+        progress.update(100, "Aborted")
+        show_ok("[B]DNS Test[/B]", f"[COLOR FFFF0000]{message}[/COLOR]")
+
     try:
         if progress.iscanceled():
             log_message("DNS Leak Test: User aborted before connectivity check.", 0)
@@ -29,16 +34,16 @@ def main():
         progress.update(5, "Checking connection...")
         try:
             req = urllib.request.Request(f"https://{API_DOMAIN}", method="HEAD")
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                if resp.status != 200:
-                    log_message("DNS Leak Test: Host unreachable", 3)
-                    progress.update(100, "Service unreachable")
-                    show_ok("[B]DNS Test[/B]", "[COLOR FFFF0000]Test service unreachable. Try again later.[/COLOR]")
-                    return
+            with urllib.request.urlopen(req, timeout=5):
+                pass
         except Exception as conn_fault:
             log_message(f"DNS Leak Test: Connectivity failed: {conn_fault}", 3)
             progress.update(100, "Connection failed")
-            show_ok("[B]DNS Test[/B]", "[COLOR FFFF0000]No VPN connection available.[/COLOR]")
+            show_ok(
+                "[B]DNS Test[/B]",
+                "[COLOR FFFF0000]Cannot reach test service (bash.ws).\n"
+                "Check VPN/network connection and try again.[/COLOR]"
+            )
             return
 
         if progress.iscanceled():
@@ -50,7 +55,7 @@ def main():
             with urllib.request.urlopen(f"https://{API_DOMAIN}/id", timeout=5) as resp:
                 test_id = resp.read().decode('utf-8').strip()
         except Exception as id_fault:
-            log_message(f"DNS Leak Test: ID generation failed: {id_fault}", 3)
+            abort(f"Session ID generation failed: {id_fault}")
             return
 
         log_message(f"DNS Leak Test: Session ID allocated: {test_id}", 0)
@@ -80,7 +85,7 @@ def main():
             with urllib.request.urlopen(f"https://{API_DOMAIN}/dnsleak/test/{test_id}?json", timeout=8) as resp:
                 server_data = json.loads(resp.read().decode('utf-8').strip())
         except Exception as payload_fault:
-            log_message(f"DNS Leak Test: Failed fetching payload: {payload_fault}", 3)
+            abort(f"Failed fetching test payload: {payload_fault}")
             return
 
         progress.update(90, "Analyzing results...")

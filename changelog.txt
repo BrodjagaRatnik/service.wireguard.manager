@@ -1,6 +1,11 @@
 CHANGELOG
 =========
 
+v1.5.9 (14-11-2026)
+- DNS Leak Test: corrected misleading "No VPN connection available" error shown when the test service itself was unreachable
+- DNS Leak Test: session ID and payload failures now show a clear error dialog instead of silently closing the progress dialog
+- DNS Leak Test: removed dead HTTP status branch (non-2xx responses always raise an exception)
+
 v1.5.8 (01-11-2026)
 - Removed redundant 4000ms retry notifications during silent reconnect cycles (retry state now log-only)
 - Suppressed tunnelling pulse toast during location mapping: mapped connects now show only the final MAPPED CONNECT notification
